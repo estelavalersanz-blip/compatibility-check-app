@@ -6,9 +6,12 @@
 - [ ] 1.3 Scaffolding de `apps/frontend` con Angular CLI (routing, testing con Karma/Jasmine o
       Angular Testing Library configurado), añadiendo `@supabase/supabase-js` como dependencia para el
       cliente de autenticación
-- [ ] 1.6 Instalar y configurar `bootstrap`, `bootstrap-icons` y `@ng-bootstrap/ng-bootstrap` en
-      `apps/frontend` (estilos e iconos globales en `angular.json`), como sistema de diseño único de
-      toda la UI (layout, formularios, botones, tarjetas, cabecera)
+- [ ] 1.6 Instalar `bootstrap`, `bootstrap-icons` y `@ng-bootstrap/ng-bootstrap` en `apps/frontend`, y
+      configurar `apps/frontend/src/styles.scss` para compilar Bootstrap desde su fuente Sass con los
+      tokens de `.claude/skills/ui-design-consistency/references/design-tokens.md`
+      (`$primary: #E67E22`, `$secondary: #D35400`, `$dark: #0D1B2A`, `$light: #FCF3CF`,
+      `$font-family-base` con Poppins) sobrescritos antes del `@import`, en vez de usar el CSS
+      precompilado de Bootstrap sin tokenizar
 - [ ] 1.4 Configurar linters/formatters compartidos (ESLint + Prettier) para backend y frontend
 - [ ] 1.5 Configurar un logger estructurado único en el backend (wrapper sobre `@nestjs/common Logger`
       con contexto por módulo) reutilizable desde cualquier servicio, sin `console.log` sueltos
@@ -107,6 +110,12 @@
       sustituye las 36 respuestas y marca `needs_recalculation = true`; rechaza con 4xx si no hay
       cuestionario previo o si el envío está incompleto
 - [ ] 7.6 Implementar el endpoint de edición del cuestionario para que pase el test anterior
+- [ ] 7.7 Test e2e: `PUT /users/me/questionnaire/draft` (autenticado) acepta entre 0 y 35 respuestas sin
+      exigir el conjunto completo, no marca `questionnaire_completed_at` y no dispara
+      `QuestionnaireCompletedEvent`; `GET /users/me/questionnaire` devuelve las respuestas guardadas
+      hasta el momento (parciales o completas)
+- [ ] 7.8 Implementar `questionnaires.service.ts` (servicio normal, sin Command) con los endpoints de
+      guardado y lectura de borrador para que pasen los tests anteriores
 
 ## 8. Backend: módulo `matching` (selección de candidatos)
 
@@ -176,9 +185,12 @@
 - [ ] 10.3 Test e2e: `GET /users/me/comparisons` devuelve estado y datos del candidato (alias, foto,
        `shared_qualities_count`) de cada comparación, y el resultado agregado cuando está disponible
 - [ ] 10.4 Test e2e: `GET /comparisons/:id/detail` devuelve el detalle de las 36 comparaciones por
-       pregunta de una comparación completada
-- [ ] 10.5 Implementar `results.controller.ts`/`comparisons.controller.ts` y los servicios necesarios
-       para que pasen los tests anteriores
+       pregunta de una comparación completada (pregunta, puntuaciones por dimensión, `compatibilidad`,
+       `explicación`), y **la respuesta no contiene en ningún campo** `respuesta_usuario_1` ni
+       `respuesta_usuario_2`, aunque esos campos sí existan en el registro almacenado en BD
+- [ ] 10.5 Implementar `results.controller.ts`/`comparisons.controller.ts` y los servicios necesarios,
+       incluyendo el mapeo que filtra `respuesta_usuario_1`/`respuesta_usuario_2` del DTO de salida antes
+       de responder, para que pasen los tests anteriores
 
 ## 11. Frontend: shell de la aplicación autenticada
 
@@ -218,19 +230,43 @@
        la selección no sea exactamente 5, aunque el resto de campos estén completos
 - [ ] 13.2 Test de componente: el campo de alias valida en vivo contra `GET /users/check-alias` y
        muestra si está disponible u ocupado
-- [ ] 13.3 Implementar `features/registration` (formulario reactivo, subida de foto con preview,
+- [ ] 13.3 Test de componente: la cabecera de esta pantalla (Shell A) muestra el botón de cerrar sesión
+       pero **no** el enlace de Configuración, a diferencia del resto de pantallas de Shell A
+- [ ] 13.4 Implementar `features/registration` (formulario reactivo, subida de foto con preview,
        cards de cualidades, validación de alias) para que pasen los tests anteriores, consumiendo
        `GET /qualities`, `GET /users/check-alias` y `POST /users/me/profile`
 
 ## 14. Frontend: cuestionario de 36 preguntas
 
-- [ ] 14.1 Test de componente: el stepper conserva el progreso en `localStorage` entre recargas y no
-       permite avanzar sin responder la pregunta actual
-- [ ] 14.2 Implementar `features/questionnaire` para que pase el test anterior, enviando el resultado a
-       `POST /users/me/questionnaire`
-- [ ] 14.3 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (envía a
-       `POST /users/me/questionnaire`) y modo "edición" (envía a `PATCH /users/me/questionnaire`,
-       prerellenado con las respuestas actuales), para reutilizarlo también desde `features/settings`
+- [ ] 14.1 Test de componente: las 36 preguntas se agrupan en 6 paneles `NgbAccordion` (bloques 1-6),
+       cada panel muestra una barra de progreso (no un contador numérico) con la proporción de sus 6
+       preguntas respondidas, y los paneles se abren/cierran de forma independiente
+- [ ] 14.2 Test de componente: cada panel aplica la clase `question-block--weight-XX` según su peso
+       (5/15/20/25/30, ver `design-tokens.md`) sin mostrar el porcentaje como texto en ningún subtítulo
+       ni en la cabecera previa al acordeón, y los bloques 1 y 2 (mismo peso, 5%) reciben exactamente
+       la misma clase/estilo
+- [ ] 14.3 Test de componente: al cargar la pantalla, se consulta `GET /users/me/questionnaire` y se
+       prerellenan las respuestas ya guardadas (parciales o completas); cada respuesta se autoguarda
+       contra `PUT /users/me/questionnaire/draft` (p. ej. al perder el foco o al cerrar un panel), sin
+       depender de `localStorage` como mecanismo de persistencia
+- [ ] 14.4 Test de componente: el botón "Enviar cuestionario" permanece deshabilitado mientras no haya
+       respuesta para las 36 preguntas, y se habilita en cuanto se completan, sin importar si se
+       completaron en la sesión actual o ya venían de un borrador guardado
+- [ ] 14.5 Test de componente: dentro de un panel abierto, las 6 preguntas se muestran como pestañas
+       `NgbNav` (una pregunta visible a la vez, no las 6 apiladas), cada pestaña refleja si su pregunta
+       está respondida, y cambiar de pestaña aplica la transición de `question-pane` salvo que el test
+       simule `prefers-reduced-motion: reduce`, en cuyo caso el cambio de pestaña sigue funcionando sin
+       animación
+- [ ] 14.6 Test de componente: el `textarea` de la pregunta activa ocupa el 100% del ancho del panel
+       (no una columna estrecha) y tiene al menos `rows="4"` de alto
+- [ ] 14.7 Implementar `features/questionnaire` con el acordeón de 6 paneles, su gradiente por peso, las
+       pestañas por pregunta con su transición, el `textarea` a ancho completo y `rows="4"`, el
+       autoguardado de borrador y el botón de envío condicionado, para que pasen los tests anteriores,
+       enviando el envío final a `POST /users/me/questionnaire`
+- [ ] 14.8 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (borrador +
+       envío final a `POST /users/me/questionnaire`) y modo "edición" (envía a
+       `PATCH /users/me/questionnaire`, prerellenado con las respuestas actuales), para reutilizarlo
+       también desde `features/settings`
 
 ## 15. Frontend: pantalla de procesamiento
 
@@ -244,13 +280,17 @@
 - [ ] 16.1 Test de componente: las tarjetas de resultado se ordenan de mayor a menor
        `compatibilidad_final`, muestran el alias del candidato (no el nombre), y el detalle de las 36
        preguntas solo se muestra al expandir
-- [ ] 16.2 Implementar `features/results-dashboard` (tarjetas con foto/alias/score, radar chart con
-       `ng2-charts`, detalle expandible) para que pase el test anterior, consumiendo
+- [ ] 16.2 Test de componente: el detalle expandible de cada pregunta muestra el texto de la pregunta,
+       sus puntuaciones por dimensión y la explicación de la IA, y **no renderiza en ningún elemento**
+       el texto de la respuesta propia ni la del candidato, aunque el objeto recibido del backend
+       llegara a incluirlos (defensa en profundidad además del filtrado en el backend)
+- [ ] 16.3 Implementar `features/results-dashboard` (tarjetas con foto/alias/score, radar chart con
+       `ng2-charts`, detalle expandible sin respuestas) para que pasen los tests anteriores, consumiendo
        `GET /users/me/comparisons` y `GET /comparisons/:id/detail`
-- [ ] 16.3 Test de componente: el botón "recalcular compatibilidad" aparece deshabilitado/oculto cuando
+- [ ] 16.4 Test de componente: el botón "recalcular compatibilidad" aparece deshabilitado/oculto cuando
        `needs_recalculation` es `false`, habilitado cuando es `true`, y tras pulsarlo y completarse el
        recálculo el dashboard se refresca con las nuevas tarjetas/gráficos
-- [ ] 16.4 Implementar el botón de recalcular compatibilidad en `features/results-dashboard` para que
+- [ ] 16.5 Implementar el botón de recalcular compatibilidad en `features/results-dashboard` para que
        pase el test anterior, consumiendo `POST /users/me/recalculate` y refrescando `GET
        /users/me/comparisons` tras completarse
 

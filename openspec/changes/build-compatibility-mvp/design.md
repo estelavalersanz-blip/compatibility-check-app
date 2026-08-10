@@ -83,6 +83,10 @@ Bootstrap (pensado para jQuery/vanilla) y sus conflictos con la detección de ca
 `ng2-charts`/Chart.js se mantiene aparte solo para el gráfico radar (Bootstrap no cubre gráficas), pero
 se integra visualmente dentro de tarjetas Bootstrap.
 
+La skill de Claude Code `.claude/skills/ui-design-consistency/` traduce esta decisión (y las 3c-ter y
+3d) en un checklist concreto y una plantilla de partida para cada pantalla, de forma que la consistencia
+entre las 8 pantallas del frontend no dependa de recordarlo manualmente en cada sesión de trabajo.
+
 ### 3c-ter. Diseño completamente responsive (mobile-first, solo acceso web)
 
 No se plantea una app nativa/APK en esta v1 — todo el acceso es web, incluido desde móvil. La interfaz
@@ -93,6 +97,37 @@ colapsa a menú hamburguesa en móvil; el stepper del cuestionario y los formula
 disponible sin scroll horizontal; las tarjetas del dashboard pasan de 3 columnas en escritorio a 1
 columna apilada en móvil; los gráficos radar (`ng2-charts`) se redimensionan al contenedor en vez de
 tener un tamaño fijo en píxeles.
+
+### 3c-quater. Paleta de color, tipografía y cuestionario en 6 paneles con gradiente de peso
+
+La identidad visual del proyecto no es el azul/gris por defecto de Bootstrap: usa una paleta propia
+(`#E67E22` primario, `#D35400` secundario/hover, `#0D1B2A` texto/superficies oscuras, `#FCF3CF` fondos
+suaves) y tipografía **Poppins** (alternativas aceptadas: DM Sans o Roboto), aplicadas recompilando
+Bootstrap desde su fuente Sass con las variables `$primary`/`$secondary`/`$dark`/`$light`/
+`$font-family-base` sobrescritas, en vez de parchear clases sueltas con CSS a medida — así
+`.btn-primary`, `.bg-primary-subtle`, etc. se recalculan solos. Los ejemplos oficiales de Bootstrap 5
+(*Sign-in*, *Dashboard*, *Album*, *Accordion*) se usan como esqueleto de partida para cada shell/patrón
+ya descrito, no se reinventan desde cero.
+
+El cuestionario de 36 preguntas se reorganiza en **6 paneles colapsables** (uno por cada bloque de 6
+preguntas ya usado en el cálculo ponderado, decisión 6c), con un fondo en gradiente que va de verde
+(bloques de menor peso, 5%) a naranja/rojo intenso (bloque de mayor peso, 30%) — un "semáforo" que hace
+visible al usuario que las preguntas finales cuentan más en el resultado. El color se asigna por peso,
+no por número de bloque: los bloques 1 y 2 pesan igual (5%) y deben verse idénticos. Esto sustituye el
+planteamiento inicial de "stepper lineal" para el cuestionario.
+
+Dentro de cada panel, las 6 preguntas del bloque **no se apilan verticalmente**: se presentan como
+**pestañas** (`NgbNav`), mostrando una pregunta a la vez, con un icono por pestaña que indica si esa
+pregunta ya está respondida. Cambiar de pestaña anima el contenido con una transición corta (fade +
+desplazamiento horizontal, 200ms, `ease-out`, desactivada si el usuario prefiere movimiento reducido) en
+vez de un salto brusco. Esto reduce la sensación de "formulario largo" dentro de cada bloque sin volver
+a un stepper lineal para las 36 preguntas completas — el stepper se descarta a nivel de cuestionario,
+pero una navegación por pestañas sí tiene sentido a nivel de bloque (6 elementos, no 36).
+
+Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` (SKILL.md
++ `references/design-tokens.md` con los valores exactos y la tabla de gradientes + `references/page-template.md`
+con el marcado de partida), para que la consistencia entre las 8 pantallas no dependa de recordarlo
+manualmente en cada sesión de trabajo.
 
 ### 3d. Selección de cualidades como cards con mínimo y máximo de 5
 
@@ -160,6 +195,45 @@ a 6 llamadas por comparación (18 por usuario nuevo). Cada respuesta se valida c
 (claves exactas, valores 1.00–10.00 con dos decimales); si falla, se reintenta con backoff (máx. 3
 intentos) reenviando el lote con instrucción de corrección; si sigue fallando, la comparación pasa a
 `status = 'error'` para reintento manual.
+
+### 5c. Borrador del cuestionario persistido en BD, no en `localStorage`
+
+El progreso del cuestionario deja de depender de `localStorage` (que se pierde al cambiar de
+dispositivo/navegador o al limpiar datos) y pasa a guardarse en el propio backend: un endpoint de
+guardado de borrador (`PUT /users/me/questionnaire/draft`) acepta entre 0 y 36 respuestas en cualquier
+momento, sin exigir el conjunto completo y sin disparar `CompleteQuestionnaireCommand` ni el resto del
+pipeline de matching/IA. Un endpoint de lectura (`GET /users/me/questionnaire`) devuelve lo guardado
+hasta el momento para prerellenar el formulario, incluida una sesión nueva tras volver a iniciar sesión.
+
+El guardado de borrador se implementa como un servicio NestJS normal, no como un Command adicional: a
+diferencia de `CompleteQuestionnaireCommand` (que publica `QuestionnaireCompletedEvent` y desencadena
+todo el pipeline), el borrador no tiene ningún efecto de dominio que desacoplar de otros módulos — es
+una escritura frecuente y de bajo riesgo, y forzarla a pasar por el `CommandBus` solo añadiría ceremonia
+sin beneficio, en línea con el criterio "selectivo" ya adoptado para CQRS (decisión 6b).
+
+El endpoint de envío final (`POST /users/me/questionnaire`, ya existente) sigue siendo el único que
+exige las 36 respuestas completas, marca `questionnaire_completed_at` y dispara el evento — el borrador
+y el envío final son operaciones distintas con validaciones distintas, no la misma operación con un
+parámetro opcional.
+
+### 5d. Las respuestas de otros usuarios nunca se exponen en el dashboard
+
+El JSON original pedido para el análisis de IA (`pregunta, id_usuario_1, respuesta_usuario_1,
+id_usuario_2, respuesta_usuario_2, compatibilidad, emocional, ...`) sigue siendo lo que el backend
+almacena en `comparison_question_results.result` — es el registro completo necesario para auditar el
+análisis y para construir el prompt. Pero ese registro completo **no es lo que se expone a través de la
+API que consume el dashboard**: `GET /comparisons/:id/detail` filtra `respuesta_usuario_1` y
+`respuesta_usuario_2` antes de devolver la respuesta, dejando solo `pregunta`, las 6 puntuaciones por
+dimensión, `compatibilidad` y `explicación`. El dashboard nunca muestra el texto de ninguna respuesta —
+ni la propia ni la del candidato —, solo las puntuaciones y, de forma opcional (no visible por defecto),
+la justificación de la IA por pregunta.
+
+Esto es deliberado por dos motivos: (1) las respuestas a un cuestionario de compatibilidad son
+información personal e íntima que un usuario comparte para ser evaluado, no para ser leído por
+desconocidos del pool; y (2) reduce la superficie de datos sensibles expuesta por la API, en línea con
+el principio de minimización de datos ya mencionado como riesgo en la sección de Riesgos/Trade-offs.
+El filtrado se hace en el propio endpoint (capa de aplicación), no confiando en que el frontend
+simplemente "no muestre" el campo — un cliente API directo tampoco debe poder leerlo.
 
 ### 6c. Ponderación compuesta: bloques de preguntas (peso incremental) anidados en los pesos por dimensión
 

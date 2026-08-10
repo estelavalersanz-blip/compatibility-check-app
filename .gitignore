@@ -29,3 +29,6 @@ yarn-error.log*
 
 # Claude Code local settings (per-session permissions, not shared config)
 .claude/settings.local.json
+
+# Project documentation is always tracked, even if a future rule ignores docs/*
+!docs/plan.md
