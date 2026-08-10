@@ -26,3 +26,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Claude Code local settings (per-session permissions, not shared config)
+.claude/settings.local.json
