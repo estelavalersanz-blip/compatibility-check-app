@@ -24,15 +24,17 @@ apps/
   backend/    # NestJS — API, orquestación de IA, acceso a datos
   frontend/   # Angular — toda la interfaz de usuario
 packages/
-  shared-types/  # Interfaces + esquemas Zod compartidos (pendiente, sección 2 de tasks.md)
+  shared-types/  # Interfaces + esquemas Zod compartidos entre backend y frontend
 supabase/
-  migrations/    # SQL del esquema (pendiente, sección 3 de tasks.md)
+  migrations/    # Esquema SQL + políticas RLS
+  templates/     # Plantillas de email de Supabase Auth con marca AfinIA
   seed/          # Datos sintéticos de prueba
 openspec/
   changes/build-compatibility-mvp/  # Fuente de verdad: proposal.md, design.md, specs/, tasks.md
 docs/
-  plan.md        # Narrativa completa de contexto y decisiones (complementa design.md)
-  brand/         # Assets de marca (logo, favicons)
+  plan.md          # Narrativa completa de contexto y decisiones (complementa design.md)
+  architecture.md  # Configuración resultante de infraestructura (Auth, Storage, CI/CD)
+  brand/           # Assets de marca (logo, favicons)
 ```
 
 ## Empezar a desarrollar

@@ -8,7 +8,10 @@ compatibilidad, selección de candidatos, orquestación de IA y chat interno. Ve
 ## Configuración
 
 Copia `.env.example` a `.env` y rellena los valores reales (nunca se commitean). En producción
-(Render) se configuran como variables de entorno de la plataforma.
+(Render) se configuran como variables de entorno de la plataforma. `SUPABASE_URL` y
+`SUPABASE_SERVICE_ROLE_KEY` son obligatorias — la app falla al arrancar sin ellas (`SupabaseService`,
+ver más abajo); para desarrollo local, usa las del stack local (`npx supabase status`, ver README de
+la raíz).
 
 ## Scripts
 
@@ -32,6 +35,10 @@ npm run test:integration    # tests de integración (*.integration-spec.ts) — 
   Stack/Logtail vía `LOGTAIL_SOURCE_TOKEN`. Nunca usar `console.log`.
 - **`src/cqrs/`**: `LoggingCommandBus` — sustituye al `CommandBus` de `@nestjs/cqrs` por defecto,
   registrando automáticamente inicio/fin/error de cada Command con un id de correlación.
+- **`src/supabase/`**: `SupabaseService` — única puerta de acceso a datos con la `service_role` key
+  (módulo `@Global()`); el resto de servicios de dominio dependen de esta clase, nunca de
+  `@supabase/supabase-js` directamente.
 - **`test/setup/`**, **`test/factories/`**: infraestructura de tests de integración (pool de cuentas
-  `auth.users`, reset de tablas de dominio, factories de fixtures) — ver
-  `design.md`, decisión 11.
+  `auth.users`, reset de tablas de dominio, factories de fixtures) — ver `design.md`, decisión 11.
+  `test/setup/e2e-env.ts` da credenciales ficticias a los tests e2e (que no deben depender de
+  Docker) para que `AppModule` pueda arrancar igualmente.

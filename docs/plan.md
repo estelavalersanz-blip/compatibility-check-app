@@ -237,7 +237,7 @@ compatibility-check-app/
 - `users` (`id` FK a `auth.users.id`, `name`, `alias` — `UNIQUE`, `photo_url` — apunta al bucket de
   Supabase Storage, `questionnaire_completed_at`, `needs_recalculation boolean default false` — se
   activa al editar respuestas o cualidades, habilita el botón de recalcular y se desactiva al ejecutarlo)
-- `qualities` (id, label) — catálogo fijo de las 15 cualidades personales, **confirmado**: empatía,
+- `qualities` (id, name) — catálogo fijo de las 15 cualidades personales, **confirmado**: empatía,
   humor, ambición, creatividad, honestidad, aventura, estabilidad, curiosidad, generosidad, paciencia,
   sociabilidad, independencia, sensibilidad, disciplina, espontaneidad.
 - `user_qualities` (user_id, quality_id) — exactamente 5 filas por usuario, las cualidades elegidas en
