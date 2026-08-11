@@ -76,9 +76,9 @@
 
 ## 3. Base de datos y autenticación (Supabase)
 
-- [ ] 3.1 Habilitar Supabase Auth (email/contraseña) en el proyecto y configurar la plantilla del email
+- [x] 3.1 Habilitar Supabase Auth (email/contraseña) en el proyecto y configurar la plantilla del email
       de recuperación de contraseña
-- [ ] 3.2 Escribir `supabase/migrations/0001_init.sql` con las tablas `qualities`, `user_qualities`,
+- [x] 3.2 Escribir `supabase/migrations/0001_init.sql` con las tablas `qualities`, `user_qualities`,
       `questionnaires`, `comparisons` (con `on delete cascade` hacia sus resultados por pregunta y
       agregado, para soportar el recálculo), `comparison_question_results`,
       `comparison_aggregated_results`, `conversations` (`user_a_id`/`user_b_id` FK `users.id`
@@ -87,17 +87,17 @@
       de perfil `users` (`id` FK a `auth.users.id`, `name`, `alias` con restricción `UNIQUE`,
       `photo_url`, `questionnaire_completed_at`, `needs_recalculation boolean not null default false`) e
       índices descritos en el diseño
-- [ ] 3.3 Test de integración (stack local de Supabase, decisión 11): autenticando el cliente de test
+- [x] 3.3 Test de integración (stack local de Supabase, decisión 11): autenticando el cliente de test
       con el JWT real de una cuenta del pool (`signInWithPassword`, no `service_role`), con RLS
       activada, un usuario autenticado no puede leer ni escribir la fila de `users`/`questionnaires` de
       otro usuario a través del cliente directo de Supabase, ni leer ni escribir en una
       `conversation`/`message` de la que no es `user_a_id`/`user_b_id`
-- [ ] 3.4 Escribir las políticas RLS de `users`, `user_qualities`, `questionnaires`, `conversations` y
+- [x] 3.4 Escribir las políticas RLS de `users`, `user_qualities`, `questionnaires`, `conversations` y
       `messages` (`auth.uid() = id`/`user_id`/`user_a_id`/`user_b_id`/`sender_id` según corresponda,
       para lectura y escritura propia) para que pase el test anterior
-- [ ] 3.5 Crear el bucket público `user-photos` en Supabase Storage y documentar su configuración en
+- [x] 3.5 Crear el bucket público `user-photos` en Supabase Storage y documentar su configuración en
       `docs/architecture.md`
-- [ ] 3.6 Implementar `apps/backend/src/supabase/supabase.service.ts` como única puerta de acceso a
+- [x] 3.6 Implementar `apps/backend/src/supabase/supabase.service.ts` como única puerta de acceso a
       datos con la `service_role` key (para operaciones cross-usuario como el matching), sin exponer
       detalles de Postgres al resto de servicios
 

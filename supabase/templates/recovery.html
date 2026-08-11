@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recupera tu contraseña — AfinIA</title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #fdf0d5; font-family: 'Poppins', 'DM Sans', Roboto, system-ui, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #fdf0d5; padding: 32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+            <tr>
+              <td style="background: linear-gradient(160deg, #fb8500, #be1e2d); padding: 32px 32px 24px; text-align: center;">
+                <span style="color: #ffffff; font-size: 22px; font-weight: 600; letter-spacing: 0.5px;">AfinIA</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px;">
+                <h1 style="margin: 0 0 16px; color: #000000; font-size: 20px; font-weight: 600;">
+                  Recupera tu contraseña
+                </h1>
+                <p style="margin: 0 0 24px; color: #000000; font-size: 15px; line-height: 1.5;">
+                  Hemos recibido una solicitud para restablecer la contraseña de tu cuenta de AfinIA.
+                  Si no has sido tú, puedes ignorar este correo con tranquilidad — tu contraseña no
+                  cambiará.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px;">
+                  <tr>
+                    <td style="border-radius: 8px; background-color: #000000;">
+                      <a
+                        href="{{ .ConfirmationURL }}"
+                        style="display: inline-block; padding: 12px 28px; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 8px;"
+                        >Restablecer contraseña</a
+                      >
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin: 0; color: #555555; font-size: 13px; line-height: 1.5;">
+                  Si el botón no funciona, copia y pega este enlace en tu navegador:<br />
+                  <a href="{{ .ConfirmationURL }}" style="color: #be1e2d; word-break: break-all;">{{ .ConfirmationURL }}</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin: 16px 0 0; color: #777777; font-size: 12px;">
+            Este es un correo automático de AfinIA — proyecto de Trabajo de Fin de Máster.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

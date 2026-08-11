@@ -117,12 +117,13 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
+# Bucket público de fotos de perfil (tarea 3.5 de tasks.md; límites reforzados también en
+# apps/backend/src/.../photo-upload.service.ts, tarea 6.1 — nunca confiar solo en el límite del
+# bucket).
+[storage.buckets.user-photos]
+public = true
+file_size_limit = "2MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
@@ -242,6 +243,11 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# Plantilla de recuperación de contraseña con la marca AfinIA (tarea 3.1 de tasks.md).
+[auth.email.template.recovery]
+subject = "Recupera tu contraseña — AfinIA"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

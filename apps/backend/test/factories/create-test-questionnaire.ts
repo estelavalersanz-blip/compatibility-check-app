@@ -9,16 +9,16 @@ export interface AnswerSetLike {
 export interface CreateTestQuestionnaireOptions {
   userId: string;
   answers: AnswerSetLike[];
+  /**
+   * Por defecto `true`: además de guardar `answers`, marca `users.questionnaire_completed_at`
+   * (fuente única de "cuestionario completo", ver `supabase/migrations/0001_init.sql`) — pasa
+   * `false` para simular un borrador parcial sin completar.
+   */
   completed?: boolean;
 }
 
 /**
- * Inserta un cuestionario de test para un usuario ya existente.
- *
- * ⚠️ Columnas provisionales: `design.md` (decisión 3.2) fija el nombre de la tabla `questionnaires`
- * y confirma que existe `users.questionnaire_completed_at`, pero no detalla aún las columnas
- * propias de `questionnaires` — ajusta `user_id`/`answers`/`completed_at` si la migración de la
- * tarea 3.2 las nombra de otra forma.
+ * Inserta un cuestionario de test (borrador o completo) para un usuario ya existente.
  */
 export async function createTestQuestionnaire(
   supabaseAdmin: SupabaseClient,
@@ -26,11 +26,7 @@ export async function createTestQuestionnaire(
 ): Promise<{ id: string }> {
   const { data, error } = await supabaseAdmin
     .from('questionnaires')
-    .insert({
-      user_id: options.userId,
-      answers: options.answers,
-      completed_at: options.completed === false ? null : new Date().toISOString(),
-    })
+    .insert({ user_id: options.userId, answers: options.answers })
     .select('id')
     .single();
 
@@ -38,6 +34,19 @@ export async function createTestQuestionnaire(
     throw new Error(
       `No se pudo crear el cuestionario de test para "${options.userId}": ${error.message}`,
     );
+  }
+
+  if (options.completed !== false) {
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ questionnaire_completed_at: new Date().toISOString() })
+      .eq('id', options.userId);
+
+    if (updateError) {
+      throw new Error(
+        `No se pudo marcar el cuestionario como completado para "${options.userId}": ${updateError.message}`,
+      );
+    }
   }
 
   return data;
