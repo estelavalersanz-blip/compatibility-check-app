@@ -17,8 +17,11 @@ context: |
   - IA: Groq API (modelos open-weight Llama 3.x) como proveedor principal vía una interfaz
     AiProvider desacoplada (Dependency Inversion); OpenRouter como proveedor alternativo detrás de
     la misma interfaz.
-  - Despliegue gratuito objetivo: frontend en Vercel/Netlify, backend en Render, BD/Storage en
-    Supabase.
+  - Despliegue gratuito objetivo: frontend en Vercel (integración Git nativa, sin YAML de deploy
+    propio), backend en Render, BD/Storage/Auth en Supabase. CI en GitHub Actions como puerta de
+    calidad (lint + test + build); sin Terraform (aprovisionamiento manual documentado). Tests de
+    integración contra el stack local de Supabase (CLI + Docker). Logs: `nestjs-pino` + Better Stack
+    (Logtail) para histórico buscable.
   - Perfil de la desarrolladora: experiencia previa en .NET, AngularJS y SQL Server — se prioriza
     NestJS por su similitud arquitectónica con ASP.NET Core (decoradores, módulos, DI).
 

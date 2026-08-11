@@ -27,14 +27,15 @@ incluye la subida de una foto, y los usuarios seed llevan fotos genéricas de ej
 
 **El alta requiere autenticación real por email y contraseña**, en dos pasos: (1) pantalla de
 autenticación con email + contraseña, comprobando que el email no exista ya (o login con esas mismas
-credenciales, con opción de recuperar contraseña por email); (2) una vez autenticado, una segunda
-pantalla para completar el perfil con nombre, **alias único**, la foto y la selección de las 5
-cualidades. Las 15 cualidades se muestran como cards independientes seleccionables: al llegar a 5
-marcadas, las cards restantes se deshabilitan (no se puede marcar una sexta) hasta desmarcar alguna; el
-envío del formulario se bloquea mientras la selección no sea exactamente 5, pero el resto de campos
-(nombre, alias, foto) se pueden rellenar sin esa restricción. La interfaz autenticada muestra en la esquina
-superior derecha un botón de cerrar sesión y un botón de configuración para editar más adelante
-contraseña, nombre, alias, foto y cualidades.
+credenciales, con opción de recuperar contraseña por email); (2) una vez autenticado, un **wizard de 2
+pasos** para completar el perfil — paso 2a: nombre, **alias único** y la foto; paso 2b: la selección de
+las 5 cualidades. Las 15 cualidades se muestran como **píldoras** independientes seleccionables: al
+llegar a 5 marcadas, las píldoras restantes se deshabilitan (no se puede marcar una sexta) hasta
+desmarcar alguna; el envío (al terminar el paso 2b) se bloquea mientras la selección no sea exactamente
+5, pero el resto de campos (nombre, alias, foto, en el paso 2a) se pueden rellenar sin esa restricción.
+Sin completar este perfil, ninguna otra pantalla es accesible (`ProfileGuard`). La interfaz autenticada
+muestra en la esquina superior derecha un icono de chat, un botón de configuración y un botón de cerrar
+sesión para editar más adelante contraseña, nombre, alias, foto y cualidades.
 
 **Edición y recálculo bajo demanda**: desde la página de perfil, el usuario puede editar también sus
 respuestas del cuestionario y su selección de cualidades. Cualquiera de las dos ediciones habilita un
@@ -61,10 +62,11 @@ formen parte del alcance actual.
 | Backend | **NestJS (Node.js + TypeScript)** | Arquitectura por decoradores/módulos/DI casi calcada de ASP.NET Core (Controllers, Services, `[ApiController]` ≈ `@Controller`), así que la transición desde .NET es mínima. A la vez, TypeScript/Node es más natural que un lenguaje puramente OO para manipular JSON dinámico y orquestar llamadas async a APIs de IA — el punto que la propia usuaria señaló. |
 | Base de datos | **PostgreSQL vía Supabase (free tier)** | Relacional como SQL Server (SQL transferible), con columnas `JSONB` para la estructura prefijada de respuestas/resultados. |
 | Almacenamiento de fotos | **Supabase Storage (free tier, ~1GB)** | Mismo proyecto que la BD, un único proveedor/API key que gestionar; genera URLs públicas para pintar la foto de cada candidato en el dashboard. |
-| UI / diseño | **AfinIA** (nombre de marca, con logo propio) sobre **Bootstrap 5 + Bootstrap Icons** (vía `@ng-bootstrap/ng-bootstrap` para componentes interactivos), recompilado desde Sass con **paleta propia** (`#FB8500` Princeton Orange primario, `#BE1E2D` Carmine secundario, `#000000` texto/oscuro, `#FDF0D5` Papaya Whip fondo suave, `#FFFFFF` blanco base) y **tipografía Poppins** (alternativas: DM Sans/Roboto) | Sistema de diseño único para toda la interfaz (layout, formularios, botones, tarjetas, cabecera) e iconografía, sin CSS a medida ni mezclar librerías de iconos; `ng-bootstrap` evita depender del bundle JS de Bootstrap (pensado para vanilla/jQuery), que conflictuaría con la detección de cambios de Angular. Los ejemplos oficiales de Bootstrap (*Sign-in*, *Dashboard*, *Album*) sirven de esqueleto de partida para cada shell/patrón, reskinado con los tokens propios — el cuestionario ya no se basa en el ejemplo *Accordion*, es un wizard de 6 pasos (ver más abajo). **La interfaz es completamente responsive** (móvil <768px, tablet 768–991px, escritorio ≥992px) usando el grid y utilidades responsive de Bootstrap, ya que no hay app nativa/APK — el acceso es exclusivamente web. Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` para que las 8 pantallas sean coherentes entre sí sin depender de recordarlo manualmente. |
-| Autenticación | **Supabase Auth (email/contraseña)** | Mismo proyecto que la BD/Storage; hashea y guarda la contraseña en la misma Postgres, emite JWT de sesión y resuelve el email de recuperación de contraseña con su SMTP gratuito — sin implementar hashing, tokens ni envío de email a mano. El frontend Angular llama a Supabase Auth directamente (`@supabase/supabase-js`); el backend solo valida el JWT en un guard. |
+| UI / diseño | **AfinIA** (nombre de marca, con logo propio) sobre **Bootstrap 5 + Bootstrap Icons** (vía `@ng-bootstrap/ng-bootstrap` para componentes interactivos que sí lo necesitan — modales, dropdowns; el cuestionario usa un estado propio, no `NgbAccordion`/`NgbNav`), recompilado desde Sass con **paleta propia** (`#FB8500` Princeton Orange, `#BE1E2D` Carmine, `#000000` texto/oscuro y **relleno del botón de acción principal en toda la app** — `btn-dark`, no `btn-primary`, `#FDF0D5` Papaya Whip fondo suave, `#FFFFFF` blanco base) y **tipografía Poppins** (alternativas: DM Sans/Roboto) | Sistema de diseño único para toda la interfaz (layout, formularios, botones, tarjetas, cabecera) e iconografía, sin CSS a medida ni mezclar librerías de iconos. Los ejemplos oficiales de Bootstrap (*Sign-in*, *Dashboard*, *Album*) sirven de esqueleto de partida para cada shell/patrón, reskinado con los tokens propios — el cuestionario ya no se basa en el ejemplo *Accordion*, es un wizard de 6 pasos con una pregunta a pantalla completa (ver más abajo). Una **landing pública** (fondo degradado, animación de entrada del logo) precede a cualquier pantalla de autenticación. **La interfaz es completamente responsive** (móvil <768px, tablet 768–991px, escritorio ≥992px) usando el grid y utilidades responsive de Bootstrap, ya que no hay app nativa/APK — el acceso es exclusivamente web. Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` para que las 12 pantallas sean coherentes entre sí sin depender de recordarlo manualmente. |
+| Autenticación | **Supabase Auth (email/contraseña)** | Mismo proyecto que la BD/Storage; hashea y guarda la contraseña en la misma Postgres, emite JWT de sesión y resuelve el email de recuperación de contraseña con su SMTP gratuito — sin implementar hashing, tokens ni envío de email a mano, y sin proveedor de email adicional que gestionar. El frontend Angular llama a Supabase Auth directamente (`@supabase/supabase-js`); el backend solo valida el JWT en un guard. |
 | IA | **Groq API** (modelos open-weight Llama 3.x) como proveedor principal; **OpenRouter** mencionado como alternativa/comparativa | Free tier rápido, buen soporte de salida JSON estructurada ("JSON mode"), modelos open source. |
-| Despliegue gratuito | **Frontend en Vercel/Netlify + Backend en Render + BD/Auth en Supabase** | Combinación 100% free tier sin tarjeta de crédito, estándar para proyectos académicos. |
+| Despliegue gratuito | **Frontend en Vercel + Backend en Render + BD/Auth en Supabase**, todo con su integración Git nativa (sin Terraform, sin YAML de despliegue propio) | Combinación 100% free tier sin tarjeta de crédito, estándar para proyectos académicos. CI (lint+test+build, unitarios e integración) vive en GitHub Actions como puerta de calidad antes de mergear — el despliegue en sí lo dispara cada plataforma por su cuenta, no un job de Actions (ver "CI/CD, sin Terraform" más abajo). |
+| Logs | **`nestjs-pino`** (backend) con stdout en Render + transport a **Better Stack (Logtail)** free tier para histórico buscable | Render no conserva histórico más allá de la sesión reciente en el free tier; Logtail cubre eso sin montar infraestructura propia. El transport solo se activa si `LOGTAIL_SOURCE_TOKEN` está definido (nunca en tests/local). |
 
 No hay incompatibilidades entre estas piezas; el resto del documento detalla cómo encajan.
 
@@ -185,13 +187,14 @@ compatibility-check-app/
 │   │   └── chat.service.ts           # valida elegibilidad contra comparisons con service_role
 │   └── supabase/supabase.service.ts
 ├── apps/frontend/src/app/
+│   ├── features/landing/             # NUEVO: pantalla pública en "/", antes de cualquier shell
 │   ├── core/shell/                   # NUEVO: cabecera con iconos de chat, configuración y logout
-│   ├── features/auth/                # NUEVO: login, registro paso 1, forgot/reset password
-│   ├── features/registration/        # paso 2: nombre + alias + foto + cards de 5/15 cualidades
-│   ├── features/settings/            # NUEVO: editar contraseña, nombre, alias, foto y cualidades
-│   ├── features/questionnaire/       # 36 preguntas, wizard de 6 pasos con barra de peso segmentada
+│   ├── features/auth/                # NUEVO: login, registro paso 1, forgot/reset password (Shell B, degradado)
+│   ├── features/registration/        # paso 2: wizard de 2 pasos (foto+nombre+alias / píldoras de 5 cualidades)
+│   ├── features/settings/            # NUEVO: editar contraseña, nombre, alias, foto, cualidades y acceso al cuestionario
+│   ├── features/questionnaire/       # 36 preguntas, wizard de 6 pasos + bienvenida (solo creación)
 │   ├── features/processing/          # calculando candidatos + analizando (polling)
-│   ├── features/results-dashboard/   # 3 tarjetas (foto + alias + score + radar) + detalle + Chatear
+│   ├── features/results-dashboard/   # hasta 3 tarjetas (foto + alias + score + radar) + detalle + Chatear
 │   └── features/chats/               # NUEVO: listado de conversaciones + features/chats/:id (chat)
 └── supabase/
     ├── migrations/0001_init.sql      # incluye conversations/messages
@@ -213,12 +216,21 @@ compatibility-check-app/
   key, nunca el navegador directamente.
 - **Cambio de contraseña**: la pantalla de configuración exige la contraseña actual (se reintenta
   `signInWithPassword` con ella para confirmarla) antes de llamar a `updateUser({password})`.
-- **Cualidades como cards**: las 15 se muestran como elementos seleccionables independientes; desmarcar
-  es siempre libre, pero al llegar a 5 marcadas las cards restantes se deshabilitan (no se puede marcar
-  una sexta hasta desmarcar alguna) — el límite se hace cumplir en la propia interacción, no solo al
-  enviar. El botón de enviar (registro paso 2 o guardado en configuración) permanece además deshabilitado
-  mientras la selección no sea exactamente 5 — el resto de campos del formulario no se bloquean por esto.
-  La validación de "exactamente 5" se repite en el backend como fuente de verdad.
+- **Cualidades como píldoras** (rediseño sobre mockup — ya no cards): las 15 se muestran como
+  elementos seleccionables independientes (`rounded-pill`); desmarcar es siempre libre, pero al llegar a
+  5 marcadas las píldoras restantes se deshabilitan (no se puede marcar una sexta hasta desmarcar
+  alguna) — el límite se hace cumplir en la propia interacción, no solo al enviar. El botón de enviar
+  (registro paso 2 o guardado en configuración) permanece además deshabilitado mientras la selección no
+  sea exactamente 5 — el resto de campos del formulario no se bloquean por esto. La validación de
+  "exactamente 5" se repite en el backend como fuente de verdad.
+- **Completar perfil como wizard de 2 pasos** (paso 2a: foto + nombre + alias; paso 2b: cualidades) —
+  ver "Frontend Angular" más abajo. Es una división puramente de cliente: sigue siendo un único
+  `POST /users/me/profile` al terminar el paso 2b.
+- **Sin perfil, cualquier ruta redirige a completar perfil paso 1**: un usuario autenticado sin fila en
+  `users` no puede llegar a ninguna otra pantalla (dashboard, cuestionario, configuración, chats) por
+  URL directa ni de otra forma — un `ProfileGuard` de Angular lo redirige siempre a completar perfil,
+  tanto justo tras el login como en cualquier intento de navegación posterior, hasta que complete su
+  perfil.
 
 ## Modelo de datos (PostgreSQL / Supabase)
 
@@ -415,55 +427,69 @@ function weightedDimensionMean(results: ComparisonResult[], dimension: Dimension
 
 ## Frontend Angular
 
-Pantallas:
-1. **Autenticación** (`features/auth`): pantalla con dos modos — **Login** (email + contraseña +
-   enlace "¿olvidaste tu contraseña?" que abre el flujo de recuperación por email) y **Registro paso 1**
-   (email + contraseña, comprobando que el email no exista ya, vía `supabase.auth.signUp`). Incluye la
-   pantalla de destino del enlace de recuperación para establecer una nueva contraseña.
-2. **Completar perfil / Registro paso 2** (`features/registration`): nombre, alias (validado en vivo
-   contra `GET /users/check-alias`), subida de foto (preview antes de enviar), y selección de 5 de las
-   15 cualidades como **cards independientes**: al llegar a 5 marcadas, las cards restantes se
-   deshabilitan (no se puede marcar una sexta hasta desmarcar alguna), y el botón de enviar permanece
-   deshabilitado mientras la selección no sea exactamente 5, sin bloquear el resto de campos. Usa el
-   Shell A (autenticado) pero **sin el enlace de Configuración** en la cabecera — solo cerrar sesión,
-   porque todavía no existe un perfil que configurar.
-3. **Formulario de 36 preguntas** (`features/questionnaire`): es un **wizard de 6 pasos** — las 36
-   preguntas se agrupan en 6 bloques de 6 preguntas (mismo agrupamiento del cálculo ponderado, pesos
-   5/5/15/20/25/30%), pero **nunca se muestran los 6 a la vez**: solo el bloque activo, con una flecha
-   para volver al anterior (o salir del cuestionario desde el bloque 1). Encima del bloque activo hay una
-   **barra de progreso segmentada por peso** (6 tramos con ancho proporcional al peso, coloreados con un
-   gradiente estilo semáforo que va de blanco/crema (menor peso) a rojo/negro intenso (mayor peso)) — los
-   bloques 1 y 2 pesan igual (5%) y se ven idénticos. **El porcentaje de peso no se muestra como texto**
-   en ningún sitio (solo se comunica mediante el ancho/color de cada tramo). La navegación entre bloques
-   es libre (avanzar sin completar el actual) y **cualquier bloque ya visitado se puede volver a revisar
-   y editar** — retrocediendo paso a paso o saltando directo desde su tramo en la barra — sin perder el
-   punto más avanzado alcanzado (un botón "Volver a donde estabas" te devuelve allí tras revisar); no se
-   puede saltar a un bloque aún no alcanzado. Dentro del bloque activo, las 6 preguntas se presentan como
-   **pestañas** (una pregunta visible a la vez, con transición al cambiar) en vez de apiladas
-   verticalmente, y el `textarea` de la pregunta activa ocupa todo el ancho de la card con altura para
-   al menos 4 líneas (`rows="4"`, no un campo de una sola línea). El progreso **ya no depende de
-   `localStorage`**: cada respuesta se autoguarda como borrador contra
-   `PUT /users/me/questionnaire/draft` (persiste entre sesiones/dispositivos), y al abrir la pantalla se
-   precarga con `GET /users/me/questionnaire` —incluido al volver a iniciar sesión—, posicionando el
-   wizard en el primer bloque incompleto. El botón del bloque 6 ("Enviar cuestionario") permanece
-   deshabilitado hasta tener las 36 respuestas completas (guardadas como borrador o escritas en el
-   momento); solo entonces dispara el envío final a `POST /users/me/questionnaire`. Componente
-   reutilizable también en modo "edición" desde el perfil (envía a `PATCH /users/me/questionnaire`,
-   prerellenado con las respuestas actuales).
-4. **Procesando** (`features/processing`): tras enviar el cuestionario, polling cada 3–5s a
-   `GET /users/me/comparisons` mostrando el avance ("comparando con Ana... 2 de 3 completadas").
-5. **Dashboard de resultados** (`features/results-dashboard`): **3 tarjetas de resultado**, una por
+Pantallas (12 en total — ver `.claude/skills/ui-design-consistency/` para el marcado exacto de cada una):
+
+0. **Landing pública** (`features/landing`, en `/`): antes de cualquier shell — no es Shell A (no hay
+   sesión) ni Shell B (no es un formulario). Fondo degradado de marca (mismo que Shell B), logo que se
+   ensambla trazo a trazo al cargar, titular + frase explicando el producto, y **un único botón** ("Iniciar
+   sesión") hacia login. Si `/` se visita con sesión activa, la landing no se muestra — redirige directo
+   a la resolución autenticada (completar perfil / cuestionario / dashboard, ver más abajo). Animación de
+   entrada respeta `prefers-reduced-motion`.
+1. **Autenticación** (`features/auth`, Shell B — fondo degradado a pantalla completa, sin card blanca):
+   **Login** (email + contraseña + enlace "¿olvidaste tu contraseña?"), **Registro paso 1** (email +
+   contraseña, comprobando que el email no exista ya, vía `supabase.auth.signUp`), y las pantallas de
+   recuperación/nueva contraseña. El logo (blanco) aparece en las 4; solo login añade el wordmark
+   "AfinIA", el resto muestra su propio título. El botón principal es siempre `btn-dark` (negro), no
+   naranja — regla transversal a toda la app, no solo a estas pantallas.
+2. **Completar perfil / Registro paso 2** (`features/registration`, Shell A minimalista — logo + solo
+   cerrar sesión, sin chat/configuración): **wizard de 2 pasos** con paginación por puntos. Paso 2a:
+   foto (preview circular antes de enviar), nombre, alias (validado en vivo contra
+   `GET /users/check-alias`) — botón "Siguiente", solo avanza de paso, no envía nada. Paso 2b: 5 de las
+   15 cualidades como **píldoras** (no cards): al llegar a 5 marcadas, las píldoras restantes se
+   deshabilitan hasta desmarcar alguna — botón "Finalizar", que es el único punto que envía
+   `POST /users/me/profile` con los datos de ambos pasos. **Sin perfil, no se puede llegar a ninguna otra
+   pantalla** (`ProfileGuard`): cualquier intento de navegar a otra ruta redirige de vuelta aquí.
+3. **Cuestionario de 36 preguntas** (`features/questionnaire`): en **modo creación** (primera vez), antes
+   del wizard hay una pantalla de bienvenida (mismo fondo degradado, "Cuestionario de compatibilidad",
+   botón "Iniciar") — se omite por completo en **modo edición** (desde configuración), que entra directo
+   al wizard ya prerellenado. El wizard agrupa las 36 preguntas en **6 bloques de 6** (mismo agrupamiento
+   del cálculo ponderado, pesos 5/5/15/20/25/30%), **nunca los 6 a la vez**: solo el bloque activo, con
+   una flecha para volver al anterior (o salir del cuestionario desde el bloque 1). Encima, una **barra
+   de progreso segmentada por peso** (6 tramos con ancho proporcional al peso, gradiente de blanco/crema
+   a rojo/negro) — los bloques 1 y 2 pesan igual (5%) y se ven idénticos, y **el porcentaje nunca se
+   muestra como texto**. La navegación entre bloques es libre, y cualquier bloque ya visitado se puede
+   revisar/editar saltando directo desde su tramo, sin perder el punto más avanzado alcanzado (botón
+   "Volver a donde estabas"). Dentro del bloque activo, **cada pregunta ocupa toda la pantalla, una a la
+   vez** (ya no pestañas): una fila de 6 puntos + flechas prev/next debajo, clicables para saltar directo
+   a una pregunta ya visitada, y el `textarea` a ancho completo con `rows="4"` mínimo. El progreso se
+   autoguarda contra `PUT /users/me/questionnaire/draft` (nunca `localStorage`), precargado con
+   `GET /users/me/questionnaire` al abrir. El botón del bloque 6 depende del modo: **"Enviar
+   cuestionario"** en creación (→ `POST /users/me/questionnaire`, navega a procesando) o **"Guardar y
+   recalcular compatibilidad"** en edición (→ encadena `PATCH /users/me/questionnaire` +
+   `POST /users/me/recalculate` en un solo clic, navega al dashboard ya refrescado — sin paso manual
+   aparte).
+4. **Procesando** (`features/processing`): spinner + una fila por cada candidato ya seleccionado con su
+   icono de estado (pendiente/analizando, completado, error) — **nunca un porcentaje agregado ni "N de
+   3"**, porque el orden de finalización entre comparaciones no es predecible. El polling a
+   `GET /users/me/comparisons` se detiene y navega al dashboard en cuanto todas están en
+   `completed`/`error`.
+5. **Dashboard de resultados** (`features/results-dashboard`): **hasta 3 tarjetas de resultado**, una por
    candidato, cada una con su foto, alias, score final destacado y un **gráfico radar de las 6
    dimensiones**; al expandir una tarjeta se ve el detalle de las 36 preguntas con sus puntuaciones y la
    explicación de la IA — **nunca el texto de ninguna respuesta**, ni la propia ni la del candidato; solo
    puntuaciones y, opcionalmente, la justificación de la IA. Las tarjetas se ordenan de mayor a menor
-   `compatibilidad_final`. Incluye el botón "recalcular compatibilidad" (habilitado solo si
+   `compatibilidad_final`. Incluye el botón "recalcular compatibilidad" (`btn-dark`, habilitado solo si
    `needs_recalculation=true`), que llama a `POST /users/me/recalculate` y refresca el dashboard al
    completarse. Cada tarjeta incluye además un botón **"Chatear"** que inicia (o reutiliza, si ya
    existía) una conversación con ese candidato vía `POST /conversations` y navega a ella.
-6. **Configuración** (`features/settings`): accesible desde el botón de ajustes de la cabecera; edita
-   nombre, alias, foto y cualidades (mismas reglas que el registro paso 2), incluye el cuestionario en
-   modo edición, y cambio de contraseña exigiendo la contraseña actual.
+6. **Configuración** (`features/settings`): accesible desde el botón de ajustes de la cabecera, con 3
+   secciones dentro de la misma card. **Perfil**: nombre, alias, foto y píldoras de cualidad (mismas
+   reglas que el registro) — botón "Guardar cambios"; si cambiaron las cualidades, aparece un aviso con
+   un atajo **"Recalcular compatibilidad ahora"** que llama directo a `POST /users/me/recalculate` sin
+   tener que ir antes al dashboard. **Cuestionario**: un resumen (fecha de finalización) y un botón
+   **"Editar tus respuestas"** que **navega** (no despliega inline) a `features/questionnaire` en modo
+   edición — ver el punto 3 para el guardado combinado con recálculo. **Contraseña**: contraseña actual +
+   nueva, con reautenticación.
 7. **Chats** (`features/chats` y `features/chats/:id`): listado de todas las conversaciones del usuario
    (las que él inició y las que otros le iniciaron a él, aunque no le tengan como candidato propio),
    ordenadas por actividad reciente, con indicador de no leídos; al abrir una, la conversación muestra
@@ -471,14 +497,15 @@ Pantallas:
    `$light`) y un campo para responder. Se actualiza por sondeo (~4s con la conversación abierta, ~20-30s
    el contador de no leídos del menú) — sin WebSockets (ver `design.md` decisión 9).
 
-Toda pantalla autenticada comparte una **cabecera** (`core/shell`) con, en la esquina superior derecha,
-el icono de chat (con indicador de no leídos), el botón de configuración y el botón de cerrar sesión
-(`supabase.auth.signOut`), en ese orden.
+Toda pantalla autenticada (salvo completar perfil, que solo lleva logo + cerrar sesión) comparte una
+**cabecera** (`core/shell`) con, en la esquina superior derecha, el icono de chat (con indicador de no
+leídos), el botón de configuración y el botón de cerrar sesión (`supabase.auth.signOut`), en ese orden.
 
-**Enrutamiento de la página principal (`/`)**: mientras el usuario autenticado no haya completado nunca
-su cuestionario, la home es la pantalla del cuestionario (paso de creación); una vez completado, la home
-es el dashboard de resultados, independientemente de si hay comparaciones pendientes de análisis o de
-recálculo (el propio dashboard ya refleja esos estados intermedios).
+**Enrutamiento de la página principal (`/`)**, en orden de prioridad: sin sesión → landing (punto 0); con
+sesión pero **sin fila de perfil** → completar perfil paso 1, sin excepción, para cualquier ruta que se
+intente (`ProfileGuard`); con perfil pero sin cuestionario completado nunca → cuestionario; con
+cuestionario completado → dashboard de resultados, independientemente de si hay comparaciones pendientes
+de análisis o de recálculo (el propio dashboard ya refleja esos estados intermedios).
 
 **Responsive**: todas las pantallas se adaptan a móvil/tablet/escritorio con el grid de Bootstrap — la
 cabecera colapsa a menú hamburguesa en móvil, el wizard del cuestionario y los formularios no generan scroll horizontal,
@@ -515,19 +542,42 @@ se pueden pintar 3 radares independientes (uno por tarjeta) para mantener la lec
   seteado), y opcionalmente precalcula también algunas filas de
   `comparisons`/`comparison_question_results`/`comparison_aggregated_results` entre usuarios seed para
   tener un dashboard de ejemplo sin depender de la IA en cada demo.
+- **Cuenta de demostración sin perfil**: además de los 10 usuarios sintéticos completos, una cuenta de
+  `auth.users` adicional (email/contraseña conocidos) sin fila en `users`, para mostrar en vivo durante
+  la presentación el aterrizaje forzado en completar perfil paso 1 (`ProfileGuard`). Su contraseña
+  **no se documenta en ningún fichero versionado** del repositorio.
 
-## Despliegue gratuito
+## CI/CD y despliegue gratuito (ver `design.md` decisión 10 — sin Terraform)
 
+**CI (GitHub Actions)**: `.github/workflows/ci.yml` corre en cada push/PR contra `main` — instala el
+monorepo, ejecuta lint + test unitarios + build de `apps/backend` y `apps/frontend`, y un segundo step
+que instala la Supabase CLI, levanta el stack local (`supabase start`) y corre `test:integration` contra
+él antes de `supabase stop` (ver "Tests de integración" más abajo). La rama `main` exige este workflow
+en verde para poder mergear — es la única puerta de calidad.
+
+**CD, sin YAML de despliegue propio**: ni Vercel ni Render se despliegan *desde* Actions — cada uno usa
+su integración Git nativa (preview por PR + producción al mergear a `main`), sin secretos de deploy en
+GitHub.
+
+**Terraform: descartado explícitamente** para este tamaño de proyecto (3 recursos, un solo entorno, sin
+equipo) — aprovisionamiento manual documentado paso a paso en `docs/architecture.md`.
+
+Pasos de aprovisionamiento manual:
 1. **Supabase**: proyecto nuevo → ejecutar `0001_init.sql` → copiar `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`. Habilitar Auth si se usa.
-2. **Backend en Render** (free tier): root `apps/backend`, build `npm install && npm run build`,
-   start `node dist/main.js`. Variables: `DATABASE_URL`, `SUPABASE_*` (incluida `service_role`),
-   `GROQ_API_KEY`, `OPENROUTER_API_KEY` (opcional), `CORS_ORIGIN`.
-3. **Frontend en Vercel/Netlify**: root `apps/frontend`, build `ng build`, output
-   `dist/frontend/browser`, `environment.prod.ts` con la URL del backend en Render y la `SUPABASE_URL`
-   + `SUPABASE_ANON_KEY` (el frontend llama a Supabase Auth directamente).
-4. Documentar en la memoria el "cold start" del free tier de Render (~30–60s tras inactividad) como
-   limitación conocida, mitigada con una pantalla de carga explicativa.
+   `SUPABASE_SERVICE_ROLE_KEY`. Habilitar Auth (SMTP integrado, sin proveedor de email adicional).
+2. **Better Stack (Logtail)**: cuenta free tier, crear la fuente/*source* del backend → copiar el
+   `LOGTAIL_SOURCE_TOKEN` (ver "Logging estructurado" más abajo).
+3. **Backend en Render** (free tier, integración Git nativa): root `apps/backend`, build
+   `npm install && npm run build`, start `node dist/main.js`. Variables de entorno (secretos de Render,
+   nunca en el repo): `SUPABASE_*` (incluida `service_role`), `GROQ_API_KEY`, `OPENROUTER_API_KEY`
+   (opcional), `LOGTAIL_SOURCE_TOKEN`, `CORS_ORIGIN`.
+4. **Frontend en Vercel** (integración Git nativa, Root Directory = `apps/frontend` dentro del
+   monorepo): build `ng build`, output `dist/frontend/browser`, variables `SUPABASE_URL` +
+   `SUPABASE_ANON_KEY` (no son secretas) y la URL pública del backend en Render.
+5. Documentar en `docs/architecture.md` el "cold start" del free tier de Render (~30–60s tras
+   inactividad, mitigado con la pantalla de procesando/carga explicativa), la ausencia de Terraform y
+   por qué, y dónde vive cada credencial (política de secretos) y cada log (Render para tail en vivo,
+   Logtail para histórico).
 
 ## Riesgos y limitaciones (para la memoria del TFM)
 
@@ -553,7 +603,17 @@ se pueden pintar 3 radares independientes (uno por tarjeta) para mantener la lec
   bajo para emails transaccionales (confirmación/recuperación de contraseña); suficiente para una demo
   con pocos usuarios de prueba, documentar como limitación conocida si se satura.
 - **RLS mal configurada** podría exponer perfiles/cuestionarios de otros usuarios: mitigar con tests de
-  integración específicos que verifiquen el aislamiento por usuario antes de dar la v1 por completa.
+  integración específicos (contra el stack local de Supabase, ver más abajo) que verifiquen el
+  aislamiento por usuario antes de dar la v1 por completa.
+- **Aprovisionamiento manual (sin Terraform)** puede perderse si no se documenta bien: mitigado
+  escribiendo los pasos exactos en `docs/architecture.md`, no solo en la memoria del desarrollador; al
+  ser un único entorno no hay una segunda instancia con la que desincronizarse.
+- **Free tier de Better Stack (Logtail)** tiene límites de volumen/retención: mitigado activando el
+  transport solo cuando hay `LOGTAIL_SOURCE_TOKEN` (nunca en tests/local), acotando el volumen real al
+  tráfico de la demo.
+- **Los tests de integración exigen Docker Desktop en local** (Supabase CLI): solo afecta al ciclo de
+  integración, no al de unitarios (TDD rápido); en CI no hace falta instalar nada porque los runners de
+  GitHub Actions ya traen Docker.
 
 **Fuera de alcance v1** (mencionar solo como líneas futuras): más idiomas, otros sets de preguntas,
 login social/OAuth, verificación de email obligatoria antes de continuar el registro, panel de
@@ -602,8 +662,10 @@ sistema, solo sustituir piezas concretas.
   datos personales sensibles; comercializar la app exigiría política de privacidad, base legal de
   tratamiento, acuerdo de encargado de tratamiento con el proveedor de IA elegido, y mecanismo de
   borrado de datos a petición del usuario.
-- **Observabilidad**: añadir logging estructurado y monitorización de errores (ej. Sentry) y de coste
-  de IA (tokens consumidos por análisis) para poder facturar/controlar el gasto en producción.
+- **Observabilidad más allá de logs**: el logging estructurado con persistencia (Pino + Logtail) ya es
+  parte de la v1 (ver decisión 8b) — lo que queda como línea futura es monitorización de errores
+  dedicada (ej. Sentry) y de coste de IA (tokens consumidos por análisis) para poder facturar/controlar
+  el gasto en producción.
 - **Login social/OAuth**: añadir Google/Apple/etc. sobre la autenticación por email/contraseña ya
   existente en v1, reduciendo fricción de alta si se comercializa.
 - **Verificación de email obligatoria**: activar la confirmación por email de Supabase Auth (desactivada
@@ -629,8 +691,16 @@ red, rate limits, JSON mal formado, timeouts).
   cliente de Supabase inyectado, JWT válido/inválido), cubriendo explícitamente los casos de error:
   respuesta no-JSON del LLM, respuesta JSON con claves faltantes o valores fuera de rango, timeout/429
   del proveedor, fallo de subida de foto, token ausente/expirado.
-- **Aislamiento por usuario (RLS)**: test de integración específico que confirme que un usuario
-  autenticado no puede leer ni escribir la fila de `users`/`questionnaires` de otro usuario.
+- **Tests de integración, sin escribir/borrar datos a mano** (ver `design.md` decisión 11): contra el
+  stack local de Supabase (CLI + Docker, `supabase start`/`db reset`, nunca el proyecto real), con
+  fixtures montadas por *factory* (`test/factories/`, usando el cliente `service_role`) y un pool fijo
+  de cuentas `auth.users` creado una sola vez en `globalSetup` — un `afterEach` compartido hace
+  `TRUNCATE ... CASCADE` sobre las tablas de dominio entre tests. El test de **aislamiento por usuario
+  (RLS)** que confirma que un usuario autenticado no puede leer ni escribir la fila de
+  `users`/`questionnaires` de otro usuario se autentica con el JWT real de una cuenta del pool
+  (`signInWithPassword`), no con `service_role`, para ejercitar `auth.uid()` de verdad. Separados de los
+  unitarios en scripts npm distintos (`test` vs `test:integration`) para que el ciclo rápido de TDD no
+  dependa de tener Docker levantado.
 - **Controllers/endpoints**: tests e2e de NestJS (`supertest`) escritos antes de implementar cada
   endpoint, cubriendo el contrato descrito en "Endpoints backend clave" (código 201/200 esperado,
   forma del body de respuesta, errores 4xx cuando el payload no cumple el DTO).
@@ -642,10 +712,15 @@ red, rate limits, JSON mal formado, timeouts).
 - Ciclo estricto rojo-verde-refactor por cada unidad de trabajo de `tasks.md`; no se marca una tarea
   como completada sin su test correspondiente en verde.
 
-**Logging estructurado (para depuración rápida ante bugs):**
-- Logger único por app (`nestjs/common Logger` en backend, wrapper fino equivalente en frontend) con
-  niveles (`debug`/`log`/`warn`/`error`) y contexto por módulo (`AiOrchestratorService`,
+**Logging estructurado y su persistencia (ver `design.md` decisión 8b):**
+- Logger único en el backend con **`nestjs-pino`** (JSON estructurado de fábrica, no un wrapper a mano)
+  con niveles (`debug`/`log`/`warn`/`error`) y contexto por módulo (`AiOrchestratorService`,
   `CandidateSelectorService`, etc.), nunca `console.log` suelto.
+- **Dónde se almacenan**: stdout, visible en el dashboard de Render para tail en vivo (retención corta
+  en el free tier), y además un transport de Pino hacia **Better Stack (Logtail)** para histórico
+  buscable. El transport a Logtail solo se activa si `LOGTAIL_SOURCE_TOKEN` está definido — en
+  local/tests, sin esa variable, el logger sigue escribiendo solo a stdout, sin fallar ni ensuciar el
+  proyecto de Logtail con logs de cada test.
 - Puntos de log obligatorios en el flujo crítico (orquestación IA): al enviar cada batch (comparisonId,
   questionIds del batch, proveedor, intento nº), al recibir respuesta (duración, tokens si el proveedor
   los expone), al fallar validación Zod (payload crudo recibido, motivo de fallo) y en cada
@@ -659,9 +734,11 @@ red, rate limits, JSON mal formado, timeouts).
 ## Archivos críticos a crear
 
 - `package.json` (raíz, workspaces)
-- `packages/shared-types/src/{answer-set,comparison-result,aggregated-result,quality,user-profile}.ts`
+- `.github/workflows/ci.yml` (lint + test + build, y `test:integration` contra el stack local de
+  Supabase — ver decisión 10/11)
+- `packages/shared-types/src/{answer-set,comparison-result,aggregated-result,quality,user-profile,conversation,message}.ts`
 - `supabase/migrations/0001_init.sql` (incluye `users` con FK a `auth.users`, `alias` único,
-  `qualities`, `user_qualities`, `comparisons`, políticas RLS, etc.)
+  `qualities`, `user_qualities`, `comparisons`, `conversations`, `messages`, políticas RLS, etc.)
 - `apps/backend/src/auth/supabase-auth.guard.ts`
 - `apps/backend/src/questionnaires/commands/complete-questionnaire.command.ts` (+ handler y evento)
 - `apps/backend/src/matching/candidate-selector.service.ts` y sus handlers de
@@ -672,20 +749,29 @@ red, rate limits, JSON mal formado, timeouts).
   `ComparisonsCreatedEvent`
 - `apps/backend/src/comparisons/weighting.util.ts`
 - `apps/backend/src/chat/chat.controller.ts`, `apps/backend/src/chat/chat.service.ts`
-- `apps/frontend/src/app/features/auth/` (login, registro paso 1, forgot/reset password)
-- `apps/frontend/src/app/features/registration/registration.component.ts` (paso 2)
+- `test/setup/global-setup.ts` (pool de cuentas `auth.users`), `test/setup/reset-domain-tables.ts`
+  (`TRUNCATE ... CASCADE` compartido) y `test/factories/` (`createTestUser`, `createTestQuestionnaire`,
+  `createComparison`, ...) — infraestructura de tests de integración, decisión 11
+- `apps/frontend/src/app/features/landing/landing.component.ts` (pantalla pública en `/`)
+- `apps/frontend/src/app/features/auth/` (login, registro paso 1, forgot/reset password — fondo
+  degradado, Shell B)
+- `apps/frontend/src/app/features/registration/registration.component.ts` (wizard de 2 pasos)
 - `apps/frontend/src/app/features/settings/settings.component.ts`
 - `apps/frontend/src/app/features/results-dashboard/results-dashboard.component.ts`
 - `apps/frontend/src/app/features/chats/chats.component.ts` (listado) y
   `apps/frontend/src/app/features/chats/chat-conversation.component.ts` (conversación)
-- `supabase/seed/seed-users.json`, `supabase/seed/seed.ts`
+- `supabase/seed/seed-users.json`, `supabase/seed/seed.ts` (incluye la cuenta de demostración sin
+  perfil, ver "Semilla de datos sintéticos")
 
 ## Verificación
 
-1. `npm install` en la raíz del monorepo levanta todos los workspaces sin errores.
+1. `npm install` en la raíz del monorepo levanta todos los workspaces sin errores; `npm test` (unitarios)
+   pasa sin depender de Docker; `npm run test:integration` pasa contra el stack local de Supabase
+   (`supabase start`).
 2. Ejecutar el script de seed contra el proyecto Supabase: confirmar en el SQL Editor que existen las
-   cuentas de `auth.users` de los perfiles sintéticos y que `qualities`, `users` (con `alias`,
-   `photo_url`), `user_qualities` y `questionnaires` quedan pobladas con los 10 perfiles.
+   cuentas de `auth.users` de los perfiles sintéticos y de la cuenta de demostración (sin fila en
+   `users`), y que `qualities`, `users` (con `alias`, `photo_url`), `user_qualities` y `questionnaires`
+   quedan pobladas con los 10 perfiles completos.
 3. Backend: `npm run start:dev` en `apps/backend`, probar con Postman/cURL el flujo completo de un
    usuario nuevo autenticado: `POST /users/me/profile` (con alias y foto) →
    `POST /users/me/questionnaire` → comprobar que se crean 3 filas en `comparisons` con los candidatos
@@ -694,23 +780,32 @@ red, rate limits, JSON mal formado, timeouts).
    combinados con los pesos de dimensión 20/25/10/25/10/10) de al menos una comparación contra datos de
    prueba conocidos. Confirmar también que las peticiones sin JWT válido son rechazadas.
 4. Frontend: `ng serve` en `apps/frontend`, recorrer el flujo end-to-end contra el backend local:
-   registro paso 1 (email/contraseña) → paso 2 (nombre, alias, foto, 5 cualidades en cards) →
-   cuestionario → procesando → dashboard (foto, alias y radar chart correctos, ordenado por
-   `compatibilidad_final`) → configuración (editar perfil y contraseña) → logout → login → recuperar
-   contraseña.
+   landing → registro paso 1 (email/contraseña) → completar perfil paso 2a (foto, nombre, alias) → paso
+   2b (5 cualidades como píldoras) → bienvenida del cuestionario → wizard de 6 bloques (una pregunta a
+   pantalla completa, navegación por puntos) → procesando → dashboard (foto, alias y radar chart
+   correctos, ordenado por `compatibilidad_final`) → configuración (editar perfil, "Editar tus
+   respuestas" del cuestionario, contraseña) → logout → login → recuperar contraseña. Además, iniciar
+   sesión con la cuenta de demostración sin perfil e intentar navegar por URL a `/dashboard`,
+   `/settings`, `/chats`, comprobando que siempre redirige a completar perfil paso 1.
 5. Recorrer el flujo de edición y recálculo: recargar la app tras completar el cuestionario y comprobar
-   que la página principal es el dashboard; editar cualidades y/o respuestas desde configuración;
-   comprobar que se habilita el botón de recalcular; activarlo y verificar que el dashboard se refresca
-   con nuevas comparaciones, y que las comparaciones de otros usuarios (seed) que lo tuvieran como
-   candidato no se ven afectadas.
+   que la página principal es el dashboard; editar solo cualidades desde configuración y usar el atajo
+   "Recalcular compatibilidad ahora"; por separado, entrar a "Editar tus respuestas", editar el
+   cuestionario y comprobar que "Guardar y recalcular compatibilidad" recalcula sin pasos intermedios;
+   verificar en ambos casos que el dashboard se refresca con nuevas comparaciones, y que las
+   comparaciones de otros usuarios (seed) que lo tuvieran como candidato no se ven afectadas.
 5b. Recorrer el flujo de chat con dos cuentas de prueba: usuario A pulsa "Chatear" en la tarjeta de un
    candidato B en su dashboard; comprobar que B ve la conversación desde el icono del menú aunque A no
    aparezca entre sus propios candidatos; enviar mensajes en ambos sentidos y comprobar que llegan por
    sondeo sin recargar; recalcular la compatibilidad de A y comprobar que la conversación con B sigue
    existiendo aunque B deje de ser su candidato.
 6. Verificar el responsive en 3 anchos de viewport (móvil ~375px, tablet ~768px, escritorio ~1280px)
-   sobre todas las pantallas: cabecera colapsada en móvil, sin scroll horizontal en formularios/
-   cuestionario, tarjetas del dashboard apiladas en móvil y radar chart sin desbordar.
-7. Desplegar en Render + Vercel/Netlify + Supabase (free tier, incluyendo Auth, Storage y RLS) y
-   repetir el flujo completo desde las URLs públicas para validar CORS, subida de fotos, variables de
-   entorno y el cold-start de Render.
+   sobre todas las pantallas (incluida la landing): cabecera colapsada en móvil, sin scroll horizontal
+   en formularios/cuestionario/chat, tarjetas del dashboard apiladas en móvil y radar chart sin
+   desbordar.
+7. Confirmar que el workflow de GitHub Actions (`ci.yml`) pasa en verde en un PR de prueba (lint + test +
+   build + `test:integration`) antes de mergear a `main`, y que Vercel/Render despliegan automáticamente
+   al mergear (sin ningún paso manual ni job de Actions disparando el deploy).
+8. Desplegar en Render + Vercel + Supabase (free tier, incluyendo Auth, Storage y RLS) y repetir el flujo
+   completo desde las URLs públicas para validar CORS, subida de fotos, variables de entorno, el
+   cold-start de Render y que los logs llegan tanto a Render (tail en vivo) como a Better Stack/Logtail
+   (histórico).

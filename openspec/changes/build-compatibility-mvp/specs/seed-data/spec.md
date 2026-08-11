@@ -28,3 +28,18 @@ forma realista sin depender de usuarios reales.
   datos)
 - **THEN** los datos insertados son siempre los mismos (cuestionarios y cualidades congelados en un
   fichero de datos), sin realizar llamadas al proveedor de IA durante la ejecución del seed
+
+### Requirement: Cuenta de demostración sin perfil
+El sistema SHALL disponer, además de los 10 usuarios sintéticos completos, de una cuenta de
+autenticación adicional dedicada a demostraciones en vivo (presentación/defensa), con email y
+contraseña conocidos pero **sin** fila de perfil asociada.
+
+#### Scenario: La cuenta de demostración aterriza en completar perfil
+- **WHEN** se inicia sesión con la cuenta de demostración
+- **THEN** el sistema la trata igual que cualquier cuenta autenticada sin perfil (ver
+  `user-registration`, "Sin perfil, cualquier ruta redirige...") y aterriza en completar perfil paso 1
+
+#### Scenario: La contraseña no se documenta en el repositorio
+- **WHEN** se crea o se consulta la cuenta de demostración
+- **THEN** su contraseña no queda escrita en ningún fichero versionado del repositorio (specs, tasks,
+  código o configuración) — solo su email es documentable si hace falta identificarla
