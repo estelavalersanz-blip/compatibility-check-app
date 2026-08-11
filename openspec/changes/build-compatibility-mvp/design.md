@@ -461,6 +461,33 @@ sin conocerla.
   cruzar logs a ciegas. **Nunca se loguea el contenido íntegro de las 36 respuestas de un usuario** en
   texto plano (dato sensible) — solo longitudes, IDs y metadatos.
 
+### 8b. Persistencia de logs fuera de Render, vía Pino + Better Stack (Logtail)
+
+El stdout/stderr del backend sigue siendo visible en el dashboard de Render en tiempo real, pero el free
+tier de Render **no conserva histórico** más allá de la sesión reciente — insuficiente para poder
+revisar un fallo ocurrido, por ejemplo, durante la defensa del TFM o unos días antes. Para tener
+histórico buscable sin montar infraestructura propia:
+
+- **Librería de logging: `nestjs-pino`** (Pino), sustituyendo al planteamiento inicial de "wrapper a
+  mano sobre `@nestjs/common Logger`" (decisión 8) — Pino ya da salida JSON estructurada de fábrica (los
+  campos de contexto/`comparison_id`/`user_id` quedan en el propio objeto del log, no concatenados en un
+  string) y tiene soporte de transports de primera clase, evitando reinventar ese formateo a mano.
+- **Transport a Better Stack (Logtail)**: free tier suficiente para el volumen de una demo de TFM. El
+  transport de Pino manda cada log también a Logtail además de a stdout — Render sigue sirviendo para
+  tail en vivo durante el desarrollo, Logtail para consultar histórico después.
+- **Credencial (`LOGTAIL_SOURCE_TOKEN`)**: sigue exactamente el mismo tratamiento ya definido en la
+  decisión 10 para `GROQ_API_KEY`/`SUPABASE_SERVICE_ROLE_KEY` — variable de entorno solo en Render,
+  nunca en el repositorio, documentada por nombre (no valor) en `apps/backend/.env.example`.
+- **Nunca activo en tests ni en local por defecto**: el transport a Logtail solo se añade si
+  `LOGTAIL_SOURCE_TOKEN` está definido (típicamente solo en Render); en local y en CI, sin esa variable,
+  Pino sigue escribiendo solo a stdout — evita ensuciar el proyecto de Logtail con logs de cada test o
+  de cada máquina de desarrollador, y evita que CI necesite esa credencial para nada (coherente con la
+  decisión 10: CI no toca credenciales reales).
+- Sigue aplicando sin cambios el resto de la decisión 8: nunca se loguea el contenido íntegro de las 36
+  respuestas, y el `comparison_id`/`user_id` se propaga en todos los logs de una operación — con Pino
+  esto se hace con un *child logger* por request/operación en vez de concatenar el ID a mano en cada
+  mensaje.
+
 ### 9. Chat interno entre usuarios con compatibilidad, elegibilidad asimétrica y sin WebSockets
 
 Tras generarse el dashboard, un usuario puede iniciar una conversación con cualquiera de sus candidatos
@@ -512,6 +539,94 @@ Fuera de alcance explícito de esta decisión (ver Non-Goals): tiempo real vía 
 chats grupales, indicador de "escribiendo…", edición/borrado de mensajes, notificaciones push y cifrado
 end-to-end.
 
+### 10. CI/CD con GitHub Actions como puerta de calidad, despliegue nativo en Vercel/Render, sin Terraform
+
+**CI (GitHub Actions)**: un workflow (`.github/workflows/ci.yml`) corre en cada push y cada PR contra
+`main`: instala dependencias del monorepo (npm workspaces), y para `apps/backend` y `apps/frontend`
+ejecuta lint, la suite de tests (Jest/Karma) y el build de producción. La rama `main` queda protegida
+para exigir que este workflow pase en verde antes de poder mergear — es la única puerta de calidad; no
+hay un segundo pipeline paralelo que reinventar.
+
+**CD (despliegue), sin YAML propio de despliegue**: ni el frontend ni el backend se despliegan *desde*
+GitHub Actions — cada plataforma usa su propia integración nativa con el repo de GitHub:
+- **Frontend → Vercel**: integración Git nativa de Vercel (Root Directory = `apps/frontend`, dentro del
+  monorepo). Cada PR obtiene un *preview deployment* automático; el merge a `main` dispara el deploy de
+  producción. Vercel no necesita ningún secreto en GitHub Actions porque el trigger es su propia
+  integración, no un job de Actions.
+- **Backend → Render**: igual, integración Git nativa de Render (ver sección 19 de `tasks.md`), deploy
+  automático al mergear a `main`.
+
+Alternativa descartada: que un job de GitHub Actions despliegue explícitamente vía `vercel` CLI/action.
+Añadiría gestionar `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` como secrets de GitHub sin aportar
+nada que la integración nativa no cubra ya — más superficie de secretos que proteger por un control que
+no se necesita a este tamaño de proyecto.
+
+**Terraform: descartado explícitamente**. El aprovisionamiento son 3 recursos (1 proyecto Vercel, 1
+servicio web en Render, 1 proyecto Supabase), creados una sola vez y sin necesidad de reproducirlos en
+múltiples entornos (no hay staging/producción separados en esta v1, ver Non-Goals). Terraform aportaría
+valor si hubiera varios entornos que mantener sincronizados o un equipo que revisar cambios de infra vía
+PR — ninguno de los dos aplica aquí, y a cambio exigiría un backend de estado remoto y su propio secreto
+de acceso (a Vercel/Render) que proteger, aumentando la superficie de seguridad sin beneficio operativo
+real. El aprovisionamiento manual (dashboard/CLI de cada plataforma, una vez) queda documentado paso a
+paso en `docs/architecture.md` en su lugar.
+
+**Gestión de credenciales — email**: no hay ninguna credencial propia que gestionar. La recuperación de
+contraseña usa el SMTP integrado de Supabase Auth (decisión 3b), que Supabase invoca internamente al
+llamar a `resetPasswordForEmail` — el backend nunca ve ni necesita un host/usuario/contraseña SMTP. El
+límite de envíos del free tier sigue siendo un riesgo aceptado (ver Risks), no algo que resolver
+añadiendo un proveedor de email adicional en esta v1.
+
+**Gestión de credenciales — API key del LLM (Groq/OpenRouter) y `service_role` de Supabase**: ambas
+viven **exclusivamente como variables de entorno en Render** (backend) — nunca en el repositorio, nunca
+en el frontend (el orquestador de IA es backend-only, decisión 4, así que Vercel no necesita esta
+credencial en absoluto), y nunca como secret de GitHub Actions: los tests de CI validan
+`ai-orchestrator.service.ts`/`groq.provider.ts` contra un cliente HTTP mockeado (decisión 8), así que CI
+nunca llama al proveedor real ni necesita la clave verdadera — evita tanto el riesgo de fuga como
+consumir cuota de la API en cada push. `apps/backend/.env.example` documenta los **nombres** de las
+variables (`GROQ_API_KEY`, `OPENROUTER_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `LOGTAIL_SOURCE_TOKEN` —
+ver decisión 8b, etc.), nunca sus valores.
+
+### 11. Tests de integración contra Supabase local (CLI + Docker), con fixtures por factory y limpieza automática
+
+Los tests unitarios (decisión 8) cubren funciones puras y servicios contra mocks, pero no bastan para
+validar comportamiento que solo existe en Postgres real: las políticas RLS (`auth.uid()`), las
+restricciones `UNIQUE`/`CASCADE` del esquema, y el comportamiento real de Supabase Auth/Storage. Para
+esa capa de tests de integración, sin escribir/borrar datos a mano en cada ejecución:
+
+**Base de datos de test = stack local de Supabase, nunca el proyecto real**: `supabase start` (Supabase
+CLI) levanta Postgres + Auth + Storage + PostgREST en Docker, aplicando las migraciones reales de
+`supabase/migrations/`. Es la única forma de ejercitar RLS de verdad en vez de simular su comportamiento
+a mano con un Postgres genérico. `supabase db reset` reaplica las migraciones sobre una BD limpia bajo
+demanda — sustituye por completo al borrado manual. Requiere Docker Desktop en local; en GitHub Actions
+no hace falta instalar nada aparte, los runners ya traen Docker. Las claves del stack local
+(`anon`/`service_role`) son siempre las mismas por defecto de la CLI para desarrollo local — no son
+secretas, pueden vivir en la config de test sin tratamiento especial.
+
+**Fixtures por factory, no por inserción manual repetida**: `test/factories/` expone funciones
+(`createTestUser()`, `createTestQuestionnaire()`, `createComparison()`, ...) que insertan con el cliente
+`service_role` (autorizado a saltarse RLS porque está montando el escenario, no probándolo) y devuelven
+los IDs creados. Cada test pide solo los datos que necesita, en vez de depender de un dataset compartido
+pre-cargado que hay que evitar pisar.
+
+**Pool fijo de cuentas `auth.users`, creado una sola vez**: crear una cuenta de Auth es la operación más
+lenta de todo el ciclo de test — un `globalSetup` de Jest crea un pool pequeño (p. ej. 3-4 cuentas) una
+única vez al arrancar la suite de integración, no por cada test ni por cada archivo.
+
+**Limpieza automática entre tests, no borrado manual**: un `afterEach` compartido (un único helper, no
+lógica repetida por archivo) hace `TRUNCATE ... CASCADE` sobre las tablas de dominio (`users`,
+`questionnaires`, `comparisons`, `conversations`, etc.) — nunca sobre `auth.users`, cuyo pool se
+reutiliza entre tests — aprovechando los `ON DELETE CASCADE` ya definidos en `0001_init.sql`.
+
+**Los tests de RLS usan un cliente autenticado real, no `service_role`**: para el test de la tarea 3.3
+("un usuario no puede leer/escribir la fila de otro"), el cliente de test se autentica con
+`signInWithPassword` contra una cuenta del pool y opera con su JWT real — así se ejercita `auth.uid()`
+de verdad, no una simulación de qué usuario "debería" ser.
+
+**Unitarios e integración quedan separados**: `*.spec.ts` (unitarios, mockeados, sin Docker) frente a
+`*.integration-spec.ts` (necesitan el stack local corriendo), con dos scripts npm (`test`/
+`test:integration`) y dos steps distintos en `.github/workflows/ci.yml` (decisión 10) — el ciclo rápido
+de TDD con unitarios no depende de tener Docker levantado en cada guardado.
+
 ## Risks / Trade-offs
 
 - **Rate limits del free tier de Groq** → Mitigación: batching (6 llamadas/comparación), concurrencia
@@ -531,6 +646,20 @@ end-to-end.
 - **Límites de envío de email del free tier de Supabase Auth** (rate limit bajo para emails
   transaccionales) → Mitigación: documentar el límite en la memoria; suficiente para una demo con pocos
   usuarios de prueba, no para producción real.
+- **Aprovisionamiento manual (sin Terraform) puede desincronizarse entre entornos o perderse si no se
+  documenta** → Mitigación: los pasos exactos (proyecto Vercel, servicio Render, proyecto Supabase)
+  quedan escritos paso a paso en `docs/architecture.md`, no solo en la memoria del desarrollador; al ser
+  un único entorno (sin staging separado) no hay una segunda instancia con la que desincronizarse.
+- **Variables de entorno con secretos gestionadas a mano en cada plataforma** (sin un gestor de secretos
+  centralizado) → Mitigación: `.env.example` documenta solo nombres, nunca valores; `.gitignore` cubre
+  `.env`; ninguna clave real llega a GitHub Actions porque los tests de IA usan mocks (decisión 8).
+- **Los tests de integración exigen Docker Desktop en local** (Supabase CLI, decisión 11) → Mitigación:
+  solo afecta al ciclo de integración, no al de unitarios (TDD rápido); en CI no hace falta instalar
+  nada porque los runners de GitHub Actions ya traen Docker.
+- **Free tier de Better Stack (Logtail) tiene límites de volumen/retención** (decisión 8b) → Mitigación:
+  el transport solo se activa con `LOGTAIL_SOURCE_TOKEN` definido (solo en Render, nunca en tests/local),
+  así que el volumen real queda acotado al tráfico de la demo, no al de cada ejecución de test; Render
+  sigue disponible como respaldo para tail en vivo si se agotase la cuota.
 - **RLS mal configurada expondría perfiles de otros usuarios** → Mitigación: escribir tests de
   integración específicos que verifiquen que un usuario autenticado no puede leer/editar la fila de
   `users`/`questionnaires` de otro usuario vía el cliente directo de Supabase.

@@ -63,12 +63,15 @@ SHALL refrescar el gráfico y las tarjetas con los nuevos resultados una vez com
   reemplazando los anteriores
 
 ### Requirement: Enrutamiento de la página principal según el estado del usuario
-El sistema SHALL mostrar como página principal el cuestionario mientras el usuario autenticado no lo
-haya completado y enviado nunca, y SHALL mostrar como página principal el dashboard de resultados una
-vez completado.
+El sistema SHALL mostrar como página principal el cuestionario mientras el usuario autenticado (con
+perfil ya completado — ver `user-registration`, "Sin perfil, cualquier ruta redirige...") no haya
+completado y enviado nunca su cuestionario, y SHALL mostrar como página principal el dashboard de
+resultados una vez completado. La comprobación de perfil tiene prioridad sobre esta: sin perfil, la
+página principal siempre es completar perfil paso 1, nunca el cuestionario ni el dashboard.
 
 #### Scenario: Página principal antes de completar el cuestionario
-- **WHEN** un usuario autenticado que nunca completó su cuestionario abre la aplicación
+- **WHEN** un usuario autenticado, con perfil ya completado, que nunca completó su cuestionario abre la
+  aplicación
 - **THEN** la página principal mostrada es el formulario del cuestionario
 
 #### Scenario: Página principal tras completar el cuestionario

@@ -13,8 +13,14 @@
       `$font-family-base` con Poppins) sobrescritos antes del `@import`, en vez de usar el CSS
       precompilado de Bootstrap sin tokenizar
 - [ ] 1.4 Configurar linters/formatters compartidos (ESLint + Prettier) para backend y frontend
-- [ ] 1.5 Configurar un logger estructurado único en el backend (wrapper sobre `@nestjs/common Logger`
-      con contexto por módulo) reutilizable desde cualquier servicio, sin `console.log` sueltos
+- [ ] 1.5 Configurar `nestjs-pino` como logger estructurado único del backend (ver `design.md` decisión
+      8b — JSON estructurado de fábrica, con contexto por módulo) reutilizable desde cualquier servicio,
+      sin `console.log` sueltos
+- [ ] 1.5b Test: con `LOGTAIL_SOURCE_TOKEN` definido en el entorno, el logger añade el transport hacia
+      Better Stack (Logtail) además de stdout; sin esa variable definida (caso de tests/local), el
+      logger solo escribe a stdout, sin fallar ni intentar conectar a Logtail
+- [ ] 1.5c Implementar el transport condicional de la tarea anterior, y documentar
+      `LOGTAIL_SOURCE_TOKEN` (solo el nombre, nunca el valor) en `apps/backend/.env.example`
 - [ ] 1.7 Instalar `@nestjs/cqrs` en `apps/backend` para el uso selectivo de Commands/Events descrito
       en el diseño (no para las lecturas simples)
 - [ ] 1.8 Test unitario: el interceptor de logging enganchado al `CommandBus` registra inicio, fin y
@@ -22,6 +28,26 @@
       un identificador de correlación propagado
 - [ ] 1.9 Implementar el interceptor de logging del `CommandBus` para que pase el test anterior,
       reemplazando la necesidad de logging manual repetido en cada Command Handler
+- [ ] 1.10 Crear `.github/workflows/ci.yml` (ver `design.md` decisión 10): en cada push/PR contra `main`,
+      instala dependencias del monorepo y ejecuta lint + test (unitarios) + build de `apps/backend` y
+      `apps/frontend`, y un segundo step que instala la Supabase CLI, ejecuta `supabase start` y corre
+      `test:integration` contra ese stack local (decisión 11) antes de terminar con `supabase stop`. No
+      despliega nada ni usa secrets de Vercel/Render/Supabase — es solo la puerta de calidad; el
+      despliegue lo dispara la integración nativa de cada plataforma (tarea 19.2/19.3)
+- [ ] 1.11 Configurar la protección de la rama `main` en GitHub para exigir que el workflow de la tarea
+      anterior pase en verde antes de poder mergear
+- [ ] 1.12 Instalar la Supabase CLI como dependencia de desarrollo y añadir los scripts npm `test`
+      (unitarios, `*.spec.ts`, sin depender de Docker) y `test:integration` (`*.integration-spec.ts`,
+      contra el stack local — ver `design.md` decisión 11) como comandos separados del monorepo
+- [ ] 1.13 Test de la propia infraestructura de test: un `globalSetup` de Jest crea un pool fijo de 3-4
+      cuentas `auth.users` contra el stack local una sola vez al arrancar `test:integration` (no por
+      test ni por archivo), y expone sus credenciales/JWT a los tests sin necesidad de recrearlas
+- [ ] 1.14 Implementar `test/setup/global-setup.ts` (pool de cuentas) y
+      `test/setup/reset-domain-tables.ts` (helper de `afterEach` compartido que hace
+      `TRUNCATE ... CASCADE` sobre las tablas de dominio, nunca sobre `auth.users`) para que pase el
+      test anterior, y `test/factories/` (`createTestUser`, `createTestQuestionnaire`,
+      `createComparison`, ...) con el cliente `service_role` para montar fixtures por test sin
+      inserciones manuales repetidas
 
 ## 2. `packages/shared-types` (contrato compartido)
 
@@ -57,9 +83,11 @@
       de perfil `users` (`id` FK a `auth.users.id`, `name`, `alias` con restricción `UNIQUE`,
       `photo_url`, `questionnaire_completed_at`, `needs_recalculation boolean not null default false`) e
       índices descritos en el diseño
-- [ ] 3.3 Test de integración: con RLS activada, un usuario autenticado no puede leer ni escribir la
-      fila de `users`/`questionnaires` de otro usuario a través del cliente directo de Supabase, ni leer
-      ni escribir en una `conversation`/`message` de la que no es `user_a_id`/`user_b_id`
+- [ ] 3.3 Test de integración (stack local de Supabase, decisión 11): autenticando el cliente de test
+      con el JWT real de una cuenta del pool (`signInWithPassword`, no `service_role`), con RLS
+      activada, un usuario autenticado no puede leer ni escribir la fila de `users`/`questionnaires` de
+      otro usuario a través del cliente directo de Supabase, ni leer ni escribir en una
+      `conversation`/`message` de la que no es `user_a_id`/`user_b_id`
 - [ ] 3.4 Escribir las políticas RLS de `users`, `user_qualities`, `questionnaires`, `conversations` y
       `messages` (`auth.uid() = id`/`user_id`/`user_a_id`/`user_b_id`/`sender_id` según corresponda,
       para lectura y escritura propia) para que pase el test anterior
@@ -238,11 +266,19 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
        mostrarlo cuando no queda ninguno
 - [ ] 11.2c Implementar el sondeo del contador de no leídos (~20-30s) y el indicador en el icono de chat
        para que pase el test anterior
-- [ ] 11.3 Test de componente/routing: **con sesión activa**, la ruta principal (`/`) resuelve al
-       cuestionario si `GET /users/me` indica que el usuario no ha completado nunca su cuestionario, y
-       al dashboard de resultados en caso contrario
+- [ ] 11.3 Test de componente/routing: **con sesión activa**, la ruta principal (`/`) resuelve a
+       completar perfil (paso 1) si `GET /users/me` indica que el usuario no tiene fila de perfil aún;
+       si tiene perfil pero no ha completado nunca su cuestionario, resuelve al cuestionario; en caso
+       contrario, al dashboard de resultados — en ese orden de prioridad
 - [ ] 11.4 Implementar el guard/resolver de enrutamiento de la página principal para que pase el test
        anterior
+- [ ] 11.5 Test de routing: un usuario autenticado sin perfil que intenta navegar directamente (por URL)
+       a `/questionnaire`, `/dashboard`, `/settings` o `/chats` es redirigido a completar perfil (paso
+       1) en vez de acceder a la ruta solicitada; un usuario con perfil ya completado no sufre esa
+       redirección (ver spec `user-registration`, "Sin perfil, cualquier ruta redirige...")
+- [ ] 11.6 Implementar `ProfileGuard` (guard de ruta de Angular aplicado a todas las rutas autenticadas
+       salvo `features/registration`) para que pase el test anterior, reutilizando la misma consulta a
+       `GET /users/me` que el resolver de la tarea 11.4 (sin duplicar la llamada por cada guard)
 
 ## 11d. Frontend: landing pública (ver `design.md` decisión 3g)
 
@@ -443,16 +479,34 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
        autenticación vía la Admin API de Supabase (`service_role` key, contraseña aleatoria no
        comunicada), sube las fotos genéricas a Storage, e inserta cualidades, perfiles (`users`),
        `user_qualities` y `questionnaires`
+- [ ] 18.5 Crear, aparte de los 10 usuarios sintéticos completos, **una cuenta de demostración**
+       (`auth.users` con email/contraseña conocidos, pero **sin** fila en `users`) para la presentación:
+       al iniciar sesión con ella debe aterrizar en completar perfil paso 1 (ver spec
+       `user-registration`, "Sin perfil, cualquier ruta redirige..."), mostrando ese flujo en vivo. La
+       contraseña de esta cuenta se define y comunica fuera del repositorio (no en `tasks.md`/specs ni
+       en ningún fichero versionado) — solo el email/alias de la cuenta puede documentarse si hace falta
+       identificarla
 
-## 19. Despliegue gratuito
+## 19. Despliegue gratuito (ver `design.md` decisión 10 — sin Terraform, sin YAML de deploy propio)
 
-- [ ] 19.1 Configurar proyecto en Supabase (BD, Auth, Storage) y documentar las variables de entorno
-       necesarias en `apps/backend/.env.example`
-- [ ] 19.2 Desplegar `apps/backend` en Render (free tier) con las variables de entorno configuradas
-- [ ] 19.3 Desplegar `apps/frontend` en Vercel o Netlify apuntando a la URL pública del backend y al
-       proyecto de Supabase (URL + anon key)
-- [ ] 19.4 Verificar CORS entre frontend y backend desplegados, y documentar el cold-start de Render en
-       `docs/architecture.md`
+- [ ] 19.1 Crear a mano el proyecto de Supabase (BD, Auth, Storage) y una cuenta gratuita de Better
+       Stack (Logtail, decisión 8b) con su fuente/*source* para el backend; documentar en
+       `docs/architecture.md` los pasos exactos seguidos (no solo el resultado) — es el aprovisionamiento
+       manual que sustituye a Terraform. Documentar en `apps/backend/.env.example` los **nombres** de las
+       variables de entorno necesarias (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GROQ_API_KEY`,
+       `OPENROUTER_API_KEY`, `LOGTAIL_SOURCE_TOKEN`, etc.), nunca sus valores reales
+- [ ] 19.2 Crear a mano el servicio web de `apps/backend` en Render (free tier), conectado por su
+       integración Git nativa a la rama `main` (deploy automático al mergear, sin workflow de GitHub
+       Actions que lo dispare), con las variables de entorno de la tarea anterior (incluida
+       `LOGTAIL_SOURCE_TOKEN`) configuradas como secretos de Render (nunca committeadas)
+- [ ] 19.3 Crear a mano el proyecto de `apps/frontend` en Vercel (Root Directory = `apps/frontend` dentro
+       del monorepo), conectado por su integración Git nativa (preview deployment por PR, producción al
+       mergear a `main`), apuntando a la URL pública del backend y al proyecto de Supabase (URL + anon
+       key — no son secretas, pueden ir como variables de entorno normales de Vercel)
+- [ ] 19.4 Verificar CORS entre frontend y backend desplegados, y documentar en `docs/architecture.md` el
+       cold-start de Render, la ausencia de Terraform (y por qué, ver decisión 10), dónde vive cada
+       credencial (política de secretos) y dónde consultar los logs (Render para tail en vivo, Better
+       Stack/Logtail para histórico buscable, decisión 8b)
 
 ## 20. Verificación end-to-end
 
@@ -460,7 +514,10 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
        según lo esperado, incluyendo las cuentas de `auth.users` de los perfiles sintéticos
 - [ ] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → completar perfil paso 2a
        con foto/nombre/alias → paso 2b con cualidades → cuestionario → procesando → dashboard →
-       configuración → logout → login → recuperar contraseña) y contra las URLs públicas desplegadas
+       configuración → logout → login → recuperar contraseña) y contra las URLs públicas desplegadas.
+       Aparte, iniciar sesión con la cuenta de demostración sin perfil (tarea 18.5) e intentar navegar
+       directamente a `/dashboard`/`/settings`/`/chats` por URL, comprobando que siempre redirige a
+       completar perfil paso 1
 - [ ] 20.3 Recorrer manualmente el flujo de edición y recálculo: recargar la app tras completar el
        cuestionario y comprobar que la página principal es el dashboard; editar cualidades desde
        configuración, guardar y usar el atajo "Recalcular compatibilidad ahora"; por separado, entrar a

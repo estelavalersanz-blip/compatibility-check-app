@@ -35,6 +35,26 @@ El sistema SHALL permitir a un usuario ya autenticado (ver `authentication`) com
 - **WHEN** se intenta enviar el formulario de perfil sin un token de sesión válido
 - **THEN** el sistema rechaza la petición y no crea ningún perfil
 
+### Requirement: Sin perfil, cualquier ruta redirige a completar perfil paso 1
+El sistema SHALL redirigir a la pantalla de completar perfil (paso 1) a cualquier usuario autenticado
+que todavía no tenga fila de perfil (`users`), sin importar a qué ruta de la aplicación intente acceder
+— no solo justo después de iniciar sesión. Esta redirección deja de aplicar en cuanto el perfil existe.
+
+#### Scenario: Login sin perfil aterriza en completar perfil paso 1
+- **WHEN** un usuario autenticado sin perfil aún inicia sesión
+- **THEN** el sistema lo lleva directamente al paso 1 de completar perfil (foto, nombre, alias) — nunca
+  al paso 2, al cuestionario, al dashboard, a configuración o a los chats
+
+#### Scenario: Intentar navegar a otra ruta sin perfil redirige de vuelta
+- **WHEN** un usuario autenticado sin perfil aún intenta acceder directamente (por URL o navegación) a
+  cualquier otra pantalla de la aplicación
+- **THEN** el sistema lo redirige a completar perfil (paso 1) en vez de mostrar la pantalla solicitada
+
+#### Scenario: Con perfil ya completado, la redirección forzada no aplica
+- **WHEN** un usuario cuyo perfil ya existe navega por la aplicación
+- **THEN** el sistema no lo fuerza a completar perfil; se aplican en su lugar las reglas de
+  enrutamiento normales (cuestionario o dashboard, ver `results-dashboard`)
+
 ### Requirement: Completar perfil presentado como wizard de 2 pasos
 El sistema SHALL presentar la captura de nombre/foto/alias y la selección de cualidades como dos pasos
 secuenciales de una misma pantalla (paso 1: foto, nombre y alias; paso 2: cualidades), en vez de un
