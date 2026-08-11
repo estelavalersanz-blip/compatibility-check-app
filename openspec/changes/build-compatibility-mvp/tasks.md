@@ -55,22 +55,22 @@
 
 ## 2. `packages/shared-types` (contrato compartido)
 
-- [ ] 2.1 Test: validar con datos de ejemplo que `AnswerSet` acepta exactamente 36 elementos con
+- [x] 2.1 Test: validar con datos de ejemplo que `AnswerSet` acepta exactamente 36 elementos con
       `{questionId, question, answer}` y rechaza formas inválidas (usando un validador Zod expuesto
       junto al tipo)
-- [ ] 2.2 Definir `answer-set.ts` (interfaz `AnswerSet` + esquema Zod de validación) para que pase el
+- [x] 2.2 Definir `answer-set.ts` (interfaz `AnswerSet` + esquema Zod de validación) para que pase el
       test anterior
-- [ ] 2.3 Test: validar el esquema de `ComparisonResult` (claves exactas del JSON pedido, rangos
+- [x] 2.3 Test: validar el esquema de `ComparisonResult` (claves exactas del JSON pedido, rangos
       1.00–10.00 en los campos numéricos) con casos válidos e inválidos
-- [ ] 2.4 Definir `comparison-result.ts` (interfaz + esquema Zod) para que pase el test anterior
-- [ ] 2.5 Definir `aggregated-result.ts` (interfaz `AggregatedResult` con las 6 dimensiones, el
+- [x] 2.4 Definir `comparison-result.ts` (interfaz + esquema Zod) para que pase el test anterior
+- [x] 2.5 Definir `aggregated-result.ts` (interfaz `AggregatedResult` con las 6 dimensiones, el
       `compatibilidad_final` y `weights: { dimension, block }` con ambos vectores de pesos usados) y
       `quality.ts` (interfaz `Quality`)
-- [ ] 2.6 Definir `questions.ts` con las 36 preguntas del cuestionario de compatibilidad (id, texto,
+- [x] 2.6 Definir `questions.ts` con las 36 preguntas del cuestionario de compatibilidad (id, texto,
       categoría)
-- [ ] 2.7 Definir `user-profile.ts` (interfaz `UserProfile`: id, name, alias, photoUrl,
+- [x] 2.7 Definir `user-profile.ts` (interfaz `UserProfile`: id, name, alias, photoUrl,
       questionnaireCompletedAt) compartida entre backend y frontend
-- [ ] 2.8 Definir `conversation.ts` (interfaz `Conversation`: id, otherParticipant `UserProfile`,
+- [x] 2.8 Definir `conversation.ts` (interfaz `Conversation`: id, otherParticipant `UserProfile`,
       lastMessage, unreadCount) y `message.ts` (interfaz `Message`: id, conversationId, senderId, body,
       createdAt, readAt) compartidas entre backend y frontend
 
