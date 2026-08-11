@@ -19,13 +19,16 @@ function requireEnv(name: string): string {
   if (!value) {
     throw new Error(
       `${name} no está definida. Antes de \`npm run test:integration\` hace falta el stack local ` +
-        `de Supabase corriendo, con sus credenciales exportadas:\n` +
+        `de Supabase corriendo, con sus credenciales exportadas (\`set -a\` para que \`eval\` las ` +
+        `exporte de verdad al proceso, no solo a variables locales del shell):\n` +
         `  npx supabase start\n` +
+        `  set -a\n` +
         `  eval "$(npx supabase status -o env \\\n` +
         `    --override-name api.url=SUPABASE_URL \\\n` +
         `    --override-name auth.anon_key=SUPABASE_ANON_KEY \\\n` +
         `    --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \\\n` +
         `    --override-name db.url=SUPABASE_DB_URL)"\n` +
+        `  set +a\n` +
         `(ver \`.github/workflows/ci.yml\` para el mismo procedimiento tal como corre en CI).`,
     );
   }
