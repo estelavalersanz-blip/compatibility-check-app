@@ -35,7 +35,7 @@ justifique.
     </div>
     <div class="card-footer bg-white d-flex justify-content-end gap-2">
       <!-- botón secundario si aplica -->
-      <button type="button" class="btn btn-primary" (click)="onSubmit()">
+      <button type="button" class="btn btn-dark" (click)="onSubmit()">
         <!-- texto de la acción principal -->
       </button>
     </div>
@@ -43,44 +43,40 @@ justifique.
 }
 ```
 
-## Pantalla pública de autenticación (Shell B)
+## Pantalla pública de autenticación (Shell B — fondo degradado)
 
 ```html
 <!-- apps/frontend/src/app/features/auth/<pantalla>/<pantalla>.component.html -->
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light py-4">
-  <div class="card shadow-sm" style="max-width: 420px; width: 100%;">
-    <div class="card-body p-4">
-      <div class="text-center mb-4">
-        <!-- <svg class="brand-mark brand-mark--accent">, ver references/design-tokens.md -->
-        <h1 class="h4 mt-2 mb-0">AfinIA</h1>
-      </div>
+<div class="auth-shell d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+  <svg class="brand-mark brand-mark--white mb-2" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true">
+    <!-- ver references/design-tokens.md -->
+  </svg>
+  <!-- Solo en login: <h1 class="h3 text-white mb-4">AfinIA</h1>; el resto muestra su propio título -->
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="mb-3">
-          <label class="form-label" for="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            class="form-control"
-            formControlName="email"
-            [class.is-invalid]="form.controls.email.invalid && form.controls.email.touched">
-          <div class="invalid-feedback">Introduce un email válido.</div>
-        </div>
-
-        <!-- resto de campos siguiendo el mismo patrón -->
-
-        @if (submitError()) {
-          <div class="alert alert-danger py-2" role="alert">{{ submitError() }}</div>
-        }
-
-        <button type="submit" class="btn btn-primary w-100" [disabled]="form.invalid || submitting()">
-          <!-- texto de la acción principal -->
-        </button>
-      </form>
-
-      <!-- enlaces secundarios (p. ej. "¿olvidaste tu contraseña?") como btn btn-link, centrados -->
+  <form class="w-100 text-start" style="max-width: 360px;" [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="mb-3">
+      <label class="form-label" for="email">Email</label>
+      <input
+        id="email"
+        type="email"
+        class="form-control"
+        formControlName="email"
+        [class.is-invalid]="form.controls.email.invalid && form.controls.email.touched">
+      <div class="invalid-feedback">Introduce un email válido.</div>
     </div>
-  </div>
+
+    <!-- resto de campos siguiendo el mismo patrón -->
+
+    @if (submitError()) {
+      <div class="alert alert-danger py-2" role="alert">{{ submitError() }}</div>
+    }
+
+    <button type="submit" class="btn btn-dark w-100 mb-3" [disabled]="form.invalid || submitting()">
+      <!-- texto de la acción principal -->
+    </button>
+  </form>
+
+  <!-- enlaces secundarios (p. ej. "¿olvidaste tu contraseña?") en blanco, ver design-tokens.md -->
 </div>
 ```
 
@@ -108,24 +104,21 @@ justifique.
 </div>
 ```
 
-## Cards seleccionables de cualidades — componente compartido
+## Píldoras seleccionables de cualidades — componente compartido
 
-Cards en grid, no chips — lo único que cambia respecto a versiones anteriores es (1) el diseño del check
-de "seleccionada" (insignia superpuesta en la esquina) y (2) que al llegar a 5 marcadas, las cards no
-seleccionadas se deshabilitan — no se puede marcar una sexta. Ver `design-tokens.md` para el marcado y
-CSS completos (`shared/quality-card`). No copiar en `features/registration` y `features/settings` por
-separado — es un componente compartido:
+Píldoras (`rounded-pill`) en fila, no cards — cambio de color al seleccionar (fondo `$primary`, texto
+blanco), sin icono superpuesto. Al llegar a 5 marcadas, las no seleccionadas se deshabilitan — no se
+puede marcar una sexta. Ver `design-tokens.md` para el marcado y CSS completos (`shared/quality-pill`).
+No copiar en `features/registration` y `features/settings` por separado — es un componente compartido:
 
 ```html
-<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
+<div class="d-flex flex-wrap gap-2">
   @for (quality of qualities(); track quality.id) {
-    <div class="col">
-      <app-quality-card
-        [label]="quality.label"
-        [selected]="quality.selected"
-        [selectedCount]="selectedCount()"
-        (toggle)="onToggle(quality)" />
-    </div>
+    <app-quality-pill
+      [label]="quality.label"
+      [selected]="quality.selected"
+      [selectedCount]="selectedCount()"
+      (toggle)="onToggle(quality)" />
   }
 </div>
 ```
@@ -169,36 +162,25 @@ inventes aquí:
     </div>
   </div>
   <div class="card-body">
-    <!-- las 6 preguntas del bloque activo como pestañas (una pregunta visible a la vez), no apiladas -->
-    <ul ngbNav #nav="ngbNav" [(activeId)]="activeBlock().activeQuestionIndex" class="nav nav-pills question-tab-strip mb-3">
-      @for (q of activeBlock().questions; track q.id; let i = $index) {
-        <li [ngbNavItem]="i">
-          <button ngbNavLink class="d-flex align-items-center gap-1">
-            @if (q.answered) {
-              <i class="bi bi-check-circle-fill tab-icon--answered"></i>
-            } @else {
-              <i class="bi bi-circle text-body-secondary"></i>
-            }
-            {{ i + 1 }}
-          </button>
-          <ng-template ngbNavContent>
-            <div class="question-pane">
-              <label class="form-label">{{ q.text }}</label>
-              <!-- w-100 + rows="4": ocupa todo el ancho de la card y muestra al menos 4 líneas -->
-              <textarea
-                class="form-control w-100"
-                rows="4"
-                [(ngModel)]="q.answer"
-                (blur)="saveDraft()"></textarea>
-            </div>
-          </ng-template>
-        </li>
-      }
-    </ul>
-    <div [ngbNavOutlet]="nav"></div>
+    <!-- una sola pregunta a pantalla completa (ya no pestañas NgbNav) -->
+    <div class="question-pane">
+      <label class="form-label">{{ activeQuestion().text }}</label>
+      <!-- w-100 + rows="4": ocupa todo el ancho de la card y muestra al menos 4 líneas -->
+      <textarea
+        class="form-control w-100"
+        rows="4"
+        [(ngModel)]="activeQuestion().answer"
+        (blur)="saveDraft()"></textarea>
+    </div>
+    <!-- navegación de puntos + flechas entre las 6 preguntas del bloque, ver design-tokens.md -->
+    <app-question-nav
+      [questions]="activeBlock().questions"
+      [currentIndex]="currentQuestionIndex()"
+      [maxReachedIndex]="maxReachedQuestionIndex()"
+      (indexChange)="goToQuestion($event)" />
   </div>
   <div class="card-footer bg-white d-flex justify-content-end">
-    <button type="button" class="btn btn-primary" (click)="nextBlock()">
+    <button type="button" class="btn btn-dark" (click)="nextBlock()">
       {{ footerButtonLabel() }}
     </button>
   </div>

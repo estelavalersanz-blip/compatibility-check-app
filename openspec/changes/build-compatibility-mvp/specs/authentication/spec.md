@@ -1,5 +1,25 @@
 ## ADDED Requirements
 
+### Requirement: Landing pública antes de cualquier pantalla de autenticación
+El sistema SHALL mostrar, a quien visita la aplicación sin una sesión activa, una pantalla pública que
+explica la finalidad del producto con un único botón que navega a la pantalla de login. El sistema SHALL
+omitir esa pantalla y redirigir directamente al estado autenticado correspondiente cuando quien visita
+la aplicación ya tiene una sesión activa.
+
+#### Scenario: Visita sin sesión ve la landing
+- **WHEN** alguien sin sesión activa visita la ruta principal de la aplicación
+- **THEN** el sistema muestra la pantalla pública explicativa, sin exigir ningún dato ni redirigir a
+  login automáticamente
+
+#### Scenario: El botón de la landing lleva a login
+- **WHEN** quien visita la landing pulsa su único botón de llamada a la acción
+- **THEN** el sistema navega a la pantalla de login
+
+#### Scenario: Visita con sesión activa no ve la landing
+- **WHEN** alguien con una sesión ya activa visita la ruta principal de la aplicación
+- **THEN** el sistema no muestra la landing y redirige directamente al cuestionario o al dashboard,
+  según corresponda (ver `results-dashboard`, "Enrutamiento de la página principal")
+
 ### Requirement: Registro con email y contraseña (paso 1)
 El sistema SHALL permitir crear una cuenta con email y contraseña, verificando que el email no exista
 ya previamente, antes de permitir continuar al paso 2 (completar el perfil).

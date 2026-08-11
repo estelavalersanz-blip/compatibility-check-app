@@ -6,11 +6,11 @@ Valores exactos — cópialos, no los aproximes ni los reinventes por pantalla.
 
 | Token | Hex | Uso |
 |---|---|---|
-| `$primary` | `#FB8500` (Princeton Orange) | Botones principales, enlaces activos, acentos de marca, insignia de bloque completado |
-| `$secondary` | `#BE1E2D` (Carmine) | Hover/active del primario, icono de racha, extremo más intenso del gradiente de bloques. **No lo mapees a `btn-outline-secondary`/logout** — ver `SKILL.md` |
-| `$dark` / `$body-color` | `#000000` (negro) | Texto principal, superficies oscuras, extremo del gradiente del bloque más pesado |
+| `$primary` | `#FB8500` (Princeton Orange) | Acentos de marca: enlaces activos, insignia de bloque completado, píldora de cualidad seleccionada, burbuja propia del chat, extremo del degradado de Shell B. **Ya no es el color de relleno de ningún botón** — ver fila `$dark` y `SKILL.md` ("Sistema de botones") |
+| `$secondary` | `#BE1E2D` (Carmine) | Hover/active del primario, icono de racha, extremo más intenso del gradiente de bloques y del degradado de Shell B. **No lo mapees a `btn-outline-secondary`/logout** — ver `SKILL.md` |
+| `$dark` / `$body-color` | `#000000` (negro) | Texto principal, superficies oscuras, extremo del gradiente del bloque más pesado, y **relleno del botón de acción principal en toda la app** (`btn-dark` — rediseño que sustituye a `btn-primary` naranja como color de botón) |
 | `$light` (superficie alterna) | `#FDF0D5` (Papaya Whip) | Fondos suaves de sección, extremo "frío" del gradiente de bloques |
-| — (sin variable Sass dedicada, es el blanco base de Bootstrap) | `#FFFFFF` | Fondo de cards/superficies claras, otro extremo frío del mismo gradiente |
+| — (sin variable Sass dedicada, es el blanco base de Bootstrap) | `#FFFFFF` | Fondo de cards/superficies claras, otro extremo frío del mismo gradiente, y color fijo del logo sobre el degradado de Shell B |
 
 No añadas un sexto color sin mirar antes la sección de la barra ponderada más abajo — los tonos
 intermedios que aparecen ahí (`#FCD9A0`, `#DD5217`) son variaciones tonales derivadas de los 5 colores
@@ -99,13 +99,228 @@ componente compartido (`shared/brand-mark`) — no lo redibujes ni le añadas un
   height: 28px;
 }
 
-// Shell B (card de autenticación): el logo lleva el color de marca, no el de texto
-.brand-mark--accent {
-  color: $primary;
+// Shell B (fondo degradado): color fijo en blanco, no currentColor — el fondo ahí nunca es blanco
+.brand-mark--white {
+  fill: #FFFFFF;
   width: 48px;
   height: 48px;
 }
 ```
+
+`.brand-mark--accent` (naranja sobre card blanca) queda **obsoleta** — era la variante de Shell B antes
+del rediseño a fondo degradado a pantalla completa (ver sección siguiente). No la reintroduzcas.
+
+### Assets de origen y favicon
+
+Los 4 SVG originales (variante gris de un color, variante blanca de arriba, y los dos favicons con fondo
+cuadrado redondeado) están en `docs/brand/` del repo — ver `docs/brand/README.md` para el mapeo exacto.
+El favicon (`docs/brand/favicon-positivo.svg` — fondo blanco, marca con degradado; y
+`favicon-negativo.svg` — fondo con degradado, marca blanca) es un asset distinto del `brand-mark`: no es
+inline ni hereda color, es un fichero de icono cuadrado que se referencia tal cual desde `index.html`
+(`<link rel="icon">`) y desde los assets de PWA/manifest si el proyecto llega a tenerlos. Pendiente de
+decidir con Estela cuál de las dos variantes usar como favicon real del navegador y en qué tamaños
+exportarlo a PNG/ICO — no asumas una por defecto.
+
+## Landing pública (`/`)
+
+```html
+<!-- apps/frontend/src/app/features/landing/landing.component.html -->
+<div class="auth-shell landing-hero d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+  <svg class="brand-mark brand-mark--white landing-mark mb-3" viewBox="0 0 345.3 336.08" width="64" height="64" aria-hidden="true">
+    <path class="landing-mark__p1" d="..." />
+    <path class="landing-mark__p2" d="..." />
+    <path class="landing-mark__p3" d="..." />
+    <path class="landing-mark__p4" d="..." />
+    <path class="landing-mark__p5" d="..." />
+    <!-- 5 <path> reales del logo, ver sección "Logo de marca" -->
+  </svg>
+  <h1 class="landing-title text-white mb-2">Conecta con quien realmente encaja contigo</h1>
+  <p class="landing-sub text-white-75 mb-4">
+    Responde un cuestionario de compatibilidad y elige las cualidades que te definen: una IA compara tus
+    respuestas con las de otras personas para encontrar afinidades reales, no solo las que se ven a
+    simple vista.
+  </p>
+  <button type="button" class="btn btn-dark landing-cta" routerLink="/auth/login">Iniciar sesión</button>
+</div>
+```
+
+```scss
+// apps/frontend/src/app/features/landing/landing.component.scss
+.landing-hero {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #FB8500 0%, #BE1E2D 100%);
+  background-size: 200% 200%;
+  animation: landing-gradient-shift 14s ease-in-out infinite;
+}
+
+@keyframes landing-gradient-shift {
+  0%, 100% { background-position: 0% 30%; }
+  50%      { background-position: 100% 70%; }
+}
+
+.landing-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  max-width: 22ch;
+  animation: landing-fade-up 500ms ease-out 620ms both;
+}
+.landing-sub {
+  max-width: 34ch;
+  font-size: 0.95rem;
+  animation: landing-fade-up 500ms ease-out 760ms both;
+}
+.landing-cta {
+  animation: landing-fade-up 500ms ease-out 900ms both;
+}
+
+@keyframes landing-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// El logo se ensambla: cada uno de los 5 <path> aparece con fundido + escala, escalonados ~80ms
+.landing-mark {
+  @for $i from 1 through 5 {
+    &__p#{$i} {
+      opacity: 0;
+      transform-origin: center;
+      animation: quality-check-in 350ms ease-out #{($i - 1) * 80ms} both; // reutiliza el keyframe ya definido arriba
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero { animation: none; }
+  .landing-title, .landing-sub, .landing-cta, .landing-mark [class^="landing-mark__"] {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+```
+
+```ts
+// apps/frontend/src/app/features/landing/landing.component.ts (esquema)
+// Si ya hay sesión, no se muestra la landing — redirige a la misma resolución que la ruta autenticada
+constructor(private auth: AuthService, private router: Router) {
+  if (this.auth.hasSession()) {
+    this.router.navigate(['/']); // el guard de la ruta autenticada resuelve cuestionario/dashboard
+  }
+}
+```
+
+Un único botón de CTA (`btn-dark`, no un color distinto por ser landing) hacia `/auth/login` — no
+añadas un segundo botón (p. ej. a registro) salvo que se pida explícitamente; desde login ya se llega a
+registro con el enlace existente.
+
+## Shell B: pantallas de autenticación con fondo degradado
+
+Valores exactos para el rediseño de Shell B descrito en `SKILL.md` (sustituye a la card centrada sobre
+fondo claro). Las 4 pantallas comparten el mismo fondo y esqueleto; solo cambia el título y el contenido
+del formulario.
+
+```scss
+// apps/frontend/src/app/features/auth/auth-shell.component.scss (o equivalente compartido)
+.auth-shell {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #FB8500 0%, #BE1E2D 100%);
+}
+
+// Botón principal sobre este fondo — misma regla que el resto de la app (btn-dark), no un caso especial
+// Inputs: fondo claro fijo para mantener legibilidad, texto/labels/enlaces en blanco alrededor de ellos
+.auth-shell .form-label,
+.auth-shell .form-text,
+.auth-shell a {
+  color: #FFFFFF;
+}
+```
+
+```html
+<!-- Login -->
+<div class="auth-shell d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+  <svg class="brand-mark brand-mark--white mb-2" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true"><!-- ver arriba --></svg>
+  <h1 class="h3 text-white mb-4">AfinIA</h1>
+  <form class="w-100 text-start" style="max-width: 360px;">
+    <div class="mb-3">
+      <label class="form-label" for="email">Email</label>
+      <input id="email" class="form-control" type="email" formControlName="email">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="password">Contraseña</label>
+      <input id="password" class="form-control" type="password" formControlName="password">
+    </div>
+    <button type="submit" class="btn btn-dark w-100 mb-3">Iniciar sesión</button>
+    <p class="small mb-1">¿No tienes cuenta? <a routerLink="/auth/register" class="fw-semibold">Regístrate</a></p>
+    <p class="small mb-0"><a routerLink="/auth/forgot-password">¿Olvidaste tu contraseña?</a></p>
+  </form>
+</div>
+```
+
+```html
+<!-- Registro (paso 1: email/contraseña — no confundir con "completar perfil", que es Shell A) -->
+<div class="auth-shell d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+  <svg class="brand-mark brand-mark--white mb-2" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true"><!-- ver arriba --></svg>
+  <h1 class="h4 text-white mb-4">Registro</h1>
+  <form class="w-100 text-start" style="max-width: 360px;">
+    <div class="mb-3">
+      <label class="form-label" for="email">Email</label>
+      <input id="email" class="form-control" type="email" formControlName="email">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="password">Contraseña</label>
+      <input id="password" class="form-control" type="password" formControlName="password">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="passwordConfirm">Repite la contraseña</label>
+      <input id="passwordConfirm" class="form-control" type="password" formControlName="passwordConfirm">
+    </div>
+    <button type="submit" class="btn btn-dark w-100 mb-3">Crear cuenta</button>
+    <p class="small mb-0">¿Ya tienes cuenta? <a routerLink="/auth/login" class="fw-semibold">Inicia sesión</a></p>
+  </form>
+</div>
+```
+
+```html
+<!-- Recuperar contraseña (forgot password) -->
+<div class="auth-shell d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+  <svg class="brand-mark brand-mark--white mb-2" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true"><!-- ver arriba --></svg>
+  <h1 class="h4 text-white mb-2">Recuperar contraseña</h1>
+  <p class="small text-white-50 mb-4" style="max-width: 320px;">
+    Si el email existe en nuestro sistema recibirás un enlace para restablecer tu contraseña.
+  </p>
+  <form class="w-100 text-start" style="max-width: 360px;">
+    <div class="mb-3">
+      <label class="form-label" for="email">Email</label>
+      <input id="email" class="form-control" type="email" formControlName="email">
+    </div>
+    <button type="submit" class="btn btn-dark w-100 mb-3">Enviar contraseña</button>
+    <p class="small mb-0">¿Ya tienes cuenta? <a routerLink="/auth/login" class="fw-semibold">Inicia sesión</a></p>
+  </form>
+</div>
+```
+
+```html
+<!-- Nueva contraseña (reset password, con token de la URL) -->
+<div class="auth-shell d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+  <svg class="brand-mark brand-mark--white mb-2" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true"><!-- ver arriba --></svg>
+  <h1 class="h4 text-white mb-4">Nueva contraseña</h1>
+  <form class="w-100 text-start" style="max-width: 360px;">
+    <div class="mb-3">
+      <label class="form-label" for="password">Mínimo 8 caracteres</label>
+      <input id="password" class="form-control" type="password" formControlName="password">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="passwordConfirm">Repite la nueva contraseña</label>
+      <input id="passwordConfirm" class="form-control" type="password" formControlName="passwordConfirm">
+    </div>
+    <button type="submit" class="btn btn-dark w-100">Guardar nueva contraseña</button>
+  </form>
+</div>
+```
+
+Los 4 textos de botón/título de arriba están transcritos de una captura de mockup a baja resolución —
+si al implementar el copy exacto difiere (p. ej. "Enviar contraseña" podría en realidad ser "Enviar
+enlace"), el estilo/estructura no cambia, solo ajusta el texto del botón/título correspondiente.
 
 ## Barra de progreso ponderada del wizard del cuestionario
 
@@ -241,25 +456,39 @@ El mismo gradiente de la fila del bloque activo colorea el `card-header` de su p
     </div>
   </div>
   <div class="card-body">
-    <!-- pestañas + textarea, ver "Transición entre preguntas" más abajo -->
+    <!-- pregunta activa + textarea, ver "Navegación entre las 6 preguntas del bloque activo" más abajo -->
   </div>
   <div class="card-footer bg-white d-flex justify-content-end">
-    <button type="button" class="btn btn-primary" (click)="nextBlock()">
+    <button type="button" class="btn btn-dark" (click)="nextBlock()">
       {{ footerButtonLabel() }}
     </button>
   </div>
 </div>
 ```
 
-`footerButtonLabel()` combina si estás revisando o avanzando (ver `nextBlock()`/`goToBlock()` arriba) con
-si es el último bloque:
+`footerButtonLabel()` combina si estás revisando o avanzando (ver `nextBlock()`/`goToBlock()` arriba),
+si es el último bloque, y el modo (creación/edición — decisión 3h de `design.md`):
 
 ```ts
 footerButtonLabel(): string {
   if (this.currentBlockIndex() < this.maxReachedBlockIndex()) {
     return 'Volver a donde estabas'; // estás revisando un bloque ya superado
   }
-  return this.isLastBlock() ? 'Enviar cuestionario' : 'Siguiente bloque';
+  if (!this.isLastBlock()) {
+    return 'Siguiente bloque';
+  }
+  return this.mode === 'edit' ? 'Guardar y recalcular compatibilidad' : 'Enviar cuestionario';
+}
+
+async onSubmitLastBlock(): Promise<void> {
+  if (this.mode === 'edit') {
+    await this.questionnaireService.update(this.answers()); // PATCH /users/me/questionnaire
+    await this.matchingService.recalculate();                // POST /users/me/recalculate, encadenado
+    this.router.navigate(['/dashboard']);
+  } else {
+    await this.questionnaireService.complete(this.answers()); // POST /users/me/questionnaire
+    this.router.navigate(['/processing']);
+  }
 }
 ```
 
@@ -271,17 +500,79 @@ footerButtonLabel(): string {
 .question-block--weight-30 { background: linear-gradient(135deg, #BE1E2D, #000000); color: #FFFFFF; }
 ```
 
-## Transición entre preguntas (pestañas dentro del bloque activo)
+## Navegación entre las 6 preguntas del bloque activo (puntos + flechas)
 
-El bloque activo del wizard muestra sus 6 preguntas como pestañas (`NgbNav`), una pregunta a la vez. Al
-cambiar de pestaña, el contenido nuevo entra con esta transición — no un cambio instantáneo ni una
-animación más larga/llamativa:
+Dentro del bloque activo, cada pregunta ocupa toda la pantalla (ya no pestañas `NgbNav`). La navegación
+entre sus 6 preguntas es una fila de puntos + flechas prev/next, con el mismo patrón de "clic en el
+punto = salto directo si ya lo visitaste" que la barra de progreso por bloques, aplicado un nivel más
+abajo y con alcance local al bloque activo (se reinicia al entrar a un bloque distinto):
+
+```html
+<!-- apps/frontend/src/app/features/questionnaire/question-nav.component.html -->
+<div class="d-flex align-items-center justify-content-center gap-3 mt-3">
+  <button type="button" class="btn btn-link p-0 text-body" [disabled]="currentQuestionIndex() === 0"
+          (click)="previousQuestion()" aria-label="Pregunta anterior">
+    <i class="bi bi-chevron-left fs-5"></i>
+  </button>
+  <div class="d-flex gap-2">
+    @for (question of activeBlock().questions; track question.id; let qi = $index) {
+      <button type="button" class="question-nav__dot" [class.question-nav__dot--answered]="question.answered"
+              [disabled]="qi > maxReachedQuestionIndex()"
+              [attr.aria-label]="'Ir a la pregunta ' + (qi + 1)"
+              (click)="goToQuestion(qi)"></button>
+    }
+  </div>
+  <button type="button" class="btn btn-link p-0 text-body" [disabled]="currentQuestionIndex() === 5"
+          (click)="nextQuestion()" aria-label="Siguiente pregunta">
+    <i class="bi bi-chevron-right fs-5"></i>
+  </button>
+</div>
+```
+
+```ts
+// apps/frontend/src/app/features/questionnaire/questionnaire.component.ts (esquema, alcance local al bloque activo)
+currentQuestionIndex = signal(0);
+maxReachedQuestionIndex = signal(0); // se reinicia a 0 al cambiar de bloque (currentBlockIndex)
+
+goToQuestion(index: number): void {
+  if (index <= this.maxReachedQuestionIndex()) {
+    this.currentQuestionIndex.set(index);
+  }
+}
+
+nextQuestion(): void {
+  const next = Math.min(this.currentQuestionIndex() + 1, 5);
+  this.currentQuestionIndex.set(next);
+  this.maxReachedQuestionIndex.set(Math.max(this.maxReachedQuestionIndex(), next));
+}
+
+previousQuestion(): void {
+  this.currentQuestionIndex.set(Math.max(this.currentQuestionIndex() - 1, 0));
+}
+```
+
+```scss
+.question-nav__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: var(--bs-border-color);
+  cursor: pointer;
+}
+.question-nav__dot--answered { background: $primary; }
+.question-nav__dot:disabled { cursor: default; } // preguntas aún no alcanzadas: no clicables, sin look "deshabilitado" gris
+```
+
+Al llegar a la pregunta activa dentro del bloque, el contenido entra con esta transición — no un cambio
+instantáneo ni una animación más larga/llamativa:
 
 - Duración: `200ms`
 - Easing: `ease-out`
 - Efecto: fade + desplazamiento horizontal corto (`opacity 0→1`, `translateX(8px)→0`)
 - Con `prefers-reduced-motion: reduce`, se elimina el desplazamiento y el fade se hace instantáneo (el
-  cambio de pestaña sigue funcionando, solo sin la animación)
+  cambio de pregunta sigue funcionando, solo sin la animación)
 
 ```scss
 // apps/frontend/src/app/features/questionnaire/questionnaire.component.scss
@@ -301,9 +592,9 @@ animación más larga/llamativa:
 }
 ```
 
-Como cada cambio de pestaña de `ngbNavOutlet` renderiza un nodo nuevo para el panel activo, basta con
-que `.question-pane` tenga esta animación declarada — no hace falta orquestarla manualmente desde el
-componente TypeScript.
+Como cada cambio de `currentQuestionIndex` renderiza (`@if`/`@switch`) un nodo nuevo para la pregunta
+activa, basta con que `.question-pane` tenga esta animación declarada — no hace falta orquestarla
+manualmente desde el componente TypeScript.
 
 ## Gamificación del cuestionario: copys y animaciones exactas
 
@@ -359,7 +650,11 @@ inventes copys alternativos por pantalla.
 <i class="bi bi-award-fill block-badge" *ngIf="block.answeredCount === 6" aria-hidden="true"></i>
 ```
 
-### Icono de pestaña al responder (`tab-icon-pop`)
+### Punto de pregunta al responder (`tab-icon-pop`, aplicado al `question-nav__dot`)
+
+Mismo nombre de animación que en versiones anteriores (cuando esto vivía en el icono de una pestaña
+`NgbNav`) — ahora se aplica al punto de `question-nav__dot` (ver sección "Navegación entre las 6
+preguntas") al pasar de no respondida a respondida:
 
 ```scss
 @keyframes tab-icon-pop {
@@ -368,13 +663,12 @@ inventes copys alternativos por pantalla.
   100% { transform: scale(1); }
 }
 
-.tab-icon--answered {
-  color: $primary;
+.question-nav__dot--answered {
   animation: tab-icon-pop 200ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tab-icon--answered { animation: none; }
+  .question-nav__dot--answered { animation: none; }
 }
 ```
 
@@ -394,93 +688,266 @@ Aparece en el paso del bloque 6, encima de su card. Reutiliza el gradiente de es
 
 Este banner es informativo: no sustituye ni deshabilita el botón real de envío del `card-footer`.
 
-## Cards seleccionables: cualidades (diseño del check y tope de 5)
+## Píldoras seleccionables: cualidades (rediseño — sustituye a las cards con insignia)
 
-La estructura sigue siendo la **card** original en grid (decisión 3d de `design.md`) — no se cambia por
-chips ni píldoras. Dos reglas de comportamiento, no solo de estilo:
+**Rediseño confirmado sobre el mockup**: las 15 cualidades ya no son cards en grid con una insignia de
+check superpuesta — son **píldoras/chips** (`rounded-pill`) en una fila que envuelve (`flex-wrap`). El
+comportamiento no cambia, solo el estilo: dos reglas siguen siendo de comportamiento, no solo de estilo:
 
-1. **Diseño del check**: en vez de un `bi-check-circle-fill` inline junto a la etiqueta, la card
-   seleccionada muestra una insignia circular superpuesta en su esquina, con la misma animación de
-   entrada que la insignia de bloque del cuestionario (mismo lenguaje visual para "esto queda
-   marcado/elegido" en toda la app).
-2. **Tope de 5 en la propia interacción**: al llegar a 5 cualidades marcadas, las cards **no**
+1. **Estado seleccionado = cambio de color, sin icono**: sin seleccionar, fondo gris claro y texto
+   oscuro; seleccionada, fondo `$primary` (naranja) y texto blanco. A diferencia de la card anterior, no
+   lleva una insignia de check superpuesta — el propio cambio de fondo ya comunica "elegida", así que no
+   dupliques el estado con un icono adicional.
+2. **Tope de 5 en la propia interacción**: al llegar a 5 cualidades marcadas, las píldoras **no**
    seleccionadas quedan `disabled` — no se puede marcar una sexta hasta desmarcar alguna de las 5.
    Desmarcar nunca se bloquea. Esto es distinto (y más estricto) del bloqueo de envío: aquí se impide la
    propia acción de marcar, no solo el botón de guardar.
 
-Marcado exacto para el componente compartido `shared/quality-card`, usado en registro paso 2 y en
+Marcado exacto para el componente compartido `shared/quality-pill`, usado en registro paso 2 y en
 configuración (ver `SKILL.md`, sección "Sistema de botones, iconos y formularios"):
 
 ```html
-<!-- apps/frontend/src/app/shared/quality-card/quality-card.component.html -->
+<!-- apps/frontend/src/app/shared/quality-pill/quality-pill.component.html -->
 <button
   type="button"
-  class="card quality-card h-100 text-start"
-  [class.border-primary]="selected"
-  [class.bg-primary-subtle]="selected"
+  class="btn quality-pill rounded-pill"
+  [class.quality-pill--selected]="selected"
   [attr.aria-pressed]="selected"
   [disabled]="!selected && selectedCount >= 5"
   (click)="toggle.emit()">
-  <div class="card-body py-2 px-3 d-flex align-items-center">
-    <span>{{ label }}</span>
-  </div>
-  @if (selected) {
-    <span class="quality-card__check" aria-hidden="true">
-      <i class="bi bi-check-lg"></i>
-    </span>
-  }
+  {{ label }}
 </button>
 ```
 
-`selectedCount` se pasa desde el contenedor (número de cualidades ya marcadas en todo el grid, no un
-estado propio de cada card individual):
+`selectedCount` se pasa desde el contenedor (número de cualidades ya marcadas en todo el grupo, no un
+estado propio de cada píldora individual):
 
 ```html
-<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
+<div class="d-flex flex-wrap gap-2">
   @for (quality of qualities(); track quality.id) {
-    <div class="col">
-      <app-quality-card
-        [label]="quality.label"
-        [selected]="quality.selected"
-        [selectedCount]="selectedCount()"
-        (toggle)="onToggle(quality)" />
-    </div>
+    <app-quality-pill
+      [label]="quality.label"
+      [selected]="quality.selected"
+      [selectedCount]="selectedCount()"
+      (toggle)="onToggle(quality)" />
   }
 </div>
 ```
 
 ```scss
-// apps/frontend/src/app/shared/quality-card/quality-card.component.scss
-.quality-card {
-  position: relative; // necesario para que la insignia se posicione respecto a la card
+// apps/frontend/src/app/shared/quality-pill/quality-pill.component.scss
+.quality-pill {
+  background: var(--bs-secondary-bg); // gris claro, no seleccionada
+  color: $dark;
+  border: none;
+  padding: 0.4rem 1rem;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
-.quality-card__check {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+.quality-pill--selected {
   background: $primary;
   color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-  animation: quality-check-in 200ms ease-out;
 }
 
-@keyframes quality-check-in {
-  from { opacity: 0; transform: scale(0.4); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .quality-card__check { animation: none; }
+.quality-pill:disabled {
+  opacity: 0.5; // no seleccionada + tope de 5 alcanzado
+  cursor: default;
 }
 ```
+
+## Pantalla de bienvenida del cuestionario (solo modo creación)
+
+```html
+<!-- apps/frontend/src/app/features/questionnaire/questionnaire-intro.component.html -->
+@if (mode === 'create' && !started()) {
+  <div class="auth-shell d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+    <svg class="brand-mark brand-mark--white mb-3" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true">
+      <!-- ver sección "Logo de marca" -->
+    </svg>
+    <h1 class="h4 text-white mb-2">Cuestionario de compatibilidad</h1>
+    <p class="small text-white-75 mb-4" style="max-width:280px;">
+      Responde con calma. Cuanto más concreta sea tu respuesta, mejor podrá comparate la IA.
+    </p>
+    <button type="button" class="btn btn-dark" (click)="started.set(true)">Iniciar</button>
+  </div>
+} @else {
+  <!-- wizard de 6 bloques, ver "Cuestionario: wizard de 6 pasos" más abajo -->
+}
+```
+
+En **modo edición** (`mode === 'edit'`), esta pantalla no se muestra nunca — `started()` empieza en
+`true` directamente, así que se entra al wizard ya prerellenado sin pasar por aquí.
+
+## Completar perfil: paginación de 2 puntos (registro paso 2)
+
+```html
+<!-- apps/frontend/src/app/features/registration/registration.component.html -->
+@if (currentStep() === 0) {
+  <form class="text-start">
+    <div class="text-center mb-3">
+      <button type="button" class="profile-photo-picker rounded-circle" (click)="pickPhoto()">
+        @if (photoPreviewUrl()) {
+          <img [src]="photoPreviewUrl()" class="rounded-circle" width="96" height="96" alt="">
+        } @else {
+          <span class="profile-photo-picker__placeholder"></span>
+        }
+      </button>
+      <div class="small mt-2"><button type="button" class="btn btn-link p-0" (click)="pickPhoto()">Subir foto</button></div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="name">Nombre completo</label>
+      <input id="name" class="form-control" formControlName="name">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="alias">Un alias único</label>
+      <input id="alias" class="form-control" formControlName="alias">
+      <!-- feedback de disponibilidad de GET /users/check-alias, is-invalid/invalid-feedback si ocupado -->
+    </div>
+    <div class="d-flex justify-content-end">
+      <button type="button" class="btn btn-dark" [disabled]="step1Invalid()" (click)="goToStep(1)">Siguiente</button>
+    </div>
+  </form>
+} @else {
+  <div class="text-start">
+    <h2 class="h5 text-center mb-3">Elige 5 cualidades que te describen</h2>
+    <div class="d-flex flex-wrap gap-2 justify-content-center mb-4">
+      @for (quality of qualities(); track quality.id) {
+        <app-quality-pill [label]="quality.label" [selected]="quality.selected"
+                           [selectedCount]="selectedCount()" (toggle)="onToggle(quality)" />
+      }
+    </div>
+    <div class="d-flex justify-content-end">
+      <button type="button" class="btn btn-dark" [disabled]="selectedCount() !== 5" (click)="submit()">Finalizar</button>
+    </div>
+  </div>
+}
+
+<div class="d-flex justify-content-center gap-2 mt-3">
+  @for (step of [0, 1]; track step) {
+    <span class="registration-dot" [class.registration-dot--active]="currentStep() === step" aria-hidden="true"></span>
+  }
+</div>
+```
+
+```scss
+.profile-photo-picker {
+  width: 96px;
+  height: 96px;
+  border: none;
+  padding: 0;
+  background: linear-gradient(135deg, #FB8500, #BE1E2D); // mismo degradado de marca que Shell B
+}
+.profile-photo-picker__placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.registration-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bs-border-color);
+}
+.registration-dot--active { background: $dark; }
+```
+
+Los 2 puntos son solo indicador de posición, no clicables (a diferencia de los segmentos de la barra del
+cuestionario) — con solo 2 pasos y validación secuencial (el paso 2 exige que el paso 1 sea válido) no
+hace falta saltar por delante.
+
+## Pantalla de procesamiento
+
+```html
+<!-- apps/frontend/src/app/features/processing/processing.component.html -->
+<h1 class="h3 mb-1">Analizando tu compatibilidad</h1>
+<p class="text-body-secondary mb-4">Esto puede tardar unos segundos por candidato.</p>
+
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Analizando…</span>
+      </div>
+    </div>
+    <ul class="list-group list-group-flush">
+      @for (comparison of comparisons(); track comparison.id) {
+        <li class="list-group-item d-flex align-items-center gap-3">
+          <img [src]="comparison.candidate.photoUrl" class="rounded-circle" width="32" height="32" alt="">
+          <span class="flex-grow-1">{{ comparison.candidate.alias }}</span>
+          @switch (comparison.status) {
+            @case ('completed') { <i class="bi bi-check-circle-fill text-primary"></i> }
+            @case ('error') { <i class="bi bi-exclamation-triangle text-danger"></i> }
+            @default { <span class="spinner-border spinner-border-sm text-body-secondary" role="status"></span> }
+          }
+        </li>
+      }
+    </ul>
+  </div>
+</div>
+```
+
+Nunca un porcentaje agregado ni "1 de 3": cada comparación termina en un momento distinto e
+impredecible, así que el refuerzo aquí es "qué candidatos ya están listos" (lista con icono de estado),
+no "cuánto queda". El polling (`GET /users/me/comparisons`) se detiene y navega al dashboard en cuanto
+todas están en `completed`/`error`.
+
+## Configuración: sección de perfil (recalcular ahora) y sección de cuestionario
+
+**Sección Perfil** — tras guardar, si la selección de cualidades cambió (`needs_recalculation` pasa a
+`true`), ofrece recalcular sin tener que ir antes al dashboard:
+
+```html
+<!-- apps/frontend/src/app/features/settings/settings.component.html -->
+<div class="settings-section">
+  <h3 class="text-uppercase small text-body-secondary mb-2">Perfil</h3>
+  <!-- nombre, alias, quality-pill... -->
+  <button type="button" class="btn btn-dark" (click)="saveProfile()">Guardar cambios</button>
+
+  @if (profileSaved() && user().needsRecalculation) {
+    <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 py-2 mt-3" role="alert">
+      <span>Guardado. Tu compatibilidad ha quedado pendiente de recalcular.</span>
+      <button type="button" class="btn btn-outline-dark btn-sm text-nowrap" (click)="recalculateNow()">
+        Recalcular compatibilidad ahora
+      </button>
+    </div>
+  }
+</div>
+```
+
+**Sección Cuestionario** — resumen + botón que **navega** (no despliega inline) al cuestionario en modo
+edición, donde el propio guardado del último bloque ya recalcula (ver decisión 3h de `design.md` y la
+sección "Pantalla de bienvenida del cuestionario" más arriba):
+
+```html
+<div class="settings-section">
+  <h3 class="text-uppercase small text-body-secondary mb-2">Cuestionario</h3>
+  <p class="text-body-secondary small mb-2">
+    Respondido el {{ user().questionnaireCompletedAt | date:'longDate' }}.
+  </p>
+  <button type="button" class="btn btn-outline-dark btn-sm" routerLink="/questionnaire" [queryParams]="{mode: 'edit'}">
+    <i class="bi bi-pencil"></i> Editar tus respuestas
+  </button>
+</div>
+```
+
+```ts
+// apps/frontend/src/app/features/settings/settings.component.ts (esquema)
+async recalculateNow(): Promise<void> {
+  await this.matchingService.recalculate(); // POST /users/me/recalculate
+  this.router.navigate(['/dashboard']);
+}
+```
+
+Ninguno de los dos atajos duplica lógica de recálculo propia: ambos llaman al mismo
+`POST /users/me/recalculate` que ya usa el botón del dashboard (decisión 5b) — o, en el caso del
+cuestionario, quedan encadenados dentro del propio botón "Guardar y recalcular compatibilidad" del
+último bloque en modo edición (ver `footerButtonLabel()`/`onSubmitLastBlock()` más arriba).
+
+El botón "Editar tus respuestas" es `btn-outline-dark` (acción secundaria de la sección, no la principal
+de la pantalla — esa sigue siendo "Guardar cambios" del perfil). Configuración **no** duplica el botón
+de recalcular: solo enlaza al dashboard, donde vive el único control de recálculo (decisión 5b de
+`design.md`), ya habilitado allí porque `needs_recalculation` quedó en `true`.
 
 ## Chat interno: botón de la card, listado y burbujas de mensaje
 
@@ -491,7 +958,7 @@ decisión 9).
 
 ```html
 <!-- dentro del card-footer de cada card de features/results-dashboard -->
-<button type="button" class="btn btn-primary btn-sm" (click)="startChat(comparison.candidateUserId)">
+<button type="button" class="btn btn-dark btn-sm" (click)="startChat(comparison.candidateUserId)">
   <i class="bi bi-chat-dots"></i> Chatear
 </button>
 ```
@@ -557,7 +1024,7 @@ Sin `card-footer`: el listado no tiene una acción "principal" propia, cada fila
   </div>
   <div class="card-footer bg-white d-flex gap-2">
     <input class="form-control" [(ngModel)]="draftMessage" (keyup.enter)="send()" placeholder="Escribe un mensaje…">
-    <button type="button" class="btn btn-primary" (click)="send()" [disabled]="!draftMessage.trim()">
+    <button type="button" class="btn btn-dark" (click)="send()" [disabled]="!draftMessage.trim()">
       <i class="bi bi-send"></i>
     </button>
   </div>

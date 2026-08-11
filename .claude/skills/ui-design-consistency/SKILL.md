@@ -10,15 +10,16 @@ técnico del repo/paquete y no debe aparecer en ninguna pantalla.
 
 ## Por qué existe esta skill
 
-Este proyecto tiene 10 pantallas (login, registro paso 1, forgot/reset password, registro paso 2,
-cuestionario, procesando, dashboard, configuración, listado de chats, conversación de chat) construidas
-por una sola persona a lo largo de varias sesiones de trabajo. El riesgo real no es que una pantalla
-individual quede fea, sino que cada
+Este proyecto tiene 12 pantallas (landing pública, login, registro paso 1, forgot/reset password,
+completar perfil paso 2a y 2b, cuestionario, procesando, dashboard, configuración, listado de chats,
+conversación de chat) construidas por una sola persona a lo largo de varias sesiones de trabajo. El
+riesgo real no es que una pantalla individual quede fea, sino que cada
 una se resuelva con un criterio distinto — un formulario con Bootstrap y el siguiente con CSS a medida,
 una tarjeta con sombra y la siguiente sin ella, un botón de "guardar" que a veces es azul y a veces
 verde — y que el conjunto no se sienta como una sola aplicación. Esta skill existe para que, pantalla a
 pantalla, se reutilicen las mismas decisiones ya tomadas en `openspec/changes/build-compatibility-mvp/design.md`
-(decisiones 3c-bis, 3c-ter, 3d y 9) en vez de que cada componente nuevo las reinvente.
+(decisiones 3c-bis, 3c-ter, 3c-quater, 3d, 3d-bis, 3e, 3f, 3g y 9) en vez de que cada componente nuevo
+las reinvente.
 
 Si estás creando o tocando cualquier fichero bajo `apps/frontend/src/app/`, sigue esta guía. Si algo que
 ves en el código o en lo que se te pide contradice estas convenciones, dilo explícitamente antes de
@@ -30,17 +31,47 @@ implementarlo — no lo implementes en silencio y no lo dejes pasar en silencio 
   mockup antiguo, es un remanente por corregir, no una alternativa válida.
 - El logo es una marca abstracta de un solo color (5 `<path>`, sin relleno fijo). El marcado exacto
   vive en `references/design-tokens.md` — no lo redibujes ni cambies el `viewBox` (`0 0 345.3 336.08`).
-- **Siempre inline `<svg>`, nunca `<img src="logo.svg">`**: así el logo hereda color por CSS
-  (`fill: currentColor`) en vez de necesitar un fichero por color. El mismo SVG sirve en negro sobre el
-  navbar de Shell A y en naranja sobre la card de Shell B.
-- **Shell A (navbar)**: ~28px, hereda el color de texto del navbar (`$dark`) — sin color propio.
-- **Shell B (card de autenticación)**: ~48px, centrado encima del nombre, en `$primary` — es la única
-  superficie donde el logo lleva el color de marca en vez de heredar el texto, porque login/registro es
-  la primera impresión de la app.
+- **Siempre inline `<svg>`, nunca `<img src="logo.svg">`**: así el logo hereda color por CSS en vez de
+  necesitar un fichero por color.
+- **Shell A (navbar)**: ~28px, `fill: currentColor` — hereda el color de texto del navbar (`$dark`), sin
+  color propio.
+- **Shell B (pantallas de autenticación, fondo degradado)**: ~48px, en **blanco fijo** (`#FFFFFF`, no
+  `currentColor`) — es la única superficie donde el logo lleva un color fijo en vez de heredar el texto,
+  porque el fondo ahí es siempre el degradado de marca (nunca blanco), así que "heredar" no aplicaría.
+  Usa la clase `brand-mark--white` de `references/design-tokens.md`, no la variante `--accent` (naranja
+  sobre card blanca) que quedó obsoleta con el rediseño de Shell B.
+- Los archivos SVG originales (variante gris de un color, variante blanca, y los dos favicons
+  positivo/negativo con fondo cuadrado redondeado) están guardados en `docs/brand/` como fuente — cuando
+  exista `apps/frontend`, cópialos a `apps/frontend/src/assets/brand/` y referencia el favicon desde
+  `angular.json`/`index.html`. Ver `docs/brand/README.md` para el mapeo exacto de cada archivo.
 
-## Los dos "shells" de la aplicación
+## Landing pública (`/`) — antes de cualquier shell
 
-Toda pantalla pertenece a uno de dos shells. No hay una tercera opción ni pantallas "sueltas".
+Primera pantalla que ve quien no tiene sesión (ver decisión 3g de `design.md`). Si `/` se visita con
+sesión activa, no se muestra — redirige de inmediato a la resolución ya usada por la ruta autenticada
+(cuestionario o dashboard, mismo guard de la sección "Shell A"). Sin navbar, sin card de formulario:
+
+- Reutiliza el degradado de marca y el logo blanco de Shell B (continuidad visual hacia el login), pero
+  el contenido es editorial, no un formulario: un titular de una frase, una frase de apoyo explicando el
+  producto (cualidades + cuestionario de compatibilidad analizado por IA), y **un único botón** de CTA
+  (`btn-dark`, mismo color de acción principal que el resto de la app) que navega a `/auth/login`. No
+  añadas un segundo botón (p. ej. a registro) que no se haya pedido explícitamente.
+- **Animación de entrada, una sola vez al cargar**: el logo se ensambla — sus 5 `<path>` aparecen con
+  fundido + escala (0.6→1) escalonados unos `80ms` entre sí, mismo lenguaje que `quality-check-in`/
+  `block-badge-in` ya usado en el resto de la app — y el titular + subtítulo + botón entran con un
+  fundido corto justo después. El fondo tiene un desplazamiento de gradiente lento y continuo (ambiental,
+  no protagonista, `12s` o más por ciclo). Con `prefers-reduced-motion: reduce`, todo aparece completo de
+  inmediato y el degradado de fondo queda estático — nunca se elimina el contenido, solo la animación.
+
+El marcado y CSS exactos están en `references/design-tokens.md`.
+
+## Los dos "shells" de la aplicación (+ la landing pública, única excepción documentada)
+
+Toda pantalla de la aplicación en sí pertenece a uno de dos shells — no hay una tercera opción ni
+pantallas "sueltas" **dentro de la app**. La única excepción, fuera de ambos shells a propósito, es la
+**landing pública** en `/` (ver más abajo): no tiene sesión que gestionar (no es Shell A) ni contiene un
+formulario de autenticación (no es Shell B) — es contenido de marketing con un único botón hacia login.
+No añadas una segunda pantalla "suelta" sin documentarla igual de explícitamente aquí.
 
 ### Shell A — Pantallas autenticadas (`core/shell`)
 
@@ -112,27 +143,40 @@ Por qué es así:
 
 ### Shell B — Pantallas públicas de autenticación (`features/auth`)
 
-Usado por: login, registro paso 1, forgot password, reset password.
+Usado por: login, registro paso 1 (email/contraseña — no confundir con "completar perfil", que es Shell
+A), forgot password, reset password.
+
+**Rediseño (sustituye a la card centrada sobre fondo claro de versiones anteriores)**: las 4 pantallas
+ocupan toda la ventana con el **degradado de marca a pantalla completa** (`linear-gradient(160deg,
+#FB8500 0%, #BE1E2D 100%)`), sin card blanca de por medio — el formulario flota directamente sobre el
+degradado. El marcado y CSS exactos están en `references/design-tokens.md`; el esqueleto es:
 
 ```html
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light py-4">
-  <div class="card shadow-sm" style="max-width: 420px; width: 100%;">
-    <div class="card-body p-4">
-      <div class="text-center mb-4">
-        <svg class="brand-mark brand-mark--accent" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true">
-          <!-- 5 <path> del logo — copia el bloque completo de references/design-tokens.md -->
-        </svg>
-        <h1 class="h4 mt-2 mb-0">AfinIA</h1>
-      </div>
-      <!-- contenido específico: formulario de login / registro / forgot / reset -->
-    </div>
+<div class="auth-shell d-flex flex-column align-items-center justify-content-center text-center px-3 py-5">
+  <svg class="brand-mark brand-mark--white mb-3" viewBox="0 0 345.3 336.08" width="48" height="48" aria-hidden="true">
+    <!-- 5 <path> del logo — copia el bloque completo de references/design-tokens.md -->
+  </svg>
+  <!-- Solo en login: <h1 class="h3 text-white mb-4">AfinIA</h1> -->
+  <!-- En registro/recuperar/nueva contraseña: título propio de la pantalla en vez del wordmark, ver design-tokens.md -->
+  <div class="w-100" style="max-width: 360px;">
+    <!-- contenido específico: formulario de login / registro / forgot / reset -->
   </div>
 </div>
 ```
 
 Por qué es así: las 4 pantallas de `features/auth` son estados de un mismo flujo (nadie ve dos a la vez,
-y visualmente deberían sentirse como la misma tarjeta cambiando de contenido, no como 4 diseños
-distintos). No lleva navbar porque todavía no hay sesión que cerrar ni configuración que abrir.
+y visualmente deberían sentirse como el mismo fondo cambiando de contenido, no como 4 diseños distintos).
+No lleva navbar porque todavía no hay sesión que cerrar ni configuración que abrir. Reglas específicas de
+este shell:
+- El logo (blanco) aparece en las 4 pantallas; **solo login** añade debajo el wordmark "AfinIA" — el
+  resto muestra en su lugar un título propio de esa pantalla ("Registro", "Recuperar contraseña", "Nueva
+  contraseña").
+- Los `form-control` mantienen fondo claro/blanco (nunca transparentes sobre el degradado — perderían
+  legibilidad), pero las etiquetas/enlaces/texto suelto de esta pantalla van en blanco
+  (`text-white`/`text-white-50`), no en `$body-color` como en Shell A.
+- El botón principal de estas 4 pantallas sigue la misma regla que el resto de la app — ver "Sistema de
+  botones" más abajo (`btn-dark`, no `btn-primary`).
+- Copys y estructura exactos de cada una de las 4 pantallas: `references/design-tokens.md`.
 
 ## Sistema de color y tipografía (branding)
 
@@ -141,15 +185,18 @@ Bootstrap — tiene una paleta e identidad tipográfica propias, que deben aplic
 pantallas:
 
 - **Paleta de color** (5 colores base, sin excepciones ni tonos "de más" inventados por pantalla):
-  - `#FB8500` (naranja "Princeton") → color **primario** de marca: botones principales, elementos
-    activos, acentos.
+  - `#FB8500` (naranja "Princeton") → color **primario** de marca: elementos activos/seleccionados
+    (píldoras de cualidad marcadas, burbuja propia del chat), acentos, insignias, degradado de fondo de
+    Shell B. **Ya no es el color de relleno del botón principal** — ver "Sistema de botones" más abajo:
+    ese rol pasó a `btn-dark`.
   - `#BE1E2D` (rojo "Carmine") → estados hover/active del primario, acento secundario (icono de racha,
-    extremo más intenso del gradiente de bloques del cuestionario). **No lo uses para
-    `btn-outline-secondary`** — ver la nota en "Sistema de botones" más abajo: al ser rojo, un botón
-    outline con este color se lee como una acción destructiva, no como una acción neutra.
-  - `#000000` (negro) → texto principal y superficies oscuras. A diferencia de la paleta anterior, aquí
-    el negro puro es un color de marca deliberado (extremo del gradiente del bloque de mayor peso), no
-    una concesión que evitar.
+    extremo más intenso del gradiente de bloques del cuestionario, extremo del degradado de fondo de
+    Shell B). **No lo uses para `btn-outline-secondary`** — ver la nota en "Sistema de botones" más
+    abajo: al ser rojo, un botón outline con este color se lee como una acción destructiva, no como una
+    acción neutra.
+  - `#000000` (negro) → texto principal, superficies oscuras y **relleno del botón principal de toda la
+    app** (`btn-dark`, ver "Sistema de botones"). El negro puro es un color de marca deliberado (extremo
+    del gradiente del bloque de mayor peso, botón de acción principal), no una concesión que evitar.
   - `#FDF0D5` (crema "Papaya Whip") → fondos suaves de sección, superficie alternativa a `bg-light`, y
     extremo "frío" del gradiente de bloques del cuestionario (ver más abajo).
   - `#FFFFFF` (blanco) → fondo base de cards y superficies claras, y el otro extremo frío del mismo
@@ -186,6 +233,13 @@ bloques, inspirado en el patrón de "un campo/bloque por pantalla + barra de pro
 volver" típico de los onboardings de apps móviles. Esto sustituye el planteamiento anterior de acordeón
 con los 6 paneles visibles a la vez.
 
+**Pantalla de bienvenida previa, solo en modo creación** (ver decisión 3h de `design.md`): antes del
+bloque 1, la primera vez que alguien entra al cuestionario ve una única pantalla de transición — mismo
+fondo degradado que Shell B/landing, título "Cuestionario de compatibilidad", una frase invitando a
+responder con calma, botón "Iniciar" — no arranca directo en el bloque 1. En **modo edición** (llegando
+desde el botón "Editar tus respuestas" de Configuración, ver más abajo) esta pantalla se omite por
+completo: se entra directo al bloque en el que se dejó, ya prerellenado.
+
 Reglas concretas:
 - **Cabecera de wizard**, fija encima de la card del paso actual (no dentro de ella): a la izquierda una
   flecha de volver (`btn btn-link p-0` + `bi-arrow-left`) que navega al bloque anterior — en el bloque 1
@@ -207,13 +261,17 @@ Reglas concretas:
   pueden saltar por delante — el orden de progreso sigue siendo 1→6, lo único libre es volver atrás.
 - La barra **nunca muestra el peso como texto** (nada de "Bloque 3 · 15%"): el peso se comunica solo por
   el ancho y el color de cada segmento — evita que la pantalla se sienta "matemática".
-- **Dentro del bloque activo, las 6 preguntas no van apiladas verticalmente**: se muestran como
-  **pestañas** (`NgbNav`), una pestaña por pregunta, mostrando una sola pregunta/respuesta a la vez.
-  Cada pestaña indica si esa pregunta ya está respondida (icono relleno) o no (icono vacío), y cambiar
-  de pestaña anima el contenido con una transición sutil (fade + desplazamiento horizontal corto, ~200ms,
+- **Dentro del bloque activo, las 6 preguntas no van apiladas verticalmente ni en pestañas**: cada
+  pregunta ocupa **toda la pantalla**, una a la vez (ya no `NgbNav`). La navegación entre las 6
+  preguntas del bloque activo es una fila de **6 puntos + flechas prev/next** debajo de la pregunta —
+  mismo lenguaje visual que la barra de progreso por bloques, un nivel más abajo: cada punto refleja si
+  esa pregunta ya está respondida (relleno) o no (vacío), y **es clicable para saltar directo a ella**,
+  con la misma regla de los segmentos de bloque (solo puedes saltar a preguntas ya visitadas dentro de
+  ese bloque; las flechas avanzan/retroceden de una en una sin esa restricción). Cambiar de pregunta
+  anima el contenido con una transición sutil (fade + desplazamiento horizontal corto, ~200ms,
   `ease-out`) en vez de un cambio brusco — los valores exactos de la transición están en
   `references/design-tokens.md`, igual que el resto de tokens. Respeta `prefers-reduced-motion`: sin la
-  transición animada para quien la tenga desactivada, el cambio de pestaña sigue funcionando igual.
+  transición animada para quien la tenga desactivada, el cambio de pregunta sigue funcionando igual.
 - El `<textarea>` de cada pregunta ocupa **todo el ancho de la card** (`w-100`/`form-control`, nunca un
   ancho fijo en píxeles ni una columna estrecha) y tiene altura suficiente para previsualizar **al menos
   4 líneas de texto** (`rows="4"` como mínimo) — no un campo de una sola línea. Respuestas más largas
@@ -231,14 +289,17 @@ Reglas concretas:
   `maxReachedBlockIndex` en vez de obligarte a pasar de nuevo por cada bloque intermedio uno a uno.
 - El paso del bloque activo sigue el patrón container+card normal (ver más abajo): la card lleva un
   `card-header` con el gradiente de ese bloque (título del bloque, sin el peso como texto, más la
-  insignia si ya está completo) y un `card-body` con las pestañas + `textarea`, en fondo claro/blanco
-  para que el texto siga siendo legible. El `card-footer` lleva un único botón, cuyo texto depende de si
+  insignia si ya está completo) y un `card-body` con la pregunta activa + `textarea` + navegación de
+  puntos, en fondo claro/blanco para que el texto siga siendo legible. El `card-footer` lleva un único
+  botón, cuyo texto depende de si
   estás avanzando o revisando (ver punto anterior) — la flecha de volver de la cabecera ya cubre "un paso
   atrás", así que el footer nunca necesita un botón secundario.
 - Ya no uses `NgbAccordion` para los 6 bloques — implicaría tenerlos todos montados (aunque colapsados) a
   la vez, justo lo que este patrón evita. Usa un estado simple (`currentBlockIndex` +
-  `maxReachedBlockIndex`) y renderiza solo la card del bloque activo. `NgbNav` para las 6 pestañas dentro
-  del bloque sigue igual que antes.
+  `maxReachedBlockIndex`) y renderiza solo la card del bloque activo. Dentro del bloque, tampoco uses
+  `NgbNav` — el mismo par de signals aplicado un nivel más abajo (`currentQuestionIndex` +
+  `maxReachedQuestionIndex`, con alcance local al bloque activo) resuelve la navegación de puntos +
+  flechas de la pregunta activa.
 
 ### Gamificación del cuestionario: refuerzo visual, no una mecánica nueva
 
@@ -265,16 +326,51 @@ algo que esta skill autoriza.
   El mismo icono, ya sin animación, es el que queda superpuesto en el segmento de la barra al avanzar de
   bloque (ver arriba). No dupliques el estado con un badge de texto tipo "Completado".
 - **Micro-animación al responder**: cuando el `textarea` de una pregunta pasa de vacío a con contenido,
-  el icono de su pestaña pasa de `bi-circle` a `bi-check-circle-fill` con la animación `tab-icon-pop`
-  (scale 1→1.3→1) de `references/design-tokens.md`.
+  su punto en la navegación de preguntas (`question-nav__dot`) pasa a rellena (`$primary`) con la
+  animación `tab-icon-pop` (scale 1→1.3→1) de `references/design-tokens.md`.
 - **Banner de cierre** al llegar a 36/36 (aparece en el paso del bloque 6, encima de la card, nunca
   sustituyéndola): usa el gradiente de ese mismo bloque (`linear-gradient(135deg, #BE1E2D, #000000)`,
   reutilizado — no es un color nuevo), texto blanco, icono `bi-stars` y el mensaje fijo "¡Cuestionario
   completo! Ya puedes enviarlo." Es informativo: el botón real de envío sigue siendo el del
   `card-footer`, el banner no lo sustituye ni lo deshabilita.
 - Todas las animaciones de esta sección respetan `prefers-reduced-motion` con el mismo criterio que la
-  transición de pestañas: sin el efecto animado, el cambio de estado (insignia, icono, banner) sigue
+  transición de preguntas: sin el efecto animado, el cambio de estado (insignia, punto, banner) sigue
   ocurriendo igual, solo sin la animación.
+
+## Completar perfil (registro paso 2): wizard de 2 pasos
+
+Sobre el mockup, esta pantalla (Shell A, caso especial — ver arriba) ya no es un formulario único: son
+**2 pasos con paginación por puntos** (2 puntos debajo del contenido, el actual relleno). Es una
+división de **cliente únicamente** — sigue habiendo un solo `POST /users/me/profile` al terminar el
+paso 2, no un endpoint por paso:
+
+- **Paso 1**: foto (circular, con preview al subir) + "Subir foto", nombre completo, alias (con
+  validación en vivo contra `GET /users/check-alias`). Botón "Siguiente" — solo avanza de paso, no
+  envía nada al backend. Deshabilitado mientras alias/nombre/foto no sean válidos.
+- **Paso 2**: las 5 píldoras de cualidad (ver "Sistema de botones..." más abajo). Botón "Finalizar" —
+  este es el que dispara el envío real a `POST /users/me/profile` con los datos de ambos pasos juntos.
+  Deshabilitado mientras la selección no sea exactamente 5.
+
+Los 2 puntos de paginación son solo indicador de posición (no clicables como los de la barra del
+cuestionario — con 2 pasos y validación secuencial no hay "revisar un paso saltando por delante" que
+resolver). El marcado exacto está en `references/design-tokens.md`.
+
+## Pantalla de procesamiento (`features/processing`)
+
+Entre el envío del cuestionario y el dashboard, esta pantalla (Shell A) sondea
+`GET /users/me/comparisons` mientras las hasta 3 comparaciones siguen sin terminar. Sigue el patrón
+container+card estándar, con este contenido en el `card-body`:
+
+- Spinner centrado (`spinner-border text-primary`, mismo patrón que el estado de "cargando" del resto
+  de la app).
+- Debajo, una lista con una fila por candidato ya seleccionado (foto/alias + icono de estado:
+  pendiente/analizando, `bi-check-circle-fill` si `completed`, `bi-exclamation-triangle` si `error`).
+- **Nunca un porcentaje ni un contador "1 de 3"**: el orden de finalización entre comparaciones no es
+  predecible (no todas tardan lo mismo), así que un porcentaje sugeriría una duración estimable que no
+  existe — el refuerzo visual aquí es "qué candidatos ya están listos", no "cuánto queda".
+
+El polling se detiene en cuanto todas las comparaciones existentes están en `completed`/`error`, y
+entonces navega automáticamente al dashboard — no hace falta un botón "continuar" manual.
 
 ## El patrón container + card para el contenido de cada feature
 
@@ -312,7 +408,7 @@ una decisión de estilo: ver `design.md` decisión 5d y `specs/results-dashboard
 Tres piezas de UI para la capability `internal-chat` (ver `design.md` decisión 9):
 
 - **Botón "Chatear" en cada card del dashboard**: junto al resto de acciones de la card (ver
-  `results-dashboard`), `btn btn-primary btn-sm` con icono `bi-chat-dots` que llama a
+  `results-dashboard`), `btn btn-dark btn-sm` con icono `bi-chat-dots` que llama a
   `POST /conversations` con el candidato de esa card y navega a `features/chats/:id` con la conversación
   devuelta (nueva o ya existente — el backend es idempotente, la UI nunca decide si crear o reutilizar).
 - **`features/chats` (listado)**: sigue el patrón container+card normal, pero el `card-body` contiene un
@@ -323,7 +419,7 @@ Tres piezas de UI para la capability `internal-chat` (ver `design.md` decisión 
   dashboard o el cuestionario. `card-header` con foto/alias del otro participante y una flecha de volver
   al listado; `card-body` con scroll propio (`overflow-y: auto`, altura fija en CSS, nunca
   `height: 100vh` a pelo) mostrando los mensajes en orden cronológico; `card-footer` con un
-  `<input>`/`form-control` de texto + botón de enviar (icono `bi-send`, `btn-primary`) — es el único
+  `<input>`/`form-control` de texto + botón de enviar (icono `bi-send`, `btn-dark`) — es el único
   "formulario" real de esta pantalla.
 
 Mensajes propios alineados a la derecha en `$primary` con texto blanco; mensajes del otro participante a
@@ -332,16 +428,47 @@ chat, así que necesita CSS propio (no hay una clase de Bootstrap equivalente); 
 están en `references/design-tokens.md`. Los mensajes largos hacen `word-break` dentro de la burbuja, sin
 generar scroll horizontal en ningún viewport (ver sección de responsive).
 
+## Configuración: perfil, cuestionario y contraseña
+
+`features/settings` sigue el patrón container+card estándar con **3 secciones** dentro del mismo
+`card-body` (separadas por `settings-section`/subtítulo, no 3 cards distintas):
+
+1. **Perfil**: nombre, alias (validación en vivo) y las píldoras de cualidad (`shared/quality-pill`,
+   mismo tope de 5 que el registro) — botón "Guardar cambios" (`btn-dark`) al final de esta sección. Al
+   guardar con éxito (si la selección de cualidades cambió, lo que marca `needs_recalculation = true`),
+   aparece un `alert alert-warning` con un botón **"Recalcular compatibilidad ahora"**
+   (`btn-outline-dark btn-sm`) que llama directo a `POST /users/me/recalculate` y navega al dashboard —
+   sin obligar a ir antes al dashboard a buscar ese botón.
+2. **Cuestionario**: muestra un resumen (p. ej. "Respondido el 12/03/2026") y un botón **"Editar tus
+   respuestas"** (`btn-outline-dark`) que **navega** a `features/questionnaire` en modo edición (ruta
+   real, ver decisión 3h de `design.md` — no despliega las 36 preguntas dentro de la propia pantalla de
+   configuración). En modo edición se omite la pantalla de bienvenida (ver "Cuestionario" más arriba) y
+   se entra directo al wizard ya prerellenado. El botón del `card-footer` del bloque 6, en este modo, no
+   dice "Enviar cuestionario" sino **"Guardar y recalcular compatibilidad"**: encadena en una sola
+   acción `PATCH /users/me/questionnaire` seguido de `POST /users/me/recalculate`, y navega al
+   dashboard ya refrescado — sin volver antes a Configuración ni al dashboard a buscar un botón aparte.
+3. **Contraseña**: contraseña actual + nueva (con reautenticación, decisión 7b) — botón "Cambiar
+   contraseña" (`btn-outline-dark`, es una acción independiente de "Guardar cambios").
+
+El botón de recalcular del dashboard (decisión 5b) sigue existiendo tal cual — es el punto al que llevan
+los dos atajos de arriba, no algo que se duplique con lógica propia en cada sitio. El marcado exacto de
+la sección de cuestionario y del atajo de recalcular está en `references/design-tokens.md`.
+
 ## Sistema de botones, iconos y formularios
 
 No inventes un patrón nuevo por pantalla para estas cosas — reutiliza siempre el mismo:
 
-- **Botón principal de una pantalla/card** (enviar, guardar, continuar, recalcular): `btn btn-primary`.
-  Solo debe haber uno por card como acción "principal".
+- **Botón principal de una pantalla/card** (enviar, guardar, continuar, recalcular, iniciar sesión,
+  crear cuenta, chatear, enviar mensaje): `btn btn-dark` — **ya no `btn-primary`**. Este es un cambio
+  transversal a toda la app (no solo a Shell B): el naranja `$primary` deja de usarse como relleno de
+  botón y queda reservado para acentos/estados-seleccionados (ver paleta más arriba); el negro es ahora
+  el único color de relleno para la acción principal, en cualquier pantalla y fondo. Solo debe haber uno
+  por card como acción "principal".
 - **Acción secundaria** (cancelar, volver, "¿olvidaste tu contraseña?"): `btn btn-outline-dark`
   o `btn btn-link` si es más un enlace que una acción. **No uses `btn-outline-secondary`**: desde el
   cambio de paleta `$secondary` es el rojo Carmine, y un botón outline en rojo se lee como una acción
-  destructiva, no como una acción secundaria neutra.
+  destructiva, no como una acción secundaria neutra. Al ser ahora ambos "dark" (principal en sólido,
+  secundario en outline), la jerarquía sigue siendo clara por el relleno, no por el color.
 - **Acción destructiva o de cierre de sesión**: `btn btn-outline-dark` con icono — por el mismo motivo
   de arriba, nunca `btn-outline-secondary` (rojo) ni `btn-danger` para logout: no es una acción
   destructiva, es una acción neutra, y el rojo de la paleta queda reservado para hover/acentos.
@@ -359,20 +486,17 @@ No inventes un patrón nuevo por pantalla para estas cosas — reutiliza siempre
     <div class="invalid-feedback">Introduce un email válido.</div>
   </div>
   ```
-- **Cards seleccionables** (las 15 cualidades en registro/configuración, ver decisión 3d de
-  `design.md`): siguen siendo `card` en grid, **no chips ni píldoras** — lo único que cambia respecto a
-  la versión anterior es el **diseño del check** de "seleccionada". En vez de un `bi-check-circle-fill`
-  inline junto a la etiqueta, la card seleccionada lleva `border-primary bg-primary-subtle` (igual que
-  antes) más una **insignia circular superpuesta en la esquina** (`bi-check-lg` sobre fondo `$primary`,
-  ligeramente fuera del borde de la card) que aparece con una animación de entrada (`quality-check-in`,
-  scale 0.4→1 + fade) — el mismo lenguaje visual que la insignia de bloque completado del cuestionario,
-  para que "marcar algo como elegido" se sienta igual en toda la app. **Tope de 5 en la propia
-  interacción, no solo al enviar**: en cuanto hay 5 seleccionadas, las cards no marcadas se deshabilitan
-  (`disabled`, sin `(click)`) hasta que se desmarca alguna — desmarcar siempre está permitido. Sigue
+- **Píldoras seleccionables** (las 15 cualidades en registro paso 2/configuración, ver decisión 3d de
+  `design.md` — **rediseño: sustituye a las cards con insignia de check de versiones anteriores**): cada
+  cualidad es una píldora/chip compacto (`rounded-pill`), no una card en grid. Sin seleccionar: fondo
+  gris claro, texto oscuro. Seleccionada: fondo `$primary` (naranja), texto blanco — sin icono de check
+  superpuesto, el propio cambio de color ya comunica "seleccionada". **Mismo comportamiento que antes,
+  solo cambia el estilo**: tope de 5 en la propia interacción (en cuanto hay 5 marcadas, las píldoras no
+  marcadas quedan `disabled` hasta que se desmarca alguna; desmarcar siempre está permitido). Sigue
   siendo un `<button>` con `[attr.aria-pressed]`, nunca un `<div>` con solo un `(click)`. El marcado
   exacto está en `references/design-tokens.md`. El mismo componente debe reutilizarse en registro paso 2
   **y** en configuración — no dupliques el marcado en los dos sitios, extrae un componente compartido
-  (`shared/quality-card` o similar).
+  (`shared/quality-pill` o similar).
 
 ## Estados de carga, vacío y error
 
@@ -433,7 +557,9 @@ pantalla por pantalla de forma aislada:
       las 36 respuestas para enviar?
 - [ ] ¿Ningún botón "neutro" (secundario o logout) usa `btn-outline-secondary`? Desde el cambio de
       paleta ese color es rojo y se lee como destructivo — usa `btn-outline-dark`.
-- [ ] Si la pantalla tiene cards de cualidades: ¿las no seleccionadas se deshabilitan al llegar a 5
+- [ ] ¿El botón de acción principal usa `btn-dark`, no `btn-primary`? El naranja `$primary` ya no es
+      color de relleno de botón en ninguna pantalla, solo acento/estado-seleccionado.
+- [ ] Si la pantalla tiene píldoras de cualidades: ¿las no seleccionadas se deshabilitan al llegar a 5
       marcadas (no se puede marcar una sexta), permitiendo siempre desmarcar?
 - [ ] Si la pantalla es Shell A: ¿el icono de chat aparece a la izquierda de Configuración (chat,
       configuración, logout, en ese orden), y ambos (chat + configuración) están ausentes en la pantalla
@@ -441,6 +567,12 @@ pantalla por pantalla de forma aislada:
 - [ ] Si la pantalla es una conversación de chat: ¿los mensajes propios y los del otro participante se
       distinguen por alineación/color (no solo por texto), y el área de mensajes tiene scroll propio en
       vez de hacer crecer toda la página?
+- [ ] Si la pantalla es el cuestionario: ¿la pantalla de bienvenida solo aparece en modo creación (nunca
+      en modo edición), y el botón del bloque 6 dice "Guardar y recalcular compatibilidad" en edición
+      encadenando el `PATCH` con `POST /users/me/recalculate`, en vez de "Enviar cuestionario"?
+- [ ] Si la pantalla es Configuración: ¿el botón "Editar tus respuestas" navega al cuestionario en modo
+      edición (no lo despliega inline), y el guardado de perfil/cualidades ofrece un atajo de recalcular
+      sin obligar a ir antes al dashboard?
 
 Si la respuesta a alguna de estas preguntas es "no" y no hay una razón concreta para la excepción,
 corrígelo antes de considerar la pantalla terminada — y si la razón para la excepción existe, dila en
@@ -449,9 +581,11 @@ voz alta (coméntala al usuario o en el PR) en vez de dejar la desviación sin e
 ## Ver también
 
 - `openspec/changes/build-compatibility-mvp/design.md` — decisiones 3c-bis (Bootstrap como sistema de
-  diseño), 3c-ter (responsive), 3c-quater (paleta, tipografía y wizard del cuestionario), 3d (cards de
-  cualidades) y 9 (chat interno) son la fuente de verdad de la que sale esta skill; si esas decisiones
-  cambian, esta skill debe actualizarse a la vez.
+  diseño), 3c-ter (responsive), 3c-quater (paleta, tipografía, botón oscuro, Shell B degradado y wizard
+  del cuestionario), 3d/3d-bis (píldoras de cualidades), 3e (completar perfil en 2 pasos), 3f (pantalla
+  de procesamiento), 3g (landing pública), 3h (bienvenida del cuestionario y recálculo integrado) y 9
+  (chat interno) son la fuente de verdad de la que sale esta skill; si esas decisiones cambian, esta
+  skill debe actualizarse a la vez.
 - `openspec/changes/build-compatibility-mvp/specs/internal-chat/spec.md` — requisitos formales del chat
   (elegibilidad, acceso desde el menú, no leídos) que la UI descrita aquí debe cumplir.
 - `references/page-template.md` — plantilla de partida copy-paste para arrancar un componente de

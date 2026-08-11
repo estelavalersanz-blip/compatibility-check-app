@@ -12,6 +12,8 @@ base de datos ni datos de prueba, así que esta propuesta cubre la primera versi
 
 ## What Changes
 
+- Landing pública antes de cualquier pantalla de autenticación, que explica la finalidad del producto
+  con un único botón hacia login; se omite y redirige directo al estado autenticado si ya hay sesión.
 - Autenticación por email y contraseña (registro, login, logout y recuperación de contraseña por
   email), delegada en Supabase Auth: la contraseña queda hasheada en la misma base de datos Postgres
   del proyecto, sin implementar hashing/tokens de recuperación a mano.
@@ -27,10 +29,12 @@ base de datos ni datos de prueba, así que esta propuesta cubre la primera versi
   (pre-compatibilidad), calculada una única vez al completar el cuestionario — sin recálculo
   retroactivo para usuarios ya existentes cuando se une gente nueva (evita una explosión de llamadas
   al LLM).
-- Edición, desde la página de perfil, tanto de las respuestas del cuestionario como de las 5 cualidades
-  elegidas; cualquiera de las dos ediciones habilita un botón de "recalcular compatibilidad" que vuelve
-  a seleccionar candidatos y relanza el análisis solo para el propio usuario (sin afectar a otros
-  usuarios que lo tuvieran como candidato).
+- Edición, desde la página de perfil, tanto de las respuestas del cuestionario (navegando a una pantalla
+  propia en modo edición) como de las 5 cualidades elegidas. Editar y guardar el cuestionario recalcula
+  la compatibilidad en la misma acción; editar solo las cualidades habilita un atajo de "recalcular
+  compatibilidad" (en configuración y en el dashboard) que hay que activar explícitamente. En ambos
+  casos, el recálculo vuelve a seleccionar candidatos y relanza el análisis solo para el propio usuario
+  (sin afectar a otros usuarios que lo tuvieran como candidato).
 - La página principal de la aplicación es el cuestionario mientras el usuario no lo haya completado
   nunca, y pasa a ser el dashboard de resultados una vez completado; el dashboard se refresca al
   ejecutar el recálculo.
@@ -59,11 +63,12 @@ base de datos ni datos de prueba, así que esta propuesta cubre la primera versi
 ## Capabilities
 
 ### New Capabilities
-- `authentication`: registro con email/contraseña (verificando email no duplicado), login, logout y
-  recuperación de contraseña por email, delegados en Supabase Auth.
-- `user-registration`: paso 2 del alta (requiere sesión autenticada): nombre, alias único, foto y
-  selección de exactamente 5 de 15 cualidades personales, visualizadas como cards independientes que
-  bloquean el envío hasta tener exactamente 5 marcadas.
+- `authentication`: landing pública antes de cualquier pantalla de autenticación, registro con
+  email/contraseña (verificando email no duplicado), login, logout y recuperación de contraseña por
+  email, delegados en Supabase Auth.
+- `user-registration`: paso 2 del alta (requiere sesión autenticada), presentado como wizard de 2 pasos:
+  foto/nombre/alias y, después, selección de exactamente 5 de 15 cualidades personales visualizadas como
+  píldoras independientes que bloquean el envío hasta tener exactamente 5 marcadas.
 - `user-settings`: pantalla de configuración (accesible desde botones de ajustes/logout en la cabecera)
   para editar contraseña, nombre, alias, foto y cualidades de un perfil ya existente.
 - `personal-questionnaire`: formulario del cuestionario de 36 preguntas de compatibilidad y

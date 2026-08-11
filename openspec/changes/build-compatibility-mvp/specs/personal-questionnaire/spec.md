@@ -111,30 +111,57 @@ con más peso se distingan visualmente de los de menos peso.
   alcanzado (por ejemplo, saltar del bloque 2 al bloque 5 sin haber pasado por el 3 y el 4)
 - **THEN** el sistema no permite ese salto; solo se puede avanzar bloque a bloque
 
-### Requirement: Preguntas de un bloque presentadas como pestañas, no apiladas
-El sistema SHALL presentar las 6 preguntas del bloque activo como pestañas independientes (una
-pregunta visible a la vez), en vez de mostrarlas apiladas verticalmente, e indicar en cada pestaña si su
-pregunta ya tiene respuesta. El sistema SHALL animar el cambio de pestaña con una transición visual.
+### Requirement: Una pregunta a pantalla completa, con navegación por puntos
+El sistema SHALL presentar las 6 preguntas del bloque activo de una en una, ocupando toda la pantalla
+(no apiladas ni como pestañas), con una fila de 6 puntos y flechas de avance/retroceso que indican, para
+cada pregunta, si ya tiene respuesta. El sistema SHALL permitir saltar directamente a cualquier pregunta
+ya visitada haciendo clic en su punto, y SHALL animar el cambio de pregunta con una transición visual.
 
 #### Scenario: Una sola pregunta visible a la vez dentro de un bloque
 - **WHEN** el usuario está en un bloque del cuestionario
-- **THEN** ve 6 pestañas (una por pregunta) y el contenido de una sola pregunta a la vez, no las 6
-  preguntas apiladas en la misma vista
+- **THEN** ve el contenido de una sola pregunta a pantalla completa, con una fila de 6 puntos y flechas
+  debajo, no las 6 preguntas apiladas ni como pestañas en la misma vista
 
-#### Scenario: Cambio de pestaña con transición visual
-- **WHEN** el usuario selecciona una pestaña distinta dentro del mismo bloque
+#### Scenario: Cambio de pregunta con transición visual
+- **WHEN** el usuario avanza, retrocede o hace clic en un punto para cambiar de pregunta dentro del
+  mismo bloque
 - **THEN** el contenido de la nueva pregunta aparece con una transición visual (no un cambio
   instantáneo y brusco), salvo que el usuario tenga activada la preferencia de movimiento reducido, en
-  cuyo caso el cambio de pestaña sigue funcionando sin la animación
+  cuyo caso el cambio de pregunta sigue funcionando sin la animación
 
-#### Scenario: Las pestañas reflejan qué preguntas están respondidas
-- **WHEN** se muestran las pestañas de un bloque
-- **THEN** cada pestaña indica visualmente si su pregunta ya tiene una respuesta guardada o no
+#### Scenario: Los puntos reflejan qué preguntas están respondidas
+- **WHEN** se muestra la fila de puntos de un bloque
+- **THEN** cada punto indica visualmente si su pregunta ya tiene una respuesta guardada o no
+
+#### Scenario: Salto directo a una pregunta ya visitada
+- **WHEN** el usuario hace clic en el punto de una pregunta del bloque activo que ya visitó antes
+- **THEN** el sistema muestra directamente esa pregunta, sin tener que pasar pregunta a pregunta con las
+  flechas
+
+#### Scenario: No se puede saltar a una pregunta aún no alcanzada
+- **WHEN** el usuario intenta hacer clic en el punto de una pregunta posterior a la más avanzada que ha
+  alcanzado dentro del bloque activo
+- **THEN** el sistema no permite ese salto; solo se puede avanzar pregunta a pregunta con la flecha
 
 #### Scenario: El campo de respuesta tiene tamaño suficiente
 - **WHEN** se muestra la pregunta activa de un bloque
 - **THEN** el campo de respuesta ocupa todo el ancho disponible del panel y su altura permite ver al
   menos 4 líneas de texto sin necesidad de hacer scroll
+
+### Requirement: Pantalla de bienvenida antes del wizard, solo la primera vez
+El sistema SHALL mostrar, antes del bloque 1, una única pantalla de transición (título, frase invitando
+a responder con calma, y un botón para empezar) la primera vez que un usuario entra al cuestionario para
+completarlo, y SHALL omitir esa pantalla cuando el usuario entra a editar un cuestionario ya completado.
+
+#### Scenario: Bienvenida al completar el cuestionario por primera vez
+- **WHEN** un usuario sin cuestionario completado todavía abre el cuestionario
+- **THEN** el sistema muestra la pantalla de bienvenida antes de dar acceso al bloque 1, y solo entra al
+  wizard cuando el usuario pulsa el botón de esa pantalla
+
+#### Scenario: Sin bienvenida al editar un cuestionario ya completado
+- **WHEN** un usuario con cuestionario ya completado entra a editar sus respuestas desde su perfil
+- **THEN** el sistema muestra directamente el wizard con sus respuestas ya prerellenadas, sin mostrar la
+  pantalla de bienvenida
 
 ### Requirement: Persistencia en estructura JSON prefijada
 El sistema SHALL almacenar las respuestas como un array de 36 objetos con la forma

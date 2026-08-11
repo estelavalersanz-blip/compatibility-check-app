@@ -63,6 +63,20 @@ comparaciones anteriores.
 - **THEN** el botón de recalcular compatibilidad permanece deshabilitado y el sistema rechaza cualquier
   intento directo de invocar el recálculo
 
+#### Scenario: Editar y guardar el cuestionario recalcula en la misma acción
+- **WHEN** un usuario edita sus respuestas del cuestionario desde el modo edición (ver
+  `personal-questionnaire`/`user-settings`) y guarda los cambios
+- **THEN** el sistema encadena, como parte de esa misma acción del usuario, la sustitución de las
+  respuestas y el recálculo descrito en el escenario "Ejecución del recálculo" — sin exigir que el
+  usuario active un control de recalcular por separado después de guardar
+
+#### Scenario: Editar solo cualidades sigue exigiendo activar el recálculo por separado
+- **WHEN** un usuario cambia únicamente su selección de cualidades (sin tocar el cuestionario) desde
+  configuración
+- **THEN** el sistema marca el perfil como pendiente de recalcular y espera a que el usuario active
+  explícitamente el recálculo (desde el atajo de configuración o desde el dashboard) — guardar el
+  cambio de cualidades no recalcula por sí solo
+
 ### Requirement: La pre-compatibilidad por cualidades no participa en el cálculo ponderado final
 El sistema SHALL usar el número de cualidades coincidentes únicamente como criterio de selección de
 candidatos, sin incluirlo en el cálculo del resultado final ponderado por dimensiones.

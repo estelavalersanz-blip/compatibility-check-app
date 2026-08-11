@@ -1,15 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Interfaz completamente responsive
-El sistema SHALL adaptar toda la interfaz (autenticación, registro, cuestionario, procesando,
-dashboard, configuración) a móvil (<768px), tablet (768–991px) y escritorio (≥992px) usando el grid y
-las utilidades responsive de Bootstrap 5, sin depender de una app nativa, ya que el acceso es
+El sistema SHALL adaptar toda la interfaz (landing, autenticación, registro, cuestionario, procesando,
+dashboard, configuración, chat) a móvil (<768px), tablet (768–991px) y escritorio (≥992px) usando el
+grid y las utilidades responsive de Bootstrap 5, sin depender de una app nativa, ya que el acceso es
 exclusivamente web.
 
 #### Scenario: Cabecera en móvil
 - **WHEN** la aplicación se visualiza en un viewport de ancho móvil (<768px)
-- **THEN** la cabecera colapsa a un menú desplegable (hamburguesa) que sigue dando acceso a
-  configuración y cerrar sesión
+- **THEN** la cabecera colapsa a un menú desplegable (hamburguesa) que sigue dando acceso a chat,
+  configuración y cerrar sesión, en ese orden (ver `internal-chat`)
 
 #### Scenario: Cuestionario sin scroll horizontal en móvil
 - **WHEN** el formulario del cuestionario de 36 preguntas se visualiza en un viewport móvil

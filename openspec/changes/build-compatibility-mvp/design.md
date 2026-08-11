@@ -81,9 +81,11 @@ Toda la interfaz Angular (layout general, formularios, botones, tarjetas de resu
 ajustes, logout, flecha de volver del wizard del cuestionario, etc.), en vez de escribir CSS a medida o
 mezclar librerías de iconos distintas. Integración concreta: el paquete `bootstrap` (CSS) +
 `bootstrap-icons` (fuente de iconos) más `@ng-bootstrap/ng-bootstrap` para los componentes interactivos
-(modales, dropdowns, pestañas `NgbNav` de las preguntas dentro de cada bloque del cuestionario)
-reimplementados en Angular puro — evita depender del bundle JS de Bootstrap (pensado para
-jQuery/vanilla) y sus conflictos con la detección de cambios de Angular.
+que sí lo necesitan (modales, dropdowns) reimplementados en Angular puro — evita depender del bundle JS
+de Bootstrap (pensado para jQuery/vanilla) y sus conflictos con la detección de cambios de Angular. La
+navegación por bloques y preguntas del cuestionario **no** usa `NgbAccordion`/`NgbNav` (ver 3c-quater
+más abajo) — es un estado propio (`currentBlockIndex`/`currentQuestionIndex`), no un componente de
+`ng-bootstrap`.
 `ng2-charts`/Chart.js se mantiene aparte solo para el gráfico radar (Bootstrap no cubre gráficas), pero
 se integra visualmente dentro de tarjetas Bootstrap.
 
@@ -117,6 +119,17 @@ porque un outline rojo se lee como acción destructiva. Los ejemplos oficiales d
 *Dashboard*, *Album*) se usan como esqueleto de partida para cada shell/patrón ya descrito, no se
 reinventan desde cero; el cuestionario ya no se basa en el ejemplo *Accordion* (ver el cambio siguiente).
 
+**Rediseño sobre mockup (sustituye lo anterior en dos puntos transversales):**
+- **El botón de acción principal de toda la app usa `btn-dark` (negro), no `btn-primary` (naranja)**: el
+  naranja `$primary` deja de ser color de relleno de botón y queda reservado a acentos/estados
+  seleccionados (píldoras de cualidad marcadas, burbuja propia del chat, insignias, degradado de fondo
+  de Shell B). Es un cambio a toda la interfaz, no solo a las pantallas de autenticación.
+- **Shell B (login, registro paso 1, forgot/reset password) pasa de una card centrada sobre fondo claro
+  a un fondo degradado de marca a pantalla completa** (`linear-gradient(160deg, #FB8500, #BE1E2D)`), sin
+  card de por medio — el logo (en blanco fijo, no `currentColor`) y el formulario flotan directamente
+  sobre el degradado. Solo login añade el wordmark "AfinIA" bajo el logo; el resto muestra el título de
+  esa pantalla concreta.
+
 El cuestionario de 36 preguntas se presenta como un **wizard de 6 pasos** (uno por cada bloque de 6
 preguntas ya usado en el cálculo ponderado, decisión 6c): **los 6 bloques nunca se muestran a la vez en
 la misma pantalla**, solo el bloque activo, con una flecha para volver al bloque anterior. Esto sustituye
@@ -135,13 +148,14 @@ hace visible que las preguntas finales cuentan más en el resultado. El color se
 número de bloque: los bloques 1 y 2 pesan igual (5%) y deben verse idénticos. Esta barra sustituye tanto
 al color de fondo de los 6 paneles del planteamiento anterior como a un simple contador "respondidas/36".
 
-Dentro del bloque activo, las 6 preguntas **no se apilan verticalmente**: se presentan como **pestañas**
-(`NgbNav`), mostrando una pregunta a la vez, con un icono por pestaña que indica si esa pregunta ya está
-respondida. Cambiar de pestaña anima el contenido con una transición corta (fade + desplazamiento
-horizontal, 200ms, `ease-out`, desactivada si el usuario prefiere movimiento reducido) en vez de un
-salto brusco. Esto reduce la sensación de "formulario largo" dentro de cada bloque sin volver a un
-stepper lineal para las 36 preguntas completas — una navegación por pestañas sí tiene sentido a nivel de
-bloque (6 elementos, no 36).
+Dentro del bloque activo, las 6 preguntas **no se apilan verticalmente**: cada pregunta ocupa **toda la
+pantalla**, una a la vez — ya no como pestañas `NgbNav` (rediseño sobre mockup), sino con una fila de
+**puntos + flechas prev/next** debajo de la pregunta, con el mismo punto rellenándose cuando esa
+pregunta ya está respondida, y clicable para saltar directo a ella (misma regla que los segmentos de la
+barra de bloques: solo a preguntas ya visitadas). Cambiar de pregunta anima el contenido con una
+transición corta (fade + desplazamiento horizontal, 200ms, `ease-out`, desactivada si el usuario
+prefiere movimiento reducido) en vez de un salto brusco. Esto reduce la sensación de "formulario largo"
+dentro de cada bloque sin volver a un stepper lineal para las 36 preguntas completas.
 
 Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` (SKILL.md
 + `references/design-tokens.md` con los valores exactos, el logo y la tabla de gradientes +
@@ -163,6 +177,96 @@ de UI). Respecto al planteamiento original, además del límite de marcado descr
 **diseño del check de "seleccionada"**: una insignia circular superpuesta en la esquina de la card (con
 la misma animación de entrada que la insignia de bloque del cuestionario) en vez de un icono de check
 inline junto a la etiqueta.
+
+### 3d-bis. Cualidades como píldoras (rediseño sobre mockup — sustituye el check de 3d)
+
+Las 15 cualidades seleccionables siguen siendo un único componente compartido con exactamente las mismas
+reglas de comportamiento de la decisión 3d (tope de 5 impuesto en la propia interacción, desmarcar
+siempre libre, envío bloqueado si ≠5) — lo que cambia es solo la forma: en vez de cards en grid con una
+insignia circular superpuesta, son **píldoras/chips** (`rounded-pill`) en una fila que envuelve. Sin
+marcar: fondo gris claro, texto oscuro. Marcada: fondo `$primary` (naranja), texto blanco, sin icono
+adicional — el propio cambio de color ya comunica la selección, sin duplicar el estado con una insignia.
+
+### 3e. Completar perfil (registro paso 2) como wizard de 2 pasos, un único envío al final
+
+Sobre el mockup, "completar perfil" (registro paso 2) se presenta como **2 pantallas** con paginación
+por puntos (2 puntos), no un formulario único: paso 2a (foto + nombre completo + alias, con validación
+en vivo de alias) y paso 2b (las 5 cualidades, ver 3d/3d-bis). Es una división puramente de **cliente**:
+`POST /users/me/profile` sigue siendo una única llamada al backend con todos los campos juntos (no se
+añade un endpoint intermedio ni se persiste nada al pasar de 2a a 2b) — el paso 2a solo valida y retiene
+el estado del formulario en memoria hasta que el paso 2b termina y se envía todo junto. El botón de 2a se
+llama "Siguiente" (avanza sin enviar nada); el de 2b, "Finalizar" (dispara el envío real).
+
+### 3f. Pantalla de procesamiento: spinner + estado por candidato, sin porcentaje agregado
+
+Mientras se resuelven las hasta 3 comparaciones (decisión 6), `features/processing` sondea
+`GET /users/me/comparisons` y muestra un spinner (`spinner-border text-primary`) más una lista de los
+candidatos ya seleccionados, cada uno con un icono de estado (pendiente/analizando, completado
+`bi-check-circle-fill`, error `bi-exclamation-triangle`) — no una barra de "1 de 3" ni un porcentaje
+agregado, porque el orden de finalización entre comparaciones no es predecible y un porcentaje sugeriría
+una duración estimable que no existe. El polling se detiene en cuanto las comparaciones existentes están
+todas en `completed`/`error`, y entonces navega al dashboard.
+
+### 3g. Landing pública con animación de bienvenida, antes de Shell B
+
+Se añade una **pantalla pública de aterrizaje** en `/` (marketing, no un formulario), que explica en qué
+consiste AfinIA a quien todavía no tiene cuenta, con un único botón de llamada a la acción que navega a
+`/auth/login`. Es una **tercera categoría de pantalla**, distinta de los dos shells ya descritos (no es
+Shell A porque no hay sesión, y no es Shell B porque no contiene ningún formulario de autenticación) —
+la excepción queda documentada aquí y en la skill en vez de forzarla dentro de una de las dos categorías
+existentes.
+
+**Comportamiento de ruta**: si quien visita `/` ya tiene una sesión activa, la pantalla no se muestra —
+redirige de inmediato a la misma resolución ya usada para la ruta autenticada (cuestionario o dashboard
+según `GET /users/me`, ver el guard de la sección 11 de `tasks.md`). Solo la ve tráfico sin sesión.
+
+**Contenido y tono**: reutiliza la identidad visual ya establecida (degradado de marca, logo, tipografía
+Poppins) para que la transición a Shell B se sienta continua, pero con un tratamiento editorial (una
+frase que explica el producto en una línea, una segunda frase de apoyo, el botón de CTA) en vez del
+formulario de Shell B. Copy real, sin lorem: explica que AfinIA compara cualidades y un cuestionario de
+compatibilidad analizado por IA para encontrar afinidades reales entre personas — no vende nada que el
+producto no haga.
+
+**Animación**: al cargar, el logo se ensambla (sus 5 trazos aparecen con un fundido + escala breve y
+escalonada, reutilizando el mismo lenguaje de entrada que las insignias del cuestionario) y el titular
+más el botón entran con un fundido corto tras él — una única secuencia orquestada al cargar, no efectos
+sueltos. El fondo degradado tiene un desplazamiento de gradiente lento y continuo (ambiental, no
+protagonista). Todo respeta `prefers-reduced-motion`: sin movimiento, el contenido aparece completo de
+inmediato y el degradado queda estático.
+
+### 3h. Pantalla de bienvenida del cuestionario (solo en creación) y recálculo integrado en el guardado de edición
+
+**Pantalla de bienvenida, solo la primera vez**: antes de entrar al wizard de 6 bloques, `features/questionnaire`
+en **modo creación** muestra una única pantalla de transición — mismo fondo degradado que Shell B/landing,
+título "Cuestionario de compatibilidad", una frase animando a responder con calma, y un botón "Iniciar" — en
+vez de arrancar directamente en el bloque 1. En **modo edición** (entrado desde Configuración) esta pantalla
+se omite: se navega directo al wizard ya prerellenado, porque la persona ya lo completó antes y no necesita
+la ceremonia de bienvenida.
+
+**Acceso desde Configuración es una navegación real, no una vista embebida**: el botón "Editar tus
+respuestas" de `features/settings` navega a `features/questionnaire` en modo edición (misma ruta que el
+cuestionario, con un modo distinto) — no despliega el wizard de 36 preguntas dentro de la propia pantalla de
+configuración.
+
+**El guardado de una edición ya recalcula, sin paso manual aparte**: en modo edición, el botón del
+`card-footer` del bloque 6 no dice "Enviar cuestionario" (ese texto es solo de creación) sino **"Guardar y
+recalcular compatibilidad"**. Al pulsarlo se encadenan, en una sola acción del usuario,
+`PATCH /users/me/questionnaire` (guarda las respuestas editadas, marca `needs_recalculation = true`,
+decisión 5c) y a continuación `POST /users/me/recalculate` (decisión 5b) — sin volver antes al dashboard a
+pulsar un botón aparte. Al completarse ambas llamadas, navega al dashboard ya refrescado con las nuevas
+comparaciones.
+
+Esto **no elimina** el botón de recalcular del dashboard (decisión 5b sigue vigente): sigue siendo el punto
+de recálculo para quien solo edita sus cualidades desde Configuración sin tocar el cuestionario, o para
+quien prefiere posponer el recálculo tras guardar. Configuración, además, ofrece el mismo atajo justo
+después de guardar cambios de perfil/cualidades: un botón "Recalcular compatibilidad ahora" junto a la
+confirmación de guardado, que llama al mismo `POST /users/me/recalculate` sin obligar a navegar antes al
+dashboard.
+
+Completar el cuestionario **por primera vez** sigue disparando el análisis automáticamente vía
+`QuestionnaireCompletedEvent` (decisión 5) — nunca ha necesitado un botón de recalcular, así que no hay
+ambigüedad ahí: "recalcular" (manual o integrado en el guardado de edición) solo aplica a ediciones
+posteriores a la primera vez.
 
 ### 3. PostgreSQL/Supabase con columnas JSONB, en vez de una base NoSQL
 

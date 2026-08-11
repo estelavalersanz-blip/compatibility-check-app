@@ -238,11 +238,23 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
        mostrarlo cuando no queda ninguno
 - [ ] 11.2c Implementar el sondeo del contador de no leídos (~20-30s) y el indicador en el icono de chat
        para que pase el test anterior
-- [ ] 11.3 Test de componente/routing: la ruta principal (`/`) resuelve al cuestionario si
-       `GET /users/me` indica que el usuario no ha completado nunca su cuestionario, y al dashboard de
-       resultados en caso contrario
+- [ ] 11.3 Test de componente/routing: **con sesión activa**, la ruta principal (`/`) resuelve al
+       cuestionario si `GET /users/me` indica que el usuario no ha completado nunca su cuestionario, y
+       al dashboard de resultados en caso contrario
 - [ ] 11.4 Implementar el guard/resolver de enrutamiento de la página principal para que pase el test
        anterior
+
+## 11d. Frontend: landing pública (ver `design.md` decisión 3g)
+
+- [ ] 11d.1 Test de componente/routing: **sin sesión activa**, la ruta principal (`/`) muestra
+       `features/landing` (titular, subtítulo explicando el producto, un único botón); **con sesión
+       activa**, `/` no muestra la landing y resuelve igual que el test 11.3
+- [ ] 11d.2 Test de componente: el botón de la landing navega a `/auth/login`; con
+       `prefers-reduced-motion: reduce` simulado, el titular/subtítulo/botón y el logo son visibles de
+       inmediato sin depender de que termine ninguna animación
+- [ ] 11d.3 Implementar `features/landing` (fondo degradado reutilizado de Shell B, animación de entrada
+       del logo + titular/subtítulo/botón, degradado de fondo con desplazamiento lento) y el guard de `/`
+       que decide entre landing y la resolución autenticada, para que pasen los tests anteriores
 
 ## 12. Frontend: autenticación
 
@@ -262,26 +274,33 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 - [ ] 12.7 Implementar `features/auth/reset-password` (pantalla de destino del enlace del email) para
        establecer una nueva contraseña con `supabase.auth.updateUser`
 
-## 13. Frontend: completar perfil (registro paso 2)
+## 13. Frontend: completar perfil (registro paso 2, wizard de 2 pasos — ver `design.md` decisión 3e)
 
-- [ ] 13.1 Test de componente: las 15 cualidades se muestran como cards independientes; al llegar a 5
-       seleccionadas, las cards no marcadas quedan deshabilitadas (no se puede marcar una sexta) hasta
-       que se desmarca alguna de las 5 — desmarcar siempre es posible; y el control de envío permanece
-       deshabilitado mientras la selección no sea exactamente 5, aunque el resto de campos estén
-       completos
-- [ ] 13.1b Test de componente: la card seleccionada muestra la insignia circular de check superpuesta
-       en la esquina (no el icono inline de versiones anteriores), con la animación de entrada salvo que
-       el test simule `prefers-reduced-motion: reduce`
-- [ ] 13.2 Test de componente: el campo de alias valida en vivo contra `GET /users/check-alias` y
-       muestra si está disponible u ocupado
+- [ ] 13.0 Test de componente: la pantalla se presenta en 2 pasos con paginación por puntos (2 puntos,
+       el actual relleno) — paso 1 (foto + nombre completo + alias) y paso 2 (cualidades); el botón
+       "Siguiente" del paso 1 solo avanza de paso (no llama a `POST /users/me/profile`) y permanece
+       deshabilitado mientras foto/nombre/alias no sean válidos; el envío real ocurre solo al pulsar
+       "Finalizar" en el paso 2, con los datos de ambos pasos juntos en una única llamada
+- [ ] 13.1 Test de componente: las 15 cualidades del paso 2 se muestran como píldoras (no cards); al
+       llegar a 5 seleccionadas, las píldoras no marcadas quedan deshabilitadas (no se puede marcar una
+       sexta) hasta que se desmarca alguna de las 5 — desmarcar siempre es posible; y "Finalizar"
+       permanece deshabilitado mientras la selección no sea exactamente 5
+- [ ] 13.2 Test de componente (paso 1): el campo de alias valida en vivo contra `GET /users/check-alias`
+       y muestra si está disponible u ocupado
 - [ ] 13.3 Test de componente: la cabecera de esta pantalla (Shell A) muestra el botón de cerrar sesión
        pero **no** el enlace de Configuración, a diferencia del resto de pantallas de Shell A
-- [ ] 13.4 Implementar `features/registration` (formulario reactivo, subida de foto con preview,
-       cards de cualidades con su insignia de check, validación de alias) para que pasen los tests
-       anteriores, consumiendo `GET /qualities`, `GET /users/check-alias` y `POST /users/me/profile`
+- [ ] 13.4 Implementar `features/registration` como wizard de 2 pasos (estado local `currentStep`, sin
+       llamada al backend entre pasos), con subida de foto con preview circular y validación de alias en
+       el paso 1, y las píldoras de cualidad (`shared/quality-pill`) en el paso 2, para que pasen los
+       tests anteriores, consumiendo `GET /qualities`, `GET /users/check-alias` y — solo al pulsar
+       "Finalizar" — `POST /users/me/profile` con los campos de ambos pasos
 
 ## 14. Frontend: cuestionario de 36 preguntas
 
+- [ ] 14.0 Test de componente: en **modo creación** (primera vez), antes del bloque 1 se muestra una
+       pantalla de bienvenida (fondo degradado, título "Cuestionario de compatibilidad", botón
+       "Iniciar") que da paso al wizard solo al pulsarla; en **modo edición** esta pantalla no aparece
+       nunca — se entra directo al wizard ya prerellenado (ver `design.md` decisión 3h)
 - [ ] 14.1 Test de componente: las 36 preguntas se agrupan en 6 bloques presentados como un **wizard de
        6 pasos** — en cada momento solo se monta el bloque activo (nunca los 6 a la vez), con una flecha
        para volver al bloque anterior (o salir del cuestionario si es el bloque 1) y un botón para
@@ -303,32 +322,45 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
        prerellenan las respuestas ya guardadas (parciales o completas), posicionando el wizard en el
        primer bloque incompleto; cada respuesta se autoguarda contra `PUT /users/me/questionnaire/draft`
        (p. ej. al perder el foco o al cambiar de bloque), sin depender de `localStorage`
-- [ ] 14.5 Test de componente: el botón del bloque 6 muestra "Enviar cuestionario" y permanece
-       deshabilitado mientras no haya respuesta para las 36 preguntas; en los bloques 1-5 el botón
-       "Siguiente bloque" nunca se deshabilita por respuestas pendientes
-- [ ] 14.6 Test de componente: dentro del bloque activo, las 6 preguntas se muestran como pestañas
-       `NgbNav` (una pregunta visible a la vez, no las 6 apiladas), cada pestaña refleja si su pregunta
-       está respondida, y cambiar de pestaña aplica la transición de `question-pane` salvo que el test
-       simule `prefers-reduced-motion: reduce`, en cuyo caso el cambio de pestaña sigue funcionando sin
+- [ ] 14.5 Test de componente: el botón del bloque 6 muestra "Enviar cuestionario" en modo creación o
+       "Guardar y recalcular compatibilidad" en modo edición, y permanece deshabilitado mientras no haya
+       respuesta para las 36 preguntas; en los bloques 1-5 el botón "Siguiente bloque" nunca se
+       deshabilita por respuestas pendientes
+- [ ] 14.5b Test de componente: en modo edición, pulsar el botón del bloque 6 encadena
+       `PATCH /users/me/questionnaire` seguido de `POST /users/me/recalculate` (sin paso manual
+       intermedio) y navega al dashboard al completarse ambas llamadas; en modo creación, pulsarlo llama
+       solo a `POST /users/me/questionnaire` y navega a `features/processing`
+- [ ] 14.6 Test de componente: dentro del bloque activo, cada pregunta ocupa toda la pantalla (ya no
+       pestañas `NgbNav`); debajo hay una fila de 6 puntos + flechas prev/next, cada punto relleno si su
+       pregunta está respondida, clicable para saltar directo a ella solo si ya fue visitada
+       (`currentQuestionIndex`/`maxReachedQuestionIndex`, alcance local al bloque activo), y cambiar de
+       pregunta aplica la transición de `question-pane` salvo que el test simule
+       `prefers-reduced-motion: reduce`, en cuyo caso el cambio de pregunta sigue funcionando sin
        animación
 - [ ] 14.7 Test de componente: el `textarea` de la pregunta activa ocupa el 100% del ancho de la card
        (no una columna estrecha) y tiene al menos `rows="4"` de alto
 - [ ] 14.8 Implementar `features/questionnaire` como wizard de 6 pasos (un bloque montado a la vez, con
        `currentBlockIndex`/`maxReachedBlockIndex` para poder revisar bloques anteriores sin perder el
-       sitio donde ibas), con la barra de progreso segmentada por peso y sus tramos clicables, la
-       cabecera con flecha de volver, el `card-header` con el gradiente del bloque activo, las pestañas
-       por pregunta con su transición, el `textarea` a ancho completo y `rows="4"`, el autoguardado de
-       borrador y el botón de envío condicionado en el último bloque, para que pasen los tests
-       anteriores, enviando el envío final a `POST /users/me/questionnaire`
-- [ ] 14.9 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (borrador +
-       envío final a `POST /users/me/questionnaire`) y modo "edición" (envía a
-       `PATCH /users/me/questionnaire`, prerellenado con las respuestas actuales), para reutilizarlo
-       también desde `features/settings`
+       sitio donde ibas), con la pantalla de bienvenida previa en modo creación (tarea 14.0), la barra de
+       progreso segmentada por peso y sus tramos clicables, la cabecera con flecha de volver, el
+       `card-header` con el gradiente del bloque activo, la navegación de puntos + flechas entre las 6
+       preguntas del bloque activo (con su propio `currentQuestionIndex`/`maxReachedQuestionIndex`) y su
+       transición, el `textarea` a ancho completo y `rows="4"`, el autoguardado de borrador y el botón
+       del bloque 6 (`btn-dark`) condicionado según el modo (tarea 14.5/14.5b), para que pasen los tests
+       anteriores
+- [ ] 14.9 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (sin
+       pantalla de bienvenida omitida, borrador + `POST /users/me/questionnaire` al final) y modo
+       "edición" (sin pantalla de bienvenida, prerellenado, `PATCH /users/me/questionnaire` +
+       `POST /users/me/recalculate` encadenados al final), accesible en modo edición como ruta propia
+       (`/questionnaire?mode=edit`, no una vista embebida) desde el botón "Editar tus respuestas" de
+       `features/settings`
 
-## 15. Frontend: pantalla de procesamiento
+## 15. Frontend: pantalla de procesamiento (ver `design.md` decisión 3f)
 
 - [ ] 15.1 Test de componente: el polling se detiene al recibir todas las comparaciones en
-       `completed`/`error` y muestra el progreso parcial mientras tanto
+       `completed`/`error` y navega al dashboard; mientras tanto muestra un spinner y una fila por cada
+       candidato ya seleccionado con su icono de estado (pendiente/analizando, completado, error) — sin
+       porcentaje agregado ni contador "N de 3"
 - [ ] 15.2 Implementar `features/processing` para que pase el test anterior, consultando
        `GET /users/me/comparisons`
 
@@ -358,19 +390,26 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 ## 17. Frontend: configuración de perfil
 
 - [ ] 17.1 Test de componente: el formulario de configuración prerellena los datos actuales y aplica
-       las mismas reglas de cualidades (cards, tope de marcado en 5, bloqueo de envío si ≠5) y de alias
-       (validación en vivo) que el registro
-- [ ] 17.2 Implementar `features/settings` (edición de nombre/alias/foto/cualidades) para que pase el
-       test anterior, consumiendo `GET /users/me` y `PATCH /users/me`
+       las mismas reglas de cualidades (píldoras `shared/quality-pill`, tope de marcado en 5, bloqueo de
+       envío si ≠5) y de alias (validación en vivo) que el registro — aquí sí en un único formulario, no
+       en el wizard de 2 pasos de `features/registration`
+- [ ] 17.1b Test de componente: tras guardar cambios de perfil, si la respuesta indica
+       `needsRecalculation = true`, aparece un aviso con un botón "Recalcular compatibilidad ahora" que
+       llama a `POST /users/me/recalculate` y navega al dashboard; si no cambió la selección de
+       cualidades, no aparece ningún aviso
+- [ ] 17.2 Implementar `features/settings` (edición de nombre/alias/foto/cualidades, con el aviso y
+       botón de la tarea anterior) para que pasen los tests anteriores, consumiendo `GET /users/me`,
+       `PATCH /users/me` y `POST /users/me/recalculate`
 - [ ] 17.3 Test de componente: el cambio de contraseña exige la contraseña actual y la reintenta contra
        Supabase antes de llamar a `updateUser`; si la contraseña actual es incorrecta, no se cambia
 - [ ] 17.4 Implementar la sección de cambio de contraseña dentro de `features/settings` para que pase
        el test anterior
-- [ ] 17.5 Test de componente: `features/settings` incluye el `features/questionnaire` en modo edición
-       (prerellenado) y, al guardarse correctamente, informa al usuario de que su compatibilidad quedó
-       pendiente de recalcular
-- [ ] 17.6 Integrar el cuestionario en modo edición dentro de `features/settings` para que pase el test
-       anterior, consumiendo `PATCH /users/me/questionnaire`
+- [ ] 17.5 Test de componente: `features/settings` muestra un resumen del cuestionario (fecha de
+       finalización) y un botón "Editar tus respuestas" que **navega** a `/questionnaire?mode=edit` (no
+       despliega el wizard dentro de la propia pantalla de configuración)
+- [ ] 17.6 Implementar la sección de cuestionario de `features/settings` (resumen + navegación) para
+       que pase el test anterior — el guardado en sí, y el recálculo encadenado, viven en
+       `features/questionnaire` en modo edición (tareas 14.5/14.5b/14.9), no se duplican aquí
 
 ## 17b. Frontend: chat interno
 
@@ -419,14 +458,16 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 - [ ] 20.1 Ejecutar el seed contra Supabase y confirmar en el SQL Editor que las tablas quedan pobladas
        según lo esperado, incluyendo las cuentas de `auth.users` de los perfiles sintéticos
-- [ ] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → paso 2 con foto y
-       cualidades → cuestionario → procesando → dashboard → configuración → logout → login → recuperar
-       contraseña) y contra las URLs públicas desplegadas
+- [ ] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → completar perfil paso 2a
+       con foto/nombre/alias → paso 2b con cualidades → cuestionario → procesando → dashboard →
+       configuración → logout → login → recuperar contraseña) y contra las URLs públicas desplegadas
 - [ ] 20.3 Recorrer manualmente el flujo de edición y recálculo: recargar la app tras completar el
-       cuestionario y comprobar que la página principal es el dashboard; editar cualidades y/o
-       respuestas desde configuración; comprobar que se habilita el botón de recalcular; activarlo y
-       verificar que el dashboard se refresca con nuevas comparaciones, y que las comparaciones de otros
-       usuarios (seed) que lo tuvieran como candidato no se ven afectadas
+       cuestionario y comprobar que la página principal es el dashboard; editar cualidades desde
+       configuración, guardar y usar el atajo "Recalcular compatibilidad ahora"; por separado, entrar a
+       "Editar tus respuestas" desde configuración (sin ver la pantalla de bienvenida), editar el
+       cuestionario y comprobar que "Guardar y recalcular compatibilidad" recalcula sin pasos
+       intermedios; verificar en ambos casos que el dashboard se refresca con nuevas comparaciones, y que
+       las comparaciones de otros usuarios (seed) que lo tuvieran como candidato no se ven afectadas
 - [ ] 20.3b Recorrer manualmente el flujo de chat con dos cuentas de prueba: usuario A inicia un chat
        desde una tarjeta de su dashboard con un candidato B; comprobar que B ve la conversación desde el
        icono del menú aunque A no aparezca entre los candidatos propios de B; enviar mensajes en ambos

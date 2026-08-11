@@ -35,13 +35,28 @@ El sistema SHALL permitir a un usuario ya autenticado (ver `authentication`) com
 - **WHEN** se intenta enviar el formulario de perfil sin un token de sesión válido
 - **THEN** el sistema rechaza la petición y no crea ningún perfil
 
-### Requirement: Selección de cualidades como cards con tope de 5 y envío bloqueado hasta exactamente 5
-El sistema SHALL presentar las 15 cualidades como elementos seleccionables independientes (cards) que el
-usuario puede desmarcar libremente en todo momento, pero SHALL impedir marcar una sexta cualidad mientras
-ya haya 5 marcadas — el límite se hace cumplir en la propia interacción, no solo al enviar. El sistema
-SHALL además bloquear el envío del formulario de perfil mientras el número de cualidades seleccionadas
-sea distinto de 5; el resto de campos del formulario (nombre, alias, foto) permanecen editables y no
-bloqueados por esta regla.
+### Requirement: Completar perfil presentado como wizard de 2 pasos
+El sistema SHALL presentar la captura de nombre/foto/alias y la selección de cualidades como dos pasos
+secuenciales de una misma pantalla (paso 1: foto, nombre y alias; paso 2: cualidades), en vez de un
+único formulario con todos los campos a la vez, pero SHALL seguir enviando ambos pasos juntos en una
+única petición al terminar el paso 2 — el paso 1 no persiste nada por sí solo.
+
+#### Scenario: Avanzar del paso 1 al paso 2 no envía nada al backend
+- **WHEN** el usuario completa foto, nombre y alias válidos en el paso 1 y pulsa "Siguiente"
+- **THEN** el sistema avanza al paso 2 (cualidades) sin haber creado ni modificado ningún perfil todavía
+
+#### Scenario: El envío real ocurre al terminar el paso 2
+- **WHEN** el usuario, ya en el paso 2, selecciona exactamente 5 cualidades y confirma
+- **THEN** el sistema envía en una sola petición los datos de ambos pasos y crea el perfil como describe
+  el escenario de "Registro de perfil exitoso"
+
+### Requirement: Selección de cualidades como píldoras con tope de 5 y envío bloqueado hasta exactamente 5
+El sistema SHALL presentar las 15 cualidades como elementos seleccionables independientes (píldoras) que
+el usuario puede desmarcar libremente en todo momento, pero SHALL impedir marcar una sexta cualidad
+mientras ya haya 5 marcadas — el límite se hace cumplir en la propia interacción, no solo al enviar. El
+sistema SHALL además bloquear el envío del formulario de perfil mientras el número de cualidades
+seleccionadas sea distinto de 5; el resto de campos del formulario (nombre, alias, foto) permanecen
+editables y no bloqueados por esta regla.
 
 #### Scenario: Envío bloqueado con una selección incompleta
 - **WHEN** el usuario tiene seleccionadas menos de 5 o más de 5 cualidades
