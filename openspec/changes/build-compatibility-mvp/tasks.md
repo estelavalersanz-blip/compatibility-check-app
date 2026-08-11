@@ -1,34 +1,34 @@
 ## 1. Scaffold del monorepo
 
-- [ ] 1.1 Crear `package.json` raíz con npm workspaces (`apps/*`, `packages/*`) y scripts comunes
+- [x] 1.1 Crear `package.json` raíz con npm workspaces (`apps/*`, `packages/*`) y scripts comunes
       (lint, test, build) para todo el monorepo
-- [ ] 1.2 Scaffolding de `apps/backend` con NestJS CLI (estructura de módulos, Jest configurado)
-- [ ] 1.3 Scaffolding de `apps/frontend` con Angular CLI (routing, testing con Karma/Jasmine o
+- [x] 1.2 Scaffolding de `apps/backend` con NestJS CLI (estructura de módulos, Jest configurado)
+- [x] 1.3 Scaffolding de `apps/frontend` con Angular CLI (routing, testing con Karma/Jasmine o
       Angular Testing Library configurado), añadiendo `@supabase/supabase-js` como dependencia para el
       cliente de autenticación
-- [ ] 1.6 Instalar `bootstrap`, `bootstrap-icons` y `@ng-bootstrap/ng-bootstrap` en `apps/frontend`, y
+- [x] 1.6 Instalar `bootstrap`, `bootstrap-icons` y `@ng-bootstrap/ng-bootstrap` en `apps/frontend`, y
       configurar `apps/frontend/src/styles.scss` para compilar Bootstrap desde su fuente Sass con los
       tokens de `.claude/skills/ui-design-consistency/references/design-tokens.md`
       (`$primary: #FB8500`, `$secondary: #BE1E2D`, `$dark: #000000`, `$light: #FDF0D5`,
       `$font-family-base` con Poppins) sobrescritos antes del `@import`, en vez de usar el CSS
       precompilado de Bootstrap sin tokenizar
-- [ ] 1.4 Configurar linters/formatters compartidos (ESLint + Prettier) para backend y frontend
-- [ ] 1.5 Configurar `nestjs-pino` como logger estructurado único del backend (ver `design.md` decisión
+- [x] 1.4 Configurar linters/formatters compartidos (ESLint + Prettier) para backend y frontend
+- [x] 1.5 Configurar `nestjs-pino` como logger estructurado único del backend (ver `design.md` decisión
       8b — JSON estructurado de fábrica, con contexto por módulo) reutilizable desde cualquier servicio,
       sin `console.log` sueltos
-- [ ] 1.5b Test: con `LOGTAIL_SOURCE_TOKEN` definido en el entorno, el logger añade el transport hacia
+- [x] 1.5b Test: con `LOGTAIL_SOURCE_TOKEN` definido en el entorno, el logger añade el transport hacia
       Better Stack (Logtail) además de stdout; sin esa variable definida (caso de tests/local), el
       logger solo escribe a stdout, sin fallar ni intentar conectar a Logtail
-- [ ] 1.5c Implementar el transport condicional de la tarea anterior, y documentar
+- [x] 1.5c Implementar el transport condicional de la tarea anterior, y documentar
       `LOGTAIL_SOURCE_TOKEN` (solo el nombre, nunca el valor) en `apps/backend/.env.example`
-- [ ] 1.7 Instalar `@nestjs/cqrs` en `apps/backend` para el uso selectivo de Commands/Events descrito
+- [x] 1.7 Instalar `@nestjs/cqrs` en `apps/backend` para el uso selectivo de Commands/Events descrito
       en el diseño (no para las lecturas simples)
-- [ ] 1.8 Test unitario: el interceptor de logging enganchado al `CommandBus` registra inicio, fin y
+- [x] 1.8 Test unitario: el interceptor de logging enganchado al `CommandBus` registra inicio, fin y
       resultado de cualquier Command despachado (incluyendo el caso de que el handler lance error), con
       un identificador de correlación propagado
-- [ ] 1.9 Implementar el interceptor de logging del `CommandBus` para que pase el test anterior,
+- [x] 1.9 Implementar el interceptor de logging del `CommandBus` para que pase el test anterior,
       reemplazando la necesidad de logging manual repetido en cada Command Handler
-- [ ] 1.10 Crear `.github/workflows/ci.yml` (ver `design.md` decisión 10): en cada push/PR contra `main`,
+- [x] 1.10 Crear `.github/workflows/ci.yml` (ver `design.md` decisión 10): en cada push/PR contra `main`,
       instala dependencias del monorepo y ejecuta lint + test (unitarios) + build de `apps/backend` y
       `apps/frontend`, y un segundo step que instala la Supabase CLI, ejecuta `supabase start` y corre
       `test:integration` contra ese stack local (decisión 11) antes de terminar con `supabase stop`. No
@@ -36,13 +36,13 @@
       despliegue lo dispara la integración nativa de cada plataforma (tarea 19.2/19.3)
 - [ ] 1.11 Configurar la protección de la rama `main` en GitHub para exigir que el workflow de la tarea
       anterior pase en verde antes de poder mergear
-- [ ] 1.12 Instalar la Supabase CLI como dependencia de desarrollo y añadir los scripts npm `test`
+- [x] 1.12 Instalar la Supabase CLI como dependencia de desarrollo y añadir los scripts npm `test`
       (unitarios, `*.spec.ts`, sin depender de Docker) y `test:integration` (`*.integration-spec.ts`,
       contra el stack local — ver `design.md` decisión 11) como comandos separados del monorepo
-- [ ] 1.13 Test de la propia infraestructura de test: un `globalSetup` de Jest crea un pool fijo de 3-4
+- [x] 1.13 Test de la propia infraestructura de test: un `globalSetup` de Jest crea un pool fijo de 3-4
       cuentas `auth.users` contra el stack local una sola vez al arrancar `test:integration` (no por
       test ni por archivo), y expone sus credenciales/JWT a los tests sin necesidad de recrearlas
-- [ ] 1.14 Implementar `test/setup/global-setup.ts` (pool de cuentas) y
+- [x] 1.14 Implementar `test/setup/global-setup.ts` (pool de cuentas) y
       `test/setup/reset-domain-tables.ts` (helper de `afterEach` compartido que hace
       `TRUNCATE ... CASCADE` sobre las tablas de dominio, nunca sobre `auth.users`) para que pase el
       test anterior, y `test/factories/` (`createTestUser`, `createTestQuestionnaire`,

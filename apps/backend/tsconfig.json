@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false,
+    // Restringido explícitamente: en el monorepo, sin esto, TS incluye automáticamente TODOS los
+    // paquetes de node_modules/@types de cualquier workspace (incluido @types/jasmine del
+    // frontend, hoisteado a la raíz), y sus matchers globales chocan con los de @types/jest
+    // (p. ej. `expect(...).toHaveLength` deja de resolverse).
+    "types": ["node", "jest"]
+  }
+}

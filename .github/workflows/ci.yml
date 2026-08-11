@@ -1,0 +1,69 @@
+name: CI
+
+# Puerta de calidad única del monorepo (design.md, decisión 10): lint + tests unitarios + build en
+# cada push/PR contra main, más un segundo job de tests de integración contra el stack local de
+# Supabase (decisión 11). No despliega nada ni usa secrets de Vercel/Render/Supabase — el
+# despliegue lo dispara la integración nativa de cada plataforma (ver tareas 19.2/19.3).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-test-build:
+    name: Lint, unit tests y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar dependencias del monorepo
+        run: npm ci
+
+      - name: Lint (backend + frontend)
+        run: npm run lint
+
+      - name: Tests unitarios (backend + frontend)
+        run: npm test
+
+      - name: Build (backend + frontend)
+        run: npm run build
+
+  integration-tests:
+    name: Tests de integración (stack local de Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar dependencias del monorepo
+        run: npm ci
+
+      # Los runners de GitHub Actions ya traen Docker — no hace falta instalar nada aparte
+      # (design.md, decisión 11).
+      - name: Arrancar el stack local de Supabase
+        run: npx supabase start
+
+      - name: Exportar credenciales del stack local
+        run: |
+          npx supabase status -o env \
+            --override-name api.url=SUPABASE_URL \
+            --override-name auth.anon_key=SUPABASE_ANON_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            --override-name db.url=SUPABASE_DB_URL >> "$GITHUB_ENV"
+
+      - name: Tests de integración (backend)
+        run: npm run test:integration
+
+      - name: Parar el stack local de Supabase
+        if: always()
+        run: npx supabase stop

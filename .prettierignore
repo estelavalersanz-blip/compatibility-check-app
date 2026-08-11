@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+.angular
+supabase/.temp
+supabase/seed/seed-users.json
+package-lock.json

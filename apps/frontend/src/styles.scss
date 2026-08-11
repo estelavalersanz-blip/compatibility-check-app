@@ -1,0 +1,17 @@
+/* You can add global styles to this file, and also import other style files */
+
+// 1. Overrides de variables de marca AfinIA ANTES del import de Bootstrap
+// (ver .claude/skills/ui-design-consistency/references/design-tokens.md)
+$primary: #fb8500;
+$secondary: #be1e2d;
+$dark: #000000;
+$light: #fdf0d5;
+$body-color: $dark;
+$font-family-base: 'Poppins', 'DM Sans', 'Roboto', system-ui, sans-serif;
+
+// 2. Import de Bootstrap desde su fuente Sass (no el CSS precompilado) para que
+// todo el sistema de utilidades se recalcule con los tokens de marca
+@import 'bootstrap/scss/bootstrap';
+
+// 3. Bootstrap Icons (fuente de iconos, independiente de las variables de arriba)
+@import 'bootstrap-icons/font/bootstrap-icons.css';
