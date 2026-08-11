@@ -34,13 +34,12 @@
       `test:integration` contra ese stack local (decisión 11) antes de terminar con `supabase stop`. No
       despliega nada ni usa secrets de Vercel/Render/Supabase — es solo la puerta de calidad; el
       despliegue lo dispara la integración nativa de cada plataforma (tarea 19.2/19.3)
-- [ ] 1.11 Configurar la protección de la rama `main` en GitHub para exigir que el workflow de la tarea
-      anterior pase en verde antes de poder mergear — **bloqueado**: tanto la API de branch protection
-      clásica como la de rulesets devuelven 403 "Upgrade to GitHub Pro or make this repository public"
-      en este repo (privado, plan gratuito). El workflow ya corre y pasa en verde en el PR #1; falta
-      decidir cómo desbloquear la protección en sí (ver opciones en el chat: GitHub Pro, repo público,
-      GitHub Student Developer Pack, o descartar la protección automática para un proyecto de un solo
-      desarrollador y hacerlo por disciplina manual)
+- [x] 1.11 Configurar la protección de la rama `main` en GitHub para exigir que el workflow de la tarea
+      anterior pase en verde antes de poder mergear — requirió pasar el repositorio a público (plan
+      gratuito de GitHub no permite branch protection en repos privados); configurada vía API con
+      `required_status_checks.strict=true` sobre los dos checks de `ci.yml` ("Lint, unit tests y
+      build" y "Tests de integración (stack local de Supabase)"), sin exigir revisión de PR (proyecto
+      de un solo desarrollador) y sin permitir force-push ni borrado de `main`
 - [x] 1.12 Instalar la Supabase CLI como dependencia de desarrollo y añadir los scripts npm `test`
       (unitarios, `*.spec.ts`, sin depender de Docker) y `test:integration` (`*.integration-spec.ts`,
       contra el stack local — ver `design.md` decisión 11) como comandos separados del monorepo
