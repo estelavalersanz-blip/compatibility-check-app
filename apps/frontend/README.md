@@ -1,59 +1,29 @@
-# Frontend
+# AfinIA — Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.3.
+Interfaz [Angular](https://angular.dev/) del proyecto AfinIA (TFM). Ver el
+[README de la raíz](../../README.md) para el contexto general del monorepo.
 
-## Development server
+**Antes de tocar cualquier pantalla**, consulta
+[`.claude/skills/ui-design-consistency/`](../../.claude/skills/ui-design-consistency/SKILL.md) —
+define el shell de página, el patrón container+card, el sistema de botones/formularios/estados, y
+los tokens exactos de color/tipografía de la marca AfinIA.
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Scripts
 
 ```bash
-ng generate component component-name
+npm start          # dev server (http://localhost:4200), recarga en caliente
+npm run build       # build de producción → dist/frontend/browser/
+npm run lint         # ESLint (angular-eslint)
+npm test             # tests unitarios con Karma/Jasmine (no Vitest — fijado explícitamente en
+                      # angular.json, ver design.md tarea 1.3) en Chrome headless
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Notas de esta app
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- **Bootstrap 5 + Bootstrap Icons + ng-bootstrap**, compilados desde su fuente Sass en
+  `src/styles.scss` con la paleta de marca AfinIA sobrescrita antes del `@import` — nunca el CSS
+  precompilado de Bootstrap sin tokenizar.
+- El build de producción coloca los estáticos en `dist/frontend/browser/` (no `dist/frontend/`
+  directamente) — importante al configurar el *Output Directory* en Vercel.
+- `@supabase/supabase-js` es el único cliente de autenticación — el frontend llama directo a
+  Supabase Auth (signUp/signIn/signOut/reset de contraseña); el backend solo valida el JWT.
