@@ -29,9 +29,10 @@ incluye la subida de una foto, y los usuarios seed llevan fotos genéricas de ej
 autenticación con email + contraseña, comprobando que el email no exista ya (o login con esas mismas
 credenciales, con opción de recuperar contraseña por email); (2) una vez autenticado, una segunda
 pantalla para completar el perfil con nombre, **alias único**, la foto y la selección de las 5
-cualidades. Las 15 cualidades se muestran como cards independientes seleccionables: el envío del
-formulario se bloquea mientras la selección no sea exactamente 5, pero el resto de campos (nombre,
-alias, foto) se pueden rellenar sin esa restricción. La interfaz autenticada muestra en la esquina
+cualidades. Las 15 cualidades se muestran como cards independientes seleccionables: al llegar a 5
+marcadas, las cards restantes se deshabilitan (no se puede marcar una sexta) hasta desmarcar alguna; el
+envío del formulario se bloquea mientras la selección no sea exactamente 5, pero el resto de campos
+(nombre, alias, foto) se pueden rellenar sin esa restricción. La interfaz autenticada muestra en la esquina
 superior derecha un botón de cerrar sesión y un botón de configuración para editar más adelante
 contraseña, nombre, alias, foto y cualidades.
 
@@ -60,7 +61,7 @@ formen parte del alcance actual.
 | Backend | **NestJS (Node.js + TypeScript)** | Arquitectura por decoradores/módulos/DI casi calcada de ASP.NET Core (Controllers, Services, `[ApiController]` ≈ `@Controller`), así que la transición desde .NET es mínima. A la vez, TypeScript/Node es más natural que un lenguaje puramente OO para manipular JSON dinámico y orquestar llamadas async a APIs de IA — el punto que la propia usuaria señaló. |
 | Base de datos | **PostgreSQL vía Supabase (free tier)** | Relacional como SQL Server (SQL transferible), con columnas `JSONB` para la estructura prefijada de respuestas/resultados. |
 | Almacenamiento de fotos | **Supabase Storage (free tier, ~1GB)** | Mismo proyecto que la BD, un único proveedor/API key que gestionar; genera URLs públicas para pintar la foto de cada candidato en el dashboard. |
-| UI / diseño | **Bootstrap 5 + Bootstrap Icons** (vía `@ng-bootstrap/ng-bootstrap` para componentes interactivos), recompilado desde Sass con **paleta propia** (`#E67E22` primario, `#D35400` secundario, `#0D1B2A` texto/oscuro, `#FCF3CF` fondo suave) y **tipografía Poppins** (alternativas: DM Sans/Roboto) | Sistema de diseño único para toda la interfaz (layout, formularios, botones, tarjetas, cabecera) e iconografía, sin CSS a medida ni mezclar librerías de iconos; `ng-bootstrap` evita depender del bundle JS de Bootstrap (pensado para vanilla/jQuery), que conflictuaría con la detección de cambios de Angular. Los ejemplos oficiales de Bootstrap (*Sign-in*, *Dashboard*, *Album*, *Accordion*) sirven de esqueleto de partida para cada shell/patrón, reskinado con los tokens propios. **La interfaz es completamente responsive** (móvil <768px, tablet 768–991px, escritorio ≥992px) usando el grid y utilidades responsive de Bootstrap, ya que no hay app nativa/APK — el acceso es exclusivamente web. Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` para que las 8 pantallas sean coherentes entre sí sin depender de recordarlo manualmente. |
+| UI / diseño | **AfinIA** (nombre de marca, con logo propio) sobre **Bootstrap 5 + Bootstrap Icons** (vía `@ng-bootstrap/ng-bootstrap` para componentes interactivos), recompilado desde Sass con **paleta propia** (`#FB8500` Princeton Orange primario, `#BE1E2D` Carmine secundario, `#000000` texto/oscuro, `#FDF0D5` Papaya Whip fondo suave, `#FFFFFF` blanco base) y **tipografía Poppins** (alternativas: DM Sans/Roboto) | Sistema de diseño único para toda la interfaz (layout, formularios, botones, tarjetas, cabecera) e iconografía, sin CSS a medida ni mezclar librerías de iconos; `ng-bootstrap` evita depender del bundle JS de Bootstrap (pensado para vanilla/jQuery), que conflictuaría con la detección de cambios de Angular. Los ejemplos oficiales de Bootstrap (*Sign-in*, *Dashboard*, *Album*) sirven de esqueleto de partida para cada shell/patrón, reskinado con los tokens propios — el cuestionario ya no se basa en el ejemplo *Accordion*, es un wizard de 6 pasos (ver más abajo). **La interfaz es completamente responsive** (móvil <768px, tablet 768–991px, escritorio ≥992px) usando el grid y utilidades responsive de Bootstrap, ya que no hay app nativa/APK — el acceso es exclusivamente web. Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` para que las 8 pantallas sean coherentes entre sí sin depender de recordarlo manualmente. |
 | Autenticación | **Supabase Auth (email/contraseña)** | Mismo proyecto que la BD/Storage; hashea y guarda la contraseña en la misma Postgres, emite JWT de sesión y resuelve el email de recuperación de contraseña con su SMTP gratuito — sin implementar hashing, tokens ni envío de email a mano. El frontend Angular llama a Supabase Auth directamente (`@supabase/supabase-js`); el backend solo valida el JWT en un guard. |
 | IA | **Groq API** (modelos open-weight Llama 3.x) como proveedor principal; **OpenRouter** mencionado como alternativa/comparativa | Free tier rápido, buen soporte de salida JSON estructurada ("JSON mode"), modelos open source. |
 | Despliegue gratuito | **Frontend en Vercel/Netlify + Backend en Render + BD/Auth en Supabase** | Combinación 100% free tier sin tarjeta de crédito, estándar para proyectos académicos. |
@@ -179,17 +180,21 @@ compatibility-check-app/
 │   │   └── schemas/comparison-result.schema.ts          (Zod, valida la salida del LLM)
 │   ├── comparisons/                  # una comparación = usuario vs. 1 candidato
 │   │   └── weighting.util.ts         # cálculo del agregado ponderado (igual que antes)
+│   ├── chat/                         # NUEVO: conversaciones y mensajes (internal-chat)
+│   │   ├── chat.controller.ts
+│   │   └── chat.service.ts           # valida elegibilidad contra comparisons con service_role
 │   └── supabase/supabase.service.ts
 ├── apps/frontend/src/app/
-│   ├── core/shell/                   # NUEVO: cabecera con botones de configuración y logout
+│   ├── core/shell/                   # NUEVO: cabecera con iconos de chat, configuración y logout
 │   ├── features/auth/                # NUEVO: login, registro paso 1, forgot/reset password
 │   ├── features/registration/        # paso 2: nombre + alias + foto + cards de 5/15 cualidades
 │   ├── features/settings/            # NUEVO: editar contraseña, nombre, alias, foto y cualidades
-│   ├── features/questionnaire/       # 36 preguntas en 6 paneles colapsables con gradiente de peso
+│   ├── features/questionnaire/       # 36 preguntas, wizard de 6 pasos con barra de peso segmentada
 │   ├── features/processing/          # calculando candidatos + analizando (polling)
-│   └── features/results-dashboard/   # 3 tarjetas (foto + alias + score + radar) + detalle
+│   ├── features/results-dashboard/   # 3 tarjetas (foto + alias + score + radar) + detalle + Chatear
+│   └── features/chats/               # NUEVO: listado de conversaciones + features/chats/:id (chat)
 └── supabase/
-    ├── migrations/0001_init.sql
+    ├── migrations/0001_init.sql      # incluye conversations/messages
     ├── storage/ (bucket "user-photos", fotos genéricas para seed)
     └── seed/seed-users.json + seed.ts
 ```
@@ -208,11 +213,12 @@ compatibility-check-app/
   key, nunca el navegador directamente.
 - **Cambio de contraseña**: la pantalla de configuración exige la contraseña actual (se reintenta
   `signInWithPassword` con ella para confirmarla) antes de llamar a `updateUser({password})`.
-- **Cualidades como cards**: las 15 se muestran como elementos seleccionables independientes; se pueden
-  marcar/desmarcar libremente, pero el botón de enviar (registro paso 2 o guardado en configuración)
-  permanece deshabilitado mientras la selección no sea exactamente 5 — el resto de campos del
-  formulario no se bloquean por esto. La validación de "exactamente 5" se repite en el backend como
-  fuente de verdad.
+- **Cualidades como cards**: las 15 se muestran como elementos seleccionables independientes; desmarcar
+  es siempre libre, pero al llegar a 5 marcadas las cards restantes se deshabilitan (no se puede marcar
+  una sexta hasta desmarcar alguna) — el límite se hace cumplir en la propia interacción, no solo al
+  enviar. El botón de enviar (registro paso 2 o guardado en configuración) permanece además deshabilitado
+  mientras la selección no sea exactamente 5 — el resto de campos del formulario no se bloquean por esto.
+  La validación de "exactamente 5" se repite en el backend como fuente de verdad.
 
 ## Modelo de datos (PostgreSQL / Supabase)
 
@@ -241,6 +247,12 @@ compatibility-check-app/
 - `comparison_aggregated_results` (comparison_id único, compatibilidad_final + las 6 dimensiones,
   `weights jsonb` con **ambos** vectores de pesos usados: por dimensión (20/25/10/25/10/10) y por
   bloque de preguntas (5/5/15/20/25/30))
+- `conversations` (id, user_a_id, user_b_id — FK a `users.id`, normalizados `least`/`greatest` con
+  `UNIQUE(user_a_id, user_b_id)` para no duplicar conversaciones entre el mismo par, `created_at`) —
+  **sin FK a `comparisons`**: una conversación sobrevive aunque el candidato deje de serlo tras un
+  recálculo.
+- `messages` (id, conversation_id FK, sender_id FK a `users.id`, `body` texto no vacío, `created_at`,
+  `read_at` nullable).
 
 Las interfaces TypeScript de `answers` y `result` viven en `packages/shared-types` para que backend y
 frontend compartan literalmente el mismo contrato.
@@ -338,6 +350,17 @@ POST  /comparisons/:id/reanalyze      → (autenticado) reintento manual si stat
 POST  /users/me/recalculate           → (autenticado) solo si needs_recalculation=true: vuelve a
                                          seleccionar candidatos, sustituye las comparaciones anteriores
                                          y relanza el análisis IA; desmarca needs_recalculation
+
+POST  /conversations                  → (autenticado) { candidateUserId }; exige que candidateUserId
+                                         sea uno de los propios candidatos en `comparisons`
+                                         (requester_user_id = yo); crea la conversación o devuelve la
+                                         existente (idempotente)
+GET   /conversations                  → (autenticado) listado de conversaciones propias (iniciadas por
+                                         mí o por otros), con alias/foto del otro participante, último
+                                         mensaje y contador de no leídos, ordenadas por actividad
+GET   /conversations/:id/messages     → (autenticado, solo participantes) mensajes en orden
+                                         cronológico; marca como leídos los dirigidos al usuario actual
+POST  /conversations/:id/messages     → (autenticado, solo participantes) { body } no vacío
 ```
 
 El análisis se dispara de forma desacoplada vía eventos (`@nestjs/cqrs`), no con una llamada directa
@@ -399,28 +422,34 @@ Pantallas:
    pantalla de destino del enlace de recuperación para establecer una nueva contraseña.
 2. **Completar perfil / Registro paso 2** (`features/registration`): nombre, alias (validado en vivo
    contra `GET /users/check-alias`), subida de foto (preview antes de enviar), y selección de 5 de las
-   15 cualidades como **cards independientes**: el botón de enviar permanece deshabilitado mientras la
-   selección no sea exactamente 5, sin bloquear el resto de campos. Usa el Shell A (autenticado) pero
-   **sin el enlace de Configuración** en la cabecera — solo cerrar sesión, porque todavía no existe un
-   perfil que configurar.
-3. **Formulario de 36 preguntas** (`features/questionnaire`): ya no es un stepper lineal — las 36
-   preguntas se agrupan en **6 paneles colapsables** (`NgbAccordion`), uno por cada bloque de 6 preguntas
-   usado también en el cálculo ponderado (pesos 5/5/15/20/25/30%), cada panel con un **gradiente de
-   fondo estilo semáforo** que va de verde (menor peso) a naranja/rojo intenso (mayor peso) — los
+   15 cualidades como **cards independientes**: al llegar a 5 marcadas, las cards restantes se
+   deshabilitan (no se puede marcar una sexta hasta desmarcar alguna), y el botón de enviar permanece
+   deshabilitado mientras la selección no sea exactamente 5, sin bloquear el resto de campos. Usa el
+   Shell A (autenticado) pero **sin el enlace de Configuración** en la cabecera — solo cerrar sesión,
+   porque todavía no existe un perfil que configurar.
+3. **Formulario de 36 preguntas** (`features/questionnaire`): es un **wizard de 6 pasos** — las 36
+   preguntas se agrupan en 6 bloques de 6 preguntas (mismo agrupamiento del cálculo ponderado, pesos
+   5/5/15/20/25/30%), pero **nunca se muestran los 6 a la vez**: solo el bloque activo, con una flecha
+   para volver al anterior (o salir del cuestionario desde el bloque 1). Encima del bloque activo hay una
+   **barra de progreso segmentada por peso** (6 tramos con ancho proporcional al peso, coloreados con un
+   gradiente estilo semáforo que va de blanco/crema (menor peso) a rojo/negro intenso (mayor peso)) — los
    bloques 1 y 2 pesan igual (5%) y se ven idénticos. **El porcentaje de peso no se muestra como texto**
-   en ningún subtítulo ni en la cabecera previa al acordeón (solo se comunica mediante el color); cada
-   panel muestra una **barra de progreso** (no un contador "X/6") con la proporción de sus 6 preguntas
-   respondidas. Dentro de cada panel abierto, las 6 preguntas se presentan como **pestañas** (una
-   pregunta visible a la vez, con transición al cambiar) en vez de apiladas verticalmente, y el
-   `textarea` de la pregunta activa ocupa todo el ancho del panel con altura para al menos 4 líneas
-   (`rows="4"`, no un campo de una sola línea). El progreso **ya no depende de `localStorage`**:
-   cada respuesta se autoguarda como borrador contra `PUT /users/me/questionnaire/draft` (persiste entre
-   sesiones/dispositivos), y al abrir la pantalla se precarga con `GET /users/me/questionnaire` —
-   incluido al volver a iniciar sesión. El botón "Enviar cuestionario" permanece deshabilitado hasta
-   tener las 36 respuestas completas (guardadas como borrador o escritas en el momento); solo entonces
-   dispara el envío final a `POST /users/me/questionnaire`. Componente reutilizable también en modo
-   "edición" desde el perfil (envía a `PATCH /users/me/questionnaire`, prerellenado con las respuestas
-   actuales).
+   en ningún sitio (solo se comunica mediante el ancho/color de cada tramo). La navegación entre bloques
+   es libre (avanzar sin completar el actual) y **cualquier bloque ya visitado se puede volver a revisar
+   y editar** — retrocediendo paso a paso o saltando directo desde su tramo en la barra — sin perder el
+   punto más avanzado alcanzado (un botón "Volver a donde estabas" te devuelve allí tras revisar); no se
+   puede saltar a un bloque aún no alcanzado. Dentro del bloque activo, las 6 preguntas se presentan como
+   **pestañas** (una pregunta visible a la vez, con transición al cambiar) en vez de apiladas
+   verticalmente, y el `textarea` de la pregunta activa ocupa todo el ancho de la card con altura para
+   al menos 4 líneas (`rows="4"`, no un campo de una sola línea). El progreso **ya no depende de
+   `localStorage`**: cada respuesta se autoguarda como borrador contra
+   `PUT /users/me/questionnaire/draft` (persiste entre sesiones/dispositivos), y al abrir la pantalla se
+   precarga con `GET /users/me/questionnaire` —incluido al volver a iniciar sesión—, posicionando el
+   wizard en el primer bloque incompleto. El botón del bloque 6 ("Enviar cuestionario") permanece
+   deshabilitado hasta tener las 36 respuestas completas (guardadas como borrador o escritas en el
+   momento); solo entonces dispara el envío final a `POST /users/me/questionnaire`. Componente
+   reutilizable también en modo "edición" desde el perfil (envía a `PATCH /users/me/questionnaire`,
+   prerellenado con las respuestas actuales).
 4. **Procesando** (`features/processing`): tras enviar el cuestionario, polling cada 3–5s a
    `GET /users/me/comparisons` mostrando el avance ("comparando con Ana... 2 de 3 completadas").
 5. **Dashboard de resultados** (`features/results-dashboard`): **3 tarjetas de resultado**, una por
@@ -430,13 +459,21 @@ Pantallas:
    puntuaciones y, opcionalmente, la justificación de la IA. Las tarjetas se ordenan de mayor a menor
    `compatibilidad_final`. Incluye el botón "recalcular compatibilidad" (habilitado solo si
    `needs_recalculation=true`), que llama a `POST /users/me/recalculate` y refresca el dashboard al
-   completarse.
+   completarse. Cada tarjeta incluye además un botón **"Chatear"** que inicia (o reutiliza, si ya
+   existía) una conversación con ese candidato vía `POST /conversations` y navega a ella.
 6. **Configuración** (`features/settings`): accesible desde el botón de ajustes de la cabecera; edita
    nombre, alias, foto y cualidades (mismas reglas que el registro paso 2), incluye el cuestionario en
    modo edición, y cambio de contraseña exigiendo la contraseña actual.
+7. **Chats** (`features/chats` y `features/chats/:id`): listado de todas las conversaciones del usuario
+   (las que él inició y las que otros le iniciaron a él, aunque no le tengan como candidato propio),
+   ordenadas por actividad reciente, con indicador de no leídos; al abrir una, la conversación muestra
+   los mensajes en burbujas (propios a la derecha en `$primary`, del otro participante a la izquierda en
+   `$light`) y un campo para responder. Se actualiza por sondeo (~4s con la conversación abierta, ~20-30s
+   el contador de no leídos del menú) — sin WebSockets (ver `design.md` decisión 9).
 
 Toda pantalla autenticada comparte una **cabecera** (`core/shell`) con, en la esquina superior derecha,
-el botón de configuración y el botón de cerrar sesión (`supabase.auth.signOut`).
+el icono de chat (con indicador de no leídos), el botón de configuración y el botón de cerrar sesión
+(`supabase.auth.signOut`), en ese orden.
 
 **Enrutamiento de la página principal (`/`)**: mientras el usuario autenticado no haya completado nunca
 su cuestionario, la home es la pantalla del cuestionario (paso de creación); una vez completado, la home
@@ -444,7 +481,7 @@ es el dashboard de resultados, independientemente de si hay comparaciones pendie
 recálculo (el propio dashboard ya refleja esos estados intermedios).
 
 **Responsive**: todas las pantallas se adaptan a móvil/tablet/escritorio con el grid de Bootstrap — la
-cabecera colapsa a menú hamburguesa en móvil, el acordeón del cuestionario y los formularios no generan scroll horizontal,
+cabecera colapsa a menú hamburguesa en móvil, el wizard del cuestionario y los formularios no generan scroll horizontal,
 las tarjetas del dashboard pasan de 3 columnas en escritorio a 1 columna apilada en móvil, y el radar
 chart (`ng2-charts`) se redimensiona al contenedor (`responsive: true`) en vez de tener tamaño fijo.
 
@@ -520,7 +557,9 @@ se pueden pintar 3 radares independientes (uno por tarjeta) para mantener la lec
 
 **Fuera de alcance v1** (mencionar solo como líneas futuras): más idiomas, otros sets de preguntas,
 login social/OAuth, verificación de email obligatoria antes de continuar el registro, panel de
-analítica entre citas, permitir que el usuario elija manualmente más o menos de 3 candidatos. El
+analítica entre citas, permitir que el usuario elija manualmente más o menos de 3 candidatos, chat en
+tiempo real vía WebSockets, llamadas de voz/vídeo, chats grupales, indicador de "escribiendo…",
+edición/borrado de mensajes, notificaciones push y cifrado end-to-end del chat interno. El
 recálculo retroactivo de candidatos para usuarios ya existentes queda explícitamente excluido por el
 riesgo de coste de llamadas a la IA explicado arriba; si se retoma en el futuro, debería implementarse
 como acción explícita bajo demanda del propio usuario ("buscar nuevos candidatos"), reutilizando
@@ -596,10 +635,10 @@ red, rate limits, JSON mal formado, timeouts).
   endpoint, cubriendo el contrato descrito en "Endpoints backend clave" (código 201/200 esperado,
   forma del body de respuesta, errores 4xx cuando el payload no cumple el DTO).
 - **Frontend**: tests de componente (Angular Testing Library o TestBed) para las validaciones de UI
-  con más lógica (selección de exactamente 5 cualidades, acordeón de 6 paneles del cuestionario con
-  autoguardado de borrador y envío bloqueado hasta completar las 36 respuestas, polling que se detiene
-  al llegar a `completed`), escritos antes del componente cuando la lógica no sea trivial de maquetación
-  pura.
+  con más lógica (selección de exactamente 5 cualidades con tope de marcado, wizard de 6 pasos del
+  cuestionario con autoguardado de borrador y envío bloqueado hasta completar las 36 respuestas, polling
+  que se detiene al llegar a `completed`, sondeo de mensajes de chat mientras la conversación está
+  abierta), escritos antes del componente cuando la lógica no sea trivial de maquetación pura.
 - Ciclo estricto rojo-verde-refactor por cada unidad de trabajo de `tasks.md`; no se marca una tarea
   como completada sin su test correspondiente en verde.
 
@@ -632,10 +671,13 @@ red, rate limits, JSON mal formado, timeouts).
   `apps/backend/src/ai/commands/analyze-comparison.command.ts` y su handler de
   `ComparisonsCreatedEvent`
 - `apps/backend/src/comparisons/weighting.util.ts`
+- `apps/backend/src/chat/chat.controller.ts`, `apps/backend/src/chat/chat.service.ts`
 - `apps/frontend/src/app/features/auth/` (login, registro paso 1, forgot/reset password)
 - `apps/frontend/src/app/features/registration/registration.component.ts` (paso 2)
 - `apps/frontend/src/app/features/settings/settings.component.ts`
 - `apps/frontend/src/app/features/results-dashboard/results-dashboard.component.ts`
+- `apps/frontend/src/app/features/chats/chats.component.ts` (listado) y
+  `apps/frontend/src/app/features/chats/chat-conversation.component.ts` (conversación)
 - `supabase/seed/seed-users.json`, `supabase/seed/seed.ts`
 
 ## Verificación
@@ -661,6 +703,11 @@ red, rate limits, JSON mal formado, timeouts).
    comprobar que se habilita el botón de recalcular; activarlo y verificar que el dashboard se refresca
    con nuevas comparaciones, y que las comparaciones de otros usuarios (seed) que lo tuvieran como
    candidato no se ven afectadas.
+5b. Recorrer el flujo de chat con dos cuentas de prueba: usuario A pulsa "Chatear" en la tarjeta de un
+   candidato B en su dashboard; comprobar que B ve la conversación desde el icono del menú aunque A no
+   aparezca entre sus propios candidatos; enviar mensajes en ambos sentidos y comprobar que llegan por
+   sondeo sin recargar; recalcular la compatibilidad de A y comprobar que la conversación con B sigue
+   existiendo aunque B deje de ser su candidato.
 6. Verificar el responsive en 3 anchos de viewport (móvil ~375px, tablet ~768px, escritorio ~1280px)
    sobre todas las pantallas: cabecera colapsada en móvil, sin scroll horizontal en formularios/
    cuestionario, tarjetas del dashboard apiladas en móvil y radar chart sin desbordar.

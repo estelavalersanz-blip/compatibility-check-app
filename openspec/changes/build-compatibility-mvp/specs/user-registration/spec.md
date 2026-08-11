@@ -35,11 +35,13 @@ El sistema SHALL permitir a un usuario ya autenticado (ver `authentication`) com
 - **WHEN** se intenta enviar el formulario de perfil sin un token de sesión válido
 - **THEN** el sistema rechaza la petición y no crea ningún perfil
 
-### Requirement: Selección de cualidades como cards con envío bloqueado hasta exactamente 5
-El sistema SHALL presentar las 15 cualidades como elementos seleccionables independientes que el
-usuario puede marcar o desmarcar libremente, pero SHALL bloquear el envío del formulario de perfil
-mientras el número de cualidades seleccionadas sea distinto de 5; el resto de campos del formulario
-(nombre, alias, foto) permanecen editables y no bloqueados por esta regla.
+### Requirement: Selección de cualidades como cards con tope de 5 y envío bloqueado hasta exactamente 5
+El sistema SHALL presentar las 15 cualidades como elementos seleccionables independientes (cards) que el
+usuario puede desmarcar libremente en todo momento, pero SHALL impedir marcar una sexta cualidad mientras
+ya haya 5 marcadas — el límite se hace cumplir en la propia interacción, no solo al enviar. El sistema
+SHALL además bloquear el envío del formulario de perfil mientras el número de cualidades seleccionadas
+sea distinto de 5; el resto de campos del formulario (nombre, alias, foto) permanecen editables y no
+bloqueados por esta regla.
 
 #### Scenario: Envío bloqueado con una selección incompleta
 - **WHEN** el usuario tiene seleccionadas menos de 5 o más de 5 cualidades

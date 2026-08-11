@@ -48,6 +48,11 @@ base de datos ni datos de prueba, así que esta propuesta cubre la primera versi
 - Semilla de datos: catálogo de 15 cualidades y 10 usuarios sintéticos (con fotos genéricas,
   cualidades y las 36 respuestas ya rellenadas) para poder probar la comparación sin depender de
   usuarios reales.
+- Chat interno entre usuarios con compatibilidad calculada: desde una tarjeta del dashboard se puede
+  iniciar una conversación con ese candidato; el acceso a todas las conversaciones propias (las que el
+  usuario inició y las que otros le iniciaron a él) vive en un icono del menú, a la izquierda del botón
+  de configuración. Mensajería por texto simple, actualizada por sondeo (sin WebSockets), sin llamadas,
+  sin chats grupales ni notificaciones push.
 - Metodología de desarrollo TDD (test antes que implementación) y logging estructurado con IDs
   correlacionados en toda la orquestación de IA, para minimizar el tiempo de depuración ante fallos.
 
@@ -74,6 +79,8 @@ base de datos ni datos de prueba, así que esta propuesta cubre la primera versi
   genéricas y cuestionarios completos.
 - `responsive-ui`: adaptación completa de toda la interfaz a móvil, tablet y escritorio con Bootstrap 5,
   al no existir una app nativa y ser el acceso exclusivamente web.
+- `internal-chat`: inicio y mensajería de conversaciones internas entre un usuario y los candidatos con
+  los que ha tenido compatibilidad, con listado de conversaciones accesible desde el menú.
 
 ### Modified Capabilities
 (ninguna — no existen specs previas en `openspec/specs/`, el repositorio parte vacío)
@@ -84,9 +91,10 @@ base de datos ni datos de prueba, así que esta propuesta cubre la primera versi
   `packages/shared-types`, `supabase/migrations` y `supabase/seed`.
 - Nueva base de datos PostgreSQL (Supabase) con tablas `users` (perfil, `id` = `auth.users.id`),
   `qualities`, `user_qualities`, `questionnaires`, `comparisons`, `comparison_question_results`,
-  `comparison_aggregated_results`, un bucket de Storage `user-photos`, políticas de Row Level Security
-  sobre `users`/`user_qualities`/`questionnaires` (cada usuario solo edita su propia fila), y Supabase
-  Auth habilitado como proveedor de identidad (email/contraseña).
+  `comparison_aggregated_results`, `conversations` y `messages` (chat interno), un bucket de Storage
+  `user-photos`, políticas de Row Level Security sobre `users`/`user_qualities`/`questionnaires`/
+  `conversations`/`messages` (cada usuario solo edita su propia fila o las conversaciones de las que es
+  parte), y Supabase Auth habilitado como proveedor de identidad (email/contraseña).
 - Nueva dependencia externa: API Key de un proveedor de IA (Groq; OpenRouter opcional) consumida desde
   el backend. El envío de emails de recuperación de contraseña usa el SMTP incluido en el free tier de
   Supabase Auth (sin proveedor de email adicional).

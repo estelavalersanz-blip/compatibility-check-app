@@ -26,6 +26,9 @@ un pool, con preselección por cualidades personales compartidas.
 - Soporte multi-idioma, otros sets de preguntas, o comparación entre más de 2 personas a la vez.
 - Migración a proveedores de pago o infraestructura de producción (documentada como línea futura, no
   implementada aquí).
+- Chat en tiempo real vía WebSockets, llamadas de voz/vídeo, chats grupales, indicador de "escribiendo…",
+  edición/borrado de mensajes, notificaciones push y cifrado end-to-end del chat interno — la mensajería
+  es texto simple actualizado por sondeo (ver decisión 9).
 
 ## Decisions
 
@@ -75,11 +78,12 @@ regla de "selección de candidatos solo la dispara el propio backend, una vez po
 
 Toda la interfaz Angular (layout general, formularios, botones, tarjetas de resultado, cabecera) usa
 **Bootstrap 5** como sistema de diseño, y **Bootstrap Icons** para toda la iconografía (botón de
-ajustes, logout, flechas del stepper, etc.), en vez de escribir CSS a medida o mezclar librerías de
-iconos distintas. Integración concreta: el paquete `bootstrap` (CSS) + `bootstrap-icons` (fuente de
-iconos) más `@ng-bootstrap/ng-bootstrap` para los componentes interactivos (modales, dropdowns,
-acordeón del detalle de preguntas) reimplementados en Angular puro — evita depender del bundle JS de
-Bootstrap (pensado para jQuery/vanilla) y sus conflictos con la detección de cambios de Angular.
+ajustes, logout, flecha de volver del wizard del cuestionario, etc.), en vez de escribir CSS a medida o
+mezclar librerías de iconos distintas. Integración concreta: el paquete `bootstrap` (CSS) +
+`bootstrap-icons` (fuente de iconos) más `@ng-bootstrap/ng-bootstrap` para los componentes interactivos
+(modales, dropdowns, pestañas `NgbNav` de las preguntas dentro de cada bloque del cuestionario)
+reimplementados en Angular puro — evita depender del bundle JS de Bootstrap (pensado para
+jQuery/vanilla) y sus conflictos con la detección de cambios de Angular.
 `ng2-charts`/Chart.js se mantiene aparte solo para el gráfico radar (Bootstrap no cubre gráficas), pero
 se integra visualmente dentro de tarjetas Bootstrap.
 
@@ -98,46 +102,67 @@ disponible sin scroll horizontal; las tarjetas del dashboard pasan de 3 columnas
 columna apilada en móvil; los gráficos radar (`ng2-charts`) se redimensionan al contenedor en vez de
 tener un tamaño fijo en píxeles.
 
-### 3c-quater. Paleta de color, tipografía y cuestionario en 6 paneles con gradiente de peso
+### 3c-quater. Marca "AfinIA", paleta de color, tipografía y cuestionario como wizard con gradiente de peso
 
-La identidad visual del proyecto no es el azul/gris por defecto de Bootstrap: usa una paleta propia
-(`#E67E22` primario, `#D35400` secundario/hover, `#0D1B2A` texto/superficies oscuras, `#FCF3CF` fondos
-suaves) y tipografía **Poppins** (alternativas aceptadas: DM Sans o Roboto), aplicadas recompilando
-Bootstrap desde su fuente Sass con las variables `$primary`/`$secondary`/`$dark`/`$light`/
-`$font-family-base` sobrescritas, en vez de parchear clases sueltas con CSS a medida — así
-`.btn-primary`, `.bg-primary-subtle`, etc. se recalculan solos. Los ejemplos oficiales de Bootstrap 5
-(*Sign-in*, *Dashboard*, *Album*, *Accordion*) se usan como esqueleto de partida para cada shell/patrón
-ya descrito, no se reinventan desde cero.
+El producto se llama **AfinIA** de cara al usuario (con logo propio); `compatibility-check-app` es solo
+el nombre técnico del repo. La identidad visual tampoco es el azul/gris por defecto de Bootstrap: usa
+una paleta propia (`#FB8500` Princeton Orange primario, `#BE1E2D` Carmine secundario/hover, `#000000`
+texto/superficies oscuras, `#FDF0D5` Papaya Whip fondos suaves, `#FFFFFF` blanco base) y tipografía
+**Poppins** (alternativas aceptadas: DM Sans o Roboto), aplicadas recompilando Bootstrap desde su fuente
+Sass con las variables `$primary`/`$secondary`/`$dark`/`$light`/`$font-family-base` sobrescritas, en vez
+de parchear clases sueltas con CSS a medida — así `.btn-primary`, `.bg-primary-subtle`, etc. se
+recalculan solos. Al ser `$secondary` un rojo, se documenta explícitamente que no debe usarse para
+botones "neutros" (`btn-outline-secondary`) como cancelar o cerrar sesión — esos usan `btn-outline-dark`,
+porque un outline rojo se lee como acción destructiva. Los ejemplos oficiales de Bootstrap 5 (*Sign-in*,
+*Dashboard*, *Album*) se usan como esqueleto de partida para cada shell/patrón ya descrito, no se
+reinventan desde cero; el cuestionario ya no se basa en el ejemplo *Accordion* (ver el cambio siguiente).
 
-El cuestionario de 36 preguntas se reorganiza en **6 paneles colapsables** (uno por cada bloque de 6
-preguntas ya usado en el cálculo ponderado, decisión 6c), con un fondo en gradiente que va de verde
-(bloques de menor peso, 5%) a naranja/rojo intenso (bloque de mayor peso, 30%) — un "semáforo" que hace
-visible al usuario que las preguntas finales cuentan más en el resultado. El color se asigna por peso,
-no por número de bloque: los bloques 1 y 2 pesan igual (5%) y deben verse idénticos. Esto sustituye el
-planteamiento inicial de "stepper lineal" para el cuestionario.
+El cuestionario de 36 preguntas se presenta como un **wizard de 6 pasos** (uno por cada bloque de 6
+preguntas ya usado en el cálculo ponderado, decisión 6c): **los 6 bloques nunca se muestran a la vez en
+la misma pantalla**, solo el bloque activo, con una flecha para volver al bloque anterior. Esto sustituye
+el planteamiento previo de un acordeón con los 6 paneles visibles simultáneamente (que a su vez había
+sustituido al stepper lineal pregunta a pregunta original). La navegación entre bloques es libre (no
+exige haber terminado el bloque actual); solo el envío final sigue exigiendo las 36 respuestas completas.
+Además, **cualquier bloque ya visitado se puede volver a revisar y editar** — no solo retrocediendo un
+paso con la flecha, también saltando directamente a él desde su segmento en la barra de progreso — sin
+perder el sitio donde ibas: el estado distingue el bloque que se está viendo del bloque más avanzado
+alcanzado, y un botón "Volver a donde estabas" te devuelve allí tras revisar.
 
-Dentro de cada panel, las 6 preguntas del bloque **no se apilan verticalmente**: se presentan como
-**pestañas** (`NgbNav`), mostrando una pregunta a la vez, con un icono por pestaña que indica si esa
-pregunta ya está respondida. Cambiar de pestaña anima el contenido con una transición corta (fade +
-desplazamiento horizontal, 200ms, `ease-out`, desactivada si el usuario prefiere movimiento reducido) en
-vez de un salto brusco. Esto reduce la sensación de "formulario largo" dentro de cada bloque sin volver
-a un stepper lineal para las 36 preguntas completas — el stepper se descarta a nivel de cuestionario,
-pero una navegación por pestañas sí tiene sentido a nivel de bloque (6 elementos, no 36).
+Encima del bloque activo hay una **barra de progreso segmentada por peso**: 6 segmentos en línea con
+ancho proporcional al peso del bloque (5/5/15/20/25/30%) que se rellenan con un gradiente que va de
+blanco/crema (bloques de menor peso) a rojo/negro intenso (bloque de mayor peso) — un "semáforo" que
+hace visible que las preguntas finales cuentan más en el resultado. El color se asigna por peso, no por
+número de bloque: los bloques 1 y 2 pesan igual (5%) y deben verse idénticos. Esta barra sustituye tanto
+al color de fondo de los 6 paneles del planteamiento anterior como a un simple contador "respondidas/36".
+
+Dentro del bloque activo, las 6 preguntas **no se apilan verticalmente**: se presentan como **pestañas**
+(`NgbNav`), mostrando una pregunta a la vez, con un icono por pestaña que indica si esa pregunta ya está
+respondida. Cambiar de pestaña anima el contenido con una transición corta (fade + desplazamiento
+horizontal, 200ms, `ease-out`, desactivada si el usuario prefiere movimiento reducido) en vez de un
+salto brusco. Esto reduce la sensación de "formulario largo" dentro de cada bloque sin volver a un
+stepper lineal para las 36 preguntas completas — una navegación por pestañas sí tiene sentido a nivel de
+bloque (6 elementos, no 36).
 
 Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` (SKILL.md
-+ `references/design-tokens.md` con los valores exactos y la tabla de gradientes + `references/page-template.md`
-con el marcado de partida), para que la consistencia entre las 8 pantallas no dependa de recordarlo
-manualmente en cada sesión de trabajo.
++ `references/design-tokens.md` con los valores exactos, el logo y la tabla de gradientes +
+`references/page-template.md` con el marcado de partida), para que la consistencia entre las 8 pantallas
+no dependa de recordarlo manualmente en cada sesión de trabajo.
 
 ### 3d. Selección de cualidades como cards con mínimo y máximo de 5
 
-Las 15 cualidades se presentan como cards seleccionables (registro y configuración). La UI permite
-marcar/desmarcar libremente, pero solo bloquea el **envío** del formulario (registro paso 2 o guardado
-de configuración) mientras la selección no sea exactamente 5 — el resto de campos del formulario
-(nombre, alias, foto) se pueden rellenar sin que la selección de cualidades esté completa. La misma
-regla de "exactamente 5" ya validada en backend (ver `user-registration`) se refuerza aquí en el
-cliente para dar feedback inmediato, pero el backend sigue siendo la fuente de verdad (nunca confiar
-solo en la validación de UI).
+Las 15 cualidades se presentan como **cards seleccionables** en grid (registro y configuración) — no
+chips ni píldoras. Desmarcar es siempre libre, pero **marcar una sexta cualidad no está permitido**: en
+cuanto la selección llega a 5, las cards no seleccionadas quedan deshabilitadas (sin poder pulsarlas)
+hasta que se desmarca alguna de las 5 elegidas — el límite se hace cumplir en la propia interacción, no
+solo al intentar enviar. El resto de campos del formulario (nombre, alias, foto) se pueden rellenar sin
+que la selección de cualidades esté completa, y el **envío** del formulario (registro paso 2 o guardado
+de configuración) sigue bloqueado mientras la selección no sea exactamente 5. La misma regla de
+"exactamente 5" ya validada en backend (ver `user-registration`) se refuerza aquí en el cliente para dar
+feedback inmediato, pero el backend sigue siendo la fuente de verdad (nunca confiar solo en la validación
+de UI). Respecto al planteamiento original, además del límite de marcado descrito arriba, cambia el
+**diseño del check de "seleccionada"**: una insignia circular superpuesta en la esquina de la card (con
+la misma animación de entrada que la insignia de bloque del cuestionario) en vez de un icono de check
+inline junto a la etiqueta.
 
 ### 3. PostgreSQL/Supabase con columnas JSONB, en vez de una base NoSQL
 
@@ -332,6 +357,57 @@ sin conocerla.
   cruzar logs a ciegas. **Nunca se loguea el contenido íntegro de las 36 respuestas de un usuario** en
   texto plano (dato sensible) — solo longitudes, IDs y metadatos.
 
+### 9. Chat interno entre usuarios con compatibilidad, elegibilidad asimétrica y sin WebSockets
+
+Tras generarse el dashboard, un usuario puede iniciar una conversación con cualquiera de sus candidatos
+directamente desde la tarjeta de ese candidato. El acceso a **todas** sus conversaciones — tanto las que
+él inició como las que otro usuario le inició a él — vive en un icono nuevo del menú de Shell A, situado
+**a la izquierda del botón de Configuración** (orden final: chat, configuración, cerrar sesión).
+
+**Modelo de datos** (dos tablas nuevas, sin relación con `comparisons`):
+- `conversations` (`id`, `user_a_id`, `user_b_id` — FK a `users.id`, normalizados como
+  `least(a,b)`/`greatest(a,b)` para poder poner `UNIQUE(user_a_id, user_b_id)` y no duplicar
+  conversaciones entre el mismo par, `created_at`).
+- `messages` (`id`, `conversation_id` FK, `sender_id` FK a `users.id`, `body` texto no vacío,
+  `created_at`, `read_at` nullable).
+
+**Elegibilidad para iniciar un chat es direccional, no simétrica** (igual que la selección de
+candidatos de la decisión 5): un usuario A solo puede **iniciar** un chat con B si existe una fila en
+`comparisons` con `requester_user_id = A` y `candidate_user_id = B` — es decir, B tiene que ser
+literalmente uno de los candidatos que aparecen en el propio dashboard de A. No se exige la relación
+inversa (que A sea también candidato de B): dos usuarios pueden tener compatibilidad calculada en un
+solo sentido si el matching por cualidades no fue mutuo, y aun así A puede escribirle a B. Precisamente
+por eso, B necesita acceder a esa conversación desde el **menú** (no tiene por qué tener una tarjeta de A
+en su propio dashboard): el listado de conversaciones se construye a partir de `conversations` donde el
+usuario es `user_a_id` o `user_b_id`, no a partir de sus propias `comparisons`.
+
+**Las conversaciones sobreviven a un recálculo de compatibilidad**: la decisión 5b elimina y sustituye
+las filas de `comparisons` de un usuario al recalcular, pero `conversations`/`messages` no tienen FK
+a `comparisons` — si el candidato con el que ya se estaba chateando deja de ser uno de los 3 nuevos
+candidatos, la conversación existente sigue intacta y accesible desde el menú (solo cambia de dónde
+se podría re-iniciar una nueva, no de si la ya iniciada se conserva).
+
+**Creación de conversación vía backend, no vía Supabase directo**: `POST /conversations` (esquema
+`{ candidateUserId }`) valida la elegibilidad descrita arriba contra `comparisons` (consulta con
+`service_role`, igual que hace `matching`) y crea la fila si no existe ya, o devuelve la existente
+(idempotente) — el frontend nunca escribe en `conversations` directamente. El envío de mensajes
+(`POST /conversations/:id/messages`) sí puede resolverse contra Supabase con RLS de por sí (el emisor
+debe ser `user_a_id`/`user_b_id` de esa conversación), reforzado con políticas RLS como red de
+seguridad de fondo, igual que el resto del dominio (nunca confiar solo en la validación de UI).
+
+**Sin WebSockets, por sondeo (polling)**: como el resto de flujos "en vivo" de la app (`processing`, el
+botón de recalcular), el chat se actualiza con sondeo REST en vez de una conexión persistente —
+`GET /conversations/:id/messages?after=<cursor>` cada ~4s mientras una conversación está abierta, y un
+sondeo más espaciado (~20-30s) para el contador de no leídos del icono del menú. Alternativa descartada:
+un gateway WebSocket (`@nestjs/websockets`) — añadiría una dependencia de infraestructura con estado
+(conexiones persistentes) sobre un despliegue de Render en el free tier, que ya duerme por inactividad
+(cold start); el sondeo es coherente con el resto de la app y suficiente para una demo de TFM, a costa de
+no ser mensajería instantánea (ver Risks).
+
+Fuera de alcance explícito de esta decisión (ver Non-Goals): tiempo real vía WebSockets, llamadas,
+chats grupales, indicador de "escribiendo…", edición/borrado de mensajes, notificaciones push y cifrado
+end-to-end.
+
 ## Risks / Trade-offs
 
 - **Rate limits del free tier de Groq** → Mitigación: batching (6 llamadas/comparación), concurrencia
@@ -358,6 +434,13 @@ sin conocerla.
   → Mitigación: el script de seed crea también los usuarios de Auth vía la Admin API de Supabase
   (`service_role` key) con contraseñas aleatorias que nunca se comunican (no necesitan iniciar sesión
   para la demo).
+- **El chat por sondeo no es mensajería instantánea** (hasta ~4s de retraso en ver un mensaje nuevo) →
+  Mitigación: aceptado explícitamente (decisión 9) por ser una demo de TFM sin infraestructura de
+  WebSockets; documentar la limitación en la memoria si se compara con apps de mensajería reales.
+- **Elegibilidad de chat asimétrica puede confundir en la demo** (A le escribe a B sin que B tenga a A
+  como candidato propio) → Mitigación: el acceso a conversaciones vía el menú (no solo desde el
+  dashboard) hace visible la conversación a B igualmente; documentar el comportamiento como
+  intencionado, no como bug, si surge en la defensa del TFM.
 
 ## Migration Plan
 

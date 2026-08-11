@@ -34,8 +34,9 @@ sesión tras iniciar sesión de nuevo, para que no tenga que volver a escribirla
 
 #### Scenario: Carga del borrador al iniciar sesión
 - **WHEN** un usuario con un borrador guardado (parcial o completo) inicia sesión y abre el cuestionario
-- **THEN** el sistema le muestra sus respuestas ya guardadas, prerellenadas en los paneles
-  correspondientes, sin que tenga que volver a escribirlas
+- **THEN** el sistema le muestra sus respuestas ya guardadas, prerellenadas en los bloques
+  correspondientes, sin que tenga que volver a escribirlas, y posiciona el wizard en el primer bloque
+  que tenga alguna pregunta sin responder (o en el bloque 6 si las 36 ya están respondidas)
 
 #### Scenario: Un borrador nunca dispara el análisis
 - **WHEN** se guarda un borrador con cualquier número de respuestas entre 0 y 35
@@ -72,36 +73,51 @@ su página de perfil, aplicando las mismas reglas de validación que el envío i
   pregunta sin identificar
 - **THEN** el sistema rechaza la actualización y conserva intactas las respuestas anteriores
 
-### Requirement: Presentación en 6 paneles agrupados por bloque de peso
-El sistema SHALL presentar las 36 preguntas agrupadas en 6 paneles colapsables independientes, uno por
-cada bloque de 6 preguntas usado en el cálculo ponderado (bloque 1 = preguntas 1-6, ..., bloque 6 =
-preguntas 31-36), y SHALL dar a cada panel un estilo visual (gradiente de fondo) que refleje su peso
-relativo en el resultado final, de forma que los bloques con más peso se distingan visualmente de los
-de menos peso.
+### Requirement: Presentación como wizard de 6 pasos agrupados por bloque de peso
+El sistema SHALL presentar las 36 preguntas agrupadas en 6 bloques de 6 preguntas cada uno (bloque 1 =
+preguntas 1-6, ..., bloque 6 = preguntas 31-36), mostrando **un único bloque a la vez** (nunca los 6
+simultáneamente en la misma pantalla) como pasos de un wizard, y SHALL dar al bloque activo un estilo
+visual (gradiente de fondo) que refleje su peso relativo en el resultado final, de forma que los bloques
+con más peso se distingan visualmente de los de menos peso.
 
 #### Scenario: Bloques de igual peso se ven igual
-- **WHEN** se muestran los paneles de los bloques 1 y 2 (ambos con el mismo peso del 5%)
-- **THEN** ambos paneles usan exactamente el mismo estilo de fondo, sin diferencias visuales entre
-  ellos
+- **WHEN** se muestra el bloque 1 y, en otro momento, el bloque 2 (ambos con el mismo peso del 5%)
+- **THEN** ambos usan exactamente el mismo estilo de fondo, sin diferencias visuales entre ellos
 
 #### Scenario: A mayor peso, estilo visualmente más intenso
-- **WHEN** se comparan los paneles de los 6 bloques entre sí
+- **WHEN** se comparan los 6 bloques entre sí a lo largo del wizard
 - **THEN** el estilo de fondo progresa de forma perceptible desde el bloque de menor peso (5%) hasta el
   de mayor peso (30%), sin que ningún bloque de menor peso se muestre con un estilo más intenso que uno
   de mayor peso
 
-#### Scenario: Los paneles no bloquean el envío incompleto
-- **WHEN** el usuario navega libremente entre paneles sin responder todas las preguntas
-- **THEN** el sistema permite abrir y cerrar los paneles en cualquier orden, pero sigue exigiendo las 36
-  respuestas completas para poder enviar el cuestionario
+#### Scenario: Nunca se muestra más de un bloque a la vez
+- **WHEN** el usuario está viendo cualquier bloque del cuestionario
+- **THEN** el sistema no monta ni muestra el contenido de los otros 5 bloques en la misma pantalla
+
+#### Scenario: Avanzar de bloque no exige haberlo completado
+- **WHEN** el usuario avanza al siguiente bloque sin haber respondido todas las preguntas del bloque
+  actual
+- **THEN** el sistema permite el avance, pero sigue exigiendo las 36 respuestas completas para poder
+  enviar el cuestionario
+
+#### Scenario: Volver a revisar y editar un bloque anterior
+- **WHEN** el usuario, estando en un bloque posterior, navega hacia atrás (paso a paso o saltando
+  directamente) hasta un bloque ya visitado anteriormente
+- **THEN** el sistema muestra ese bloque con sus respuestas ya guardadas, permite editarlas, y ofrece una
+  forma de volver directamente al bloque más avanzado que el usuario había alcanzado
+
+#### Scenario: No se puede saltar a un bloque aún no alcanzado
+- **WHEN** el usuario intenta navegar directamente a un bloque posterior al más avanzado que ha
+  alcanzado (por ejemplo, saltar del bloque 2 al bloque 5 sin haber pasado por el 3 y el 4)
+- **THEN** el sistema no permite ese salto; solo se puede avanzar bloque a bloque
 
 ### Requirement: Preguntas de un bloque presentadas como pestañas, no apiladas
-El sistema SHALL presentar las 6 preguntas de un panel abierto como pestañas independientes (una
+El sistema SHALL presentar las 6 preguntas del bloque activo como pestañas independientes (una
 pregunta visible a la vez), en vez de mostrarlas apiladas verticalmente, e indicar en cada pestaña si su
 pregunta ya tiene respuesta. El sistema SHALL animar el cambio de pestaña con una transición visual.
 
 #### Scenario: Una sola pregunta visible a la vez dentro de un bloque
-- **WHEN** el usuario abre un panel de bloque
+- **WHEN** el usuario está en un bloque del cuestionario
 - **THEN** ve 6 pestañas (una por pregunta) y el contenido de una sola pregunta a la vez, no las 6
   preguntas apiladas en la misma vista
 

@@ -9,7 +9,7 @@
 - [ ] 1.6 Instalar `bootstrap`, `bootstrap-icons` y `@ng-bootstrap/ng-bootstrap` en `apps/frontend`, y
       configurar `apps/frontend/src/styles.scss` para compilar Bootstrap desde su fuente Sass con los
       tokens de `.claude/skills/ui-design-consistency/references/design-tokens.md`
-      (`$primary: #E67E22`, `$secondary: #D35400`, `$dark: #0D1B2A`, `$light: #FCF3CF`,
+      (`$primary: #FB8500`, `$secondary: #BE1E2D`, `$dark: #000000`, `$light: #FDF0D5`,
       `$font-family-base` con Poppins) sobrescritos antes del `@import`, en vez de usar el CSS
       precompilado de Bootstrap sin tokenizar
 - [ ] 1.4 Configurar linters/formatters compartidos (ESLint + Prettier) para backend y frontend
@@ -40,6 +40,9 @@
       categoría)
 - [ ] 2.7 Definir `user-profile.ts` (interfaz `UserProfile`: id, name, alias, photoUrl,
       questionnaireCompletedAt) compartida entre backend y frontend
+- [ ] 2.8 Definir `conversation.ts` (interfaz `Conversation`: id, otherParticipant `UserProfile`,
+      lastMessage, unreadCount) y `message.ts` (interfaz `Message`: id, conversationId, senderId, body,
+      createdAt, readAt) compartidas entre backend y frontend
 
 ## 3. Base de datos y autenticación (Supabase)
 
@@ -48,13 +51,18 @@
 - [ ] 3.2 Escribir `supabase/migrations/0001_init.sql` con las tablas `qualities`, `user_qualities`,
       `questionnaires`, `comparisons` (con `on delete cascade` hacia sus resultados por pregunta y
       agregado, para soportar el recálculo), `comparison_question_results`,
-      `comparison_aggregated_results` y la tabla de perfil `users` (`id` FK a `auth.users.id`, `name`,
-      `alias` con restricción `UNIQUE`, `photo_url`, `questionnaire_completed_at`,
-      `needs_recalculation boolean not null default false`) e índices descritos en el diseño
+      `comparison_aggregated_results`, `conversations` (`user_a_id`/`user_b_id` FK `users.id`
+      normalizados `least`/`greatest`, `UNIQUE(user_a_id, user_b_id)`, sin FK a `comparisons`), `messages`
+      (`conversation_id` FK, `sender_id` FK `users.id`, `body` no vacío, `read_at` nullable), y la tabla
+      de perfil `users` (`id` FK a `auth.users.id`, `name`, `alias` con restricción `UNIQUE`,
+      `photo_url`, `questionnaire_completed_at`, `needs_recalculation boolean not null default false`) e
+      índices descritos en el diseño
 - [ ] 3.3 Test de integración: con RLS activada, un usuario autenticado no puede leer ni escribir la
-      fila de `users`/`questionnaires` de otro usuario a través del cliente directo de Supabase
-- [ ] 3.4 Escribir las políticas RLS de `users`, `user_qualities` y `questionnaires`
-      (`auth.uid() = id`/`user_id` para lectura y escritura propia) para que pase el test anterior
+      fila de `users`/`questionnaires` de otro usuario a través del cliente directo de Supabase, ni leer
+      ni escribir en una `conversation`/`message` de la que no es `user_a_id`/`user_b_id`
+- [ ] 3.4 Escribir las políticas RLS de `users`, `user_qualities`, `questionnaires`, `conversations` y
+      `messages` (`auth.uid() = id`/`user_id`/`user_a_id`/`user_b_id`/`sender_id` según corresponda,
+      para lectura y escritura propia) para que pase el test anterior
 - [ ] 3.5 Crear el bucket público `user-photos` en Supabase Storage y documentar su configuración en
       `docs/architecture.md`
 - [ ] 3.6 Implementar `apps/backend/src/supabase/supabase.service.ts` como única puerta de acceso a
@@ -192,13 +200,44 @@
        incluyendo el mapeo que filtra `respuesta_usuario_1`/`respuesta_usuario_2` del DTO de salida antes
        de responder, para que pasen los tests anteriores
 
+## 10b. Backend: módulo `chat` (conversaciones y mensajes)
+
+Las tablas `conversations`/`messages` y sus políticas RLS ya se crean en la sección 3 (0001_init.sql);
+esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
+
+- [ ] 10b.2 Test e2e: `POST /conversations` con un `candidateUserId` que sí aparece en las
+       `comparisons` del usuario autenticado (como `requester_user_id`) crea la conversación y
+       devuelve 201; si ya existía, devuelve la misma conversación sin duplicarla (idempotente)
+- [ ] 10b.3 Test e2e: `POST /conversations` con un `candidateUserId` que **no** aparece entre las
+       `comparisons` del usuario autenticado como `requester_user_id` devuelve 4xx sin crear nada
+- [ ] 10b.4 Implementar `chat.controller.ts`/`chat.service.ts` para `POST /conversations`, validando la
+       elegibilidad contra `comparisons` con `service_role` (igual que `matching`), para que pasen los
+       tests anteriores
+- [ ] 10b.5 Test e2e: `GET /conversations` devuelve las conversaciones del usuario autenticado (sea
+       `user_a_id` o `user_b_id`), con alias/foto del otro participante, el último mensaje y si hay no
+       leídos, ordenadas por actividad más reciente primero
+- [ ] 10b.6 Test e2e: `GET /conversations/:id/messages` devuelve los mensajes de una conversación en
+       orden cronológico y marca como leídos los mensajes dirigidos al usuario autenticado que estuvieran
+       sin leer; devuelve 4xx si el usuario autenticado no es participante de esa conversación
+- [ ] 10b.7 Test e2e: `POST /conversations/:id/messages` con un `body` no vacío persiste el mensaje y lo
+       devuelve; con `body` vacío devuelve 4xx sin persistir nada; con un usuario no participante de la
+       conversación devuelve 4xx
+- [ ] 10b.8 Implementar los endpoints de los dos tests anteriores para que pasen, incluyendo el cálculo
+       del contador de no leídos en `GET /conversations`
+
 ## 11. Frontend: shell de la aplicación autenticada
 
-- [ ] 11.1 Test de componente: la cabecera muestra los botones de configuración y cerrar sesión solo
-       cuando hay una sesión activa, y el botón de cerrar sesión limpia la sesión y redirige a
-       autenticación
-- [ ] 11.2 Implementar el layout/cabecera compartido (`core/shell` o similar) con los botones de
-       configuración (esquina superior derecha) y logout, para que pase el test anterior
+- [ ] 11.1 Test de componente: la cabecera muestra los botones de chat, configuración y cerrar sesión
+       solo cuando hay una sesión activa, en ese orden (chat a la izquierda de configuración), y el
+       botón de cerrar sesión limpia la sesión y redirige a autenticación
+- [ ] 11.2 Implementar el layout/cabecera compartido (`core/shell` o similar) con los botones de chat,
+       configuración y cerrar sesión (esquina superior derecha, en ese orden), para que pase el test
+       anterior
+- [ ] 11.2b Test de componente: el icono de chat de la cabecera muestra un indicador visual cuando
+       `GET /conversations` reporta al menos un mensaje sin leer en cualquier conversación, y deja de
+       mostrarlo cuando no queda ninguno
+- [ ] 11.2c Implementar el sondeo del contador de no leídos (~20-30s) y el indicador en el icono de chat
+       para que pase el test anterior
 - [ ] 11.3 Test de componente/routing: la ruta principal (`/`) resuelve al cuestionario si
        `GET /users/me` indica que el usuario no ha completado nunca su cuestionario, y al dashboard de
        resultados en caso contrario
@@ -226,44 +265,62 @@
 ## 13. Frontend: completar perfil (registro paso 2)
 
 - [ ] 13.1 Test de componente: las 15 cualidades se muestran como cards independientes; al llegar a 5
-       seleccionadas se bloquea marcar una más, y el control de envío permanece deshabilitado mientras
-       la selección no sea exactamente 5, aunque el resto de campos estén completos
+       seleccionadas, las cards no marcadas quedan deshabilitadas (no se puede marcar una sexta) hasta
+       que se desmarca alguna de las 5 — desmarcar siempre es posible; y el control de envío permanece
+       deshabilitado mientras la selección no sea exactamente 5, aunque el resto de campos estén
+       completos
+- [ ] 13.1b Test de componente: la card seleccionada muestra la insignia circular de check superpuesta
+       en la esquina (no el icono inline de versiones anteriores), con la animación de entrada salvo que
+       el test simule `prefers-reduced-motion: reduce`
 - [ ] 13.2 Test de componente: el campo de alias valida en vivo contra `GET /users/check-alias` y
        muestra si está disponible u ocupado
 - [ ] 13.3 Test de componente: la cabecera de esta pantalla (Shell A) muestra el botón de cerrar sesión
        pero **no** el enlace de Configuración, a diferencia del resto de pantallas de Shell A
 - [ ] 13.4 Implementar `features/registration` (formulario reactivo, subida de foto con preview,
-       cards de cualidades, validación de alias) para que pasen los tests anteriores, consumiendo
-       `GET /qualities`, `GET /users/check-alias` y `POST /users/me/profile`
+       cards de cualidades con su insignia de check, validación de alias) para que pasen los tests
+       anteriores, consumiendo `GET /qualities`, `GET /users/check-alias` y `POST /users/me/profile`
 
 ## 14. Frontend: cuestionario de 36 preguntas
 
-- [ ] 14.1 Test de componente: las 36 preguntas se agrupan en 6 paneles `NgbAccordion` (bloques 1-6),
-       cada panel muestra una barra de progreso (no un contador numérico) con la proporción de sus 6
-       preguntas respondidas, y los paneles se abren/cierran de forma independiente
-- [ ] 14.2 Test de componente: cada panel aplica la clase `question-block--weight-XX` según su peso
-       (5/15/20/25/30, ver `design-tokens.md`) sin mostrar el porcentaje como texto en ningún subtítulo
-       ni en la cabecera previa al acordeón, y los bloques 1 y 2 (mismo peso, 5%) reciben exactamente
-       la misma clase/estilo
-- [ ] 14.3 Test de componente: al cargar la pantalla, se consulta `GET /users/me/questionnaire` y se
-       prerellenan las respuestas ya guardadas (parciales o completas); cada respuesta se autoguarda
-       contra `PUT /users/me/questionnaire/draft` (p. ej. al perder el foco o al cerrar un panel), sin
-       depender de `localStorage` como mecanismo de persistencia
-- [ ] 14.4 Test de componente: el botón "Enviar cuestionario" permanece deshabilitado mientras no haya
-       respuesta para las 36 preguntas, y se habilita en cuanto se completan, sin importar si se
-       completaron en la sesión actual o ya venían de un borrador guardado
-- [ ] 14.5 Test de componente: dentro de un panel abierto, las 6 preguntas se muestran como pestañas
+- [ ] 14.1 Test de componente: las 36 preguntas se agrupan en 6 bloques presentados como un **wizard de
+       6 pasos** — en cada momento solo se monta el bloque activo (nunca los 6 a la vez), con una flecha
+       para volver al bloque anterior (o salir del cuestionario si es el bloque 1) y un botón para
+       avanzar al siguiente sin exigir que el bloque actual esté completo
+- [ ] 14.2 Test de componente: encima del bloque activo se muestra una barra de progreso segmentada en 6
+       tramos con ancho proporcional al peso del bloque (5/15/20/25/30, ver `design-tokens.md`), cada
+       tramo relleno según la proporción de sus 6 preguntas respondidas — sin mostrar el porcentaje de
+       peso como texto en ningún sitio — y los bloques 1 y 2 (mismo peso, 5%) reciben exactamente el
+       mismo ancho/gradiente
+- [ ] 14.3 Test de componente: el `card-header` del bloque activo aplica la clase
+       `question-block--weight-XX` según su peso (ver `design-tokens.md`), y un bloque ya completado
+       (6/6) por el que ya se avanzó queda marcado con un check en su tramo de la barra de progreso
+- [ ] 14.3b Test de componente: hacer clic en el tramo de un bloque ya visitado (índice ≤ el bloque más
+       avanzado alcanzado) navega directamente a revisarlo/editarlo sin pasar por los bloques
+       intermedios; los tramos de bloques aún no alcanzados no son clicables. Al revisar un bloque
+       anterior, el botón del `card-footer` cambia a "Volver a donde estabas" y, al pulsarlo, regresa al
+       bloque más avanzado alcanzado (no simplemente al siguiente)
+- [ ] 14.4 Test de componente: al cargar la pantalla, se consulta `GET /users/me/questionnaire` y se
+       prerellenan las respuestas ya guardadas (parciales o completas), posicionando el wizard en el
+       primer bloque incompleto; cada respuesta se autoguarda contra `PUT /users/me/questionnaire/draft`
+       (p. ej. al perder el foco o al cambiar de bloque), sin depender de `localStorage`
+- [ ] 14.5 Test de componente: el botón del bloque 6 muestra "Enviar cuestionario" y permanece
+       deshabilitado mientras no haya respuesta para las 36 preguntas; en los bloques 1-5 el botón
+       "Siguiente bloque" nunca se deshabilita por respuestas pendientes
+- [ ] 14.6 Test de componente: dentro del bloque activo, las 6 preguntas se muestran como pestañas
        `NgbNav` (una pregunta visible a la vez, no las 6 apiladas), cada pestaña refleja si su pregunta
        está respondida, y cambiar de pestaña aplica la transición de `question-pane` salvo que el test
        simule `prefers-reduced-motion: reduce`, en cuyo caso el cambio de pestaña sigue funcionando sin
        animación
-- [ ] 14.6 Test de componente: el `textarea` de la pregunta activa ocupa el 100% del ancho del panel
+- [ ] 14.7 Test de componente: el `textarea` de la pregunta activa ocupa el 100% del ancho de la card
        (no una columna estrecha) y tiene al menos `rows="4"` de alto
-- [ ] 14.7 Implementar `features/questionnaire` con el acordeón de 6 paneles, su gradiente por peso, las
-       pestañas por pregunta con su transición, el `textarea` a ancho completo y `rows="4"`, el
-       autoguardado de borrador y el botón de envío condicionado, para que pasen los tests anteriores,
-       enviando el envío final a `POST /users/me/questionnaire`
-- [ ] 14.8 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (borrador +
+- [ ] 14.8 Implementar `features/questionnaire` como wizard de 6 pasos (un bloque montado a la vez, con
+       `currentBlockIndex`/`maxReachedBlockIndex` para poder revisar bloques anteriores sin perder el
+       sitio donde ibas), con la barra de progreso segmentada por peso y sus tramos clicables, la
+       cabecera con flecha de volver, el `card-header` con el gradiente del bloque activo, las pestañas
+       por pregunta con su transición, el `textarea` a ancho completo y `rows="4"`, el autoguardado de
+       borrador y el botón de envío condicionado en el último bloque, para que pasen los tests
+       anteriores, enviando el envío final a `POST /users/me/questionnaire`
+- [ ] 14.9 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (borrador +
        envío final a `POST /users/me/questionnaire`) y modo "edición" (envía a
        `PATCH /users/me/questionnaire`, prerellenado con las respuestas actuales), para reutilizarlo
        también desde `features/settings`
@@ -293,12 +350,16 @@
 - [ ] 16.5 Implementar el botón de recalcular compatibilidad en `features/results-dashboard` para que
        pase el test anterior, consumiendo `POST /users/me/recalculate` y refrescando `GET
        /users/me/comparisons` tras completarse
+- [ ] 16.6 Test de componente: cada tarjeta de resultado muestra un botón "Chatear" que, al pulsarlo,
+       llama a `POST /conversations` con el candidato de esa tarjeta y navega a la conversación devuelta
+- [ ] 16.7 Implementar el botón "Chatear" en cada tarjeta de `features/results-dashboard` para que pase
+       el test anterior
 
 ## 17. Frontend: configuración de perfil
 
 - [ ] 17.1 Test de componente: el formulario de configuración prerellena los datos actuales y aplica
-       las mismas reglas de cualidades (cards, bloqueo de envío si ≠5) y de alias (validación en vivo)
-       que el registro
+       las mismas reglas de cualidades (cards, tope de marcado en 5, bloqueo de envío si ≠5) y de alias
+       (validación en vivo) que el registro
 - [ ] 17.2 Implementar `features/settings` (edición de nombre/alias/foto/cualidades) para que pase el
        test anterior, consumiendo `GET /users/me` y `PATCH /users/me`
 - [ ] 17.3 Test de componente: el cambio de contraseña exige la contraseña actual y la reintenta contra
@@ -310,6 +371,24 @@
        pendiente de recalcular
 - [ ] 17.6 Integrar el cuestionario en modo edición dentro de `features/settings` para que pase el test
        anterior, consumiendo `PATCH /users/me/questionnaire`
+
+## 17b. Frontend: chat interno
+
+- [ ] 17b.1 Test de componente: `features/chats` (listado) muestra una fila por conversación con
+       foto/alias del otro participante, el último mensaje y su fecha, ordenadas por actividad más
+       reciente, marcando visualmente las que tienen mensajes sin leer
+- [ ] 17b.2 Implementar `features/chats` (listado) para que pase el test anterior, consumiendo
+       `GET /conversations`
+- [ ] 17b.3 Test de componente: `features/chats/:id` (conversación) muestra los mensajes en orden
+       cronológico, los propios alineados de forma distinta a los del otro participante, permite enviar
+       un mensaje nuevo con el campo de texto del `card-footer`, y hace scroll automático al último
+       mensaje al entrar o al recibir uno nuevo
+- [ ] 17b.4 Implementar `features/chats/:id` (conversación) para que pase el test anterior, consumiendo
+       `GET /conversations/:id/messages` y `POST /conversations/:id/messages`
+- [ ] 17b.5 Test de componente: mientras una conversación está abierta, se sondea
+       `GET /conversations/:id/messages?after=<cursor>` cada ~4s y los mensajes nuevos se añaden sin
+       recargar toda la conversación; el sondeo se detiene al salir de la pantalla
+- [ ] 17b.6 Implementar el sondeo de la conversación abierta para que pase el test anterior
 
 ## 18. Semilla de datos sintéticos
 
@@ -348,20 +427,25 @@
        respuestas desde configuración; comprobar que se habilita el botón de recalcular; activarlo y
        verificar que el dashboard se refresca con nuevas comparaciones, y que las comparaciones de otros
        usuarios (seed) que lo tuvieran como candidato no se ven afectadas
+- [ ] 20.3b Recorrer manualmente el flujo de chat con dos cuentas de prueba: usuario A inicia un chat
+       desde una tarjeta de su dashboard con un candidato B; comprobar que B ve la conversación desde el
+       icono del menú aunque A no aparezca entre los candidatos propios de B; enviar mensajes en ambos
+       sentidos y comprobar que llegan por sondeo sin recargar la página; recalcular la compatibilidad de
+       A y comprobar que la conversación con B sigue existiendo aunque B deje de ser su candidato
 - [ ] 20.4 Ejecutar toda la suite de tests (backend y frontend) y confirmar que queda en verde antes de
        dar la v1 por completa
 
 ## 21. Diseño responsive (transversal)
 
-Estas tareas se ejecutan incrementalmente junto con cada pantalla de los grupos 11-17 (no como un
+Estas tareas se ejecutan incrementalmente junto con cada pantalla de los grupos 11-17b (no como un
 bloque aislado al final); se listan aparte solo para que el requisito de `responsive-ui` no se pierda
 de vista pantalla por pantalla.
 
 - [ ] 21.1 Test de componente: la cabecera (`core/shell`) colapsa a menú hamburguesa en viewport móvil
-       (<768px) y mantiene el acceso a configuración y logout
+       (<768px) y mantiene el acceso a chat, configuración y logout, en ese orden
 - [ ] 21.2 Ajustar `core/shell` con las utilidades responsive de Bootstrap (`navbar-expand-*`) para que
        pase el test anterior
-- [ ] 21.3 Test de componente: el stepper de `features/questionnaire` y los formularios de
+- [ ] 21.3 Test de componente: el wizard de `features/questionnaire` y los formularios de
        `features/registration`/`features/settings` no generan scroll horizontal en viewport móvil
 - [ ] 21.4 Ajustar el grid/breakpoints de esos formularios con Bootstrap para que pase el test anterior
 - [ ] 21.5 Test de componente: las tarjetas de `features/results-dashboard` se apilan en una sola
@@ -369,5 +453,9 @@ de vista pantalla por pantalla.
        contenedor sin desbordar
 - [ ] 21.6 Ajustar el grid de `features/results-dashboard` y la configuración de `ng2-charts`
        (`responsive: true`, `maintainAspectRatio`) para que pase el test anterior
+- [ ] 21.6b Test de componente: `features/chats/:id` no genera scroll horizontal en viewport móvil y las
+       burbujas de mensaje largo hacen wrap en vez de desbordar el ancho de la card
+- [ ] 21.6c Ajustar el CSS de las burbujas de mensaje (`max-width` relativo, `word-break`) para que pase
+       el test anterior
 - [ ] 21.7 Verificación manual cruzada en 3 anchos de viewport (móvil ~375px, tablet ~768px, escritorio
        ~1280px) sobre todas las pantallas antes de dar la v1 por completa
