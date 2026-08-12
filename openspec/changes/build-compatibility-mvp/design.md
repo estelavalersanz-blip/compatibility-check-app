@@ -39,6 +39,18 @@ backend (DRY): ambos importan las mismas interfaces TypeScript de `packages/shar
 descartada: dos repos separados — habría exigido publicar un paquete npm privado solo para compartir
 tipos, complejidad innecesaria para un TFM de un solo desarrollador.
 
+**`shared-types` se consume como paquete compilado, no como fuente TS directa**: su `package.json`
+apunta `main`/`types` a `dist/` (no a `src/`), así que cualquier import real desde `apps/backend` o
+`apps/frontend` exige que `dist/` ya exista — si no, ni el type-checking (`lint`/`test`, vía
+`projectService` de `typescript-eslint`/`ts-jest`) ni el import en tiempo de ejecución resuelven el
+paquete. Un `postinstall` en el `package.json` raíz (`npm run build --workspace=packages/shared-types`)
+lo compila automáticamente tras cada `npm install`/`npm ci`, para que el orden de los steps de
+`ci.yml` (lint → test → test:e2e → build) no importe: `dist/` ya existe antes de que corra el
+primero. La sección 5 de `tasks.md` (`qualities`, importando `Quality`) fue el primer consumo real —
+hasta entonces `shared-types` solo estaba declarado como dependencia en `package.json`, sin usarse
+todavía en ningún `import`. Verificado de verdad borrando `dist/` y confirmando que `npm install` lo
+reconstruye antes de que falle ningún step, no solo por inspección del script.
+
 ### 2. NestJS sobre Express puro o un framework distinto
 
 NestJS aporta módulos/decoradores/DI muy similares a ASP.NET Core, minimizando la curva de aprendizaje

@@ -43,7 +43,9 @@ Requiere Node.js 24+ y npm. Los tests de integración además requieren
 [Docker Desktop](https://www.docker.com/products/docker-desktop/) (usan el stack local de Supabase).
 
 ```bash
-npm install                          # instala todos los workspaces desde la raíz
+npm install                          # instala todos los workspaces y compila packages/shared-types
+                                      # automáticamente (postinstall), para que backend/frontend
+                                      # puedan importarlo ya compilado
 npm run lint                         # ESLint (backend + frontend)
 npm test                             # tests unitarios (Jest + Karma/Jasmine), sin Docker
 npm run test:e2e                     # tests e2e del backend (AppModule en memoria, sin Docker)
