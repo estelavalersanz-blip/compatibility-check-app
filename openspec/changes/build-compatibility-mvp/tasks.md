@@ -137,25 +137,32 @@
 
 ## 7. Backend: módulo `questionnaires`
 
-- [ ] 7.1 Test unitario: rechazo de cuestionarios con menos de 36 respuestas, preguntas duplicadas o
+- [x] 7.1 Test unitario: rechazo de cuestionarios con menos de 36 respuestas, preguntas duplicadas o
       usuario que ya tiene cuestionario guardado
-- [ ] 7.2 Test e2e: `POST /users/me/questionnaire` (autenticado) con las 36 respuestas guarda el
+- [x] 7.2 Test e2e: `POST /users/me/questionnaire` (autenticado) con las 36 respuestas guarda el
       cuestionario y devuelve 200/201
-- [ ] 7.3 Test unitario: `CompleteQuestionnaireCommandHandler` persiste el cuestionario y publica
+- [x] 7.3 Test unitario: `CompleteQuestionnaireCommandHandler` persiste el cuestionario y publica
       `QuestionnaireCompletedEvent` con el `user_id`, sin invocar directamente ningún servicio del
       módulo `matching`
-- [ ] 7.4 Implementar `questionnaires.controller.ts` y `CompleteQuestionnaireCommand`/Handler
+- [x] 7.4 Implementar `questionnaires.controller.ts` y `CompleteQuestionnaireCommand`/Handler
       (publicando `QuestionnaireCompletedEvent` al terminar) para que pasen los tests anteriores
-- [ ] 7.5 Test e2e: `PATCH /users/me/questionnaire` (autenticado, con cuestionario ya existente)
+- [x] 7.5 Test e2e: `PATCH /users/me/questionnaire` (autenticado, con cuestionario ya existente)
       sustituye las 36 respuestas y marca `needs_recalculation = true`; rechaza con 4xx si no hay
       cuestionario previo o si el envío está incompleto
-- [ ] 7.6 Implementar el endpoint de edición del cuestionario para que pase el test anterior
-- [ ] 7.7 Test e2e: `PUT /users/me/questionnaire/draft` (autenticado) acepta entre 0 y 35 respuestas sin
+- [x] 7.6 Implementar el endpoint de edición del cuestionario para que pase el test anterior
+- [x] 7.7 Test e2e: `PUT /users/me/questionnaire/draft` (autenticado) acepta entre 0 y 35 respuestas sin
       exigir el conjunto completo, no marca `questionnaire_completed_at` y no dispara
       `QuestionnaireCompletedEvent`; `GET /users/me/questionnaire` devuelve las respuestas guardadas
       hasta el momento (parciales o completas)
-- [ ] 7.8 Implementar `questionnaires.service.ts` (servicio normal, sin Command) con los endpoints de
+- [x] 7.8 Implementar `questionnaires.service.ts` (servicio normal, sin Command) con los endpoints de
       guardado y lectura de borrador para que pasen los tests anteriores
+- [x] 7.9 Test de integración (stack local de Supabase, decisión 11): el `upsert` de `writable-table.ts`
+      usado por `saveDraft`/`CompleteQuestionnaireHandler` (tareas 7.4/7.8) funciona de verdad contra
+      PostgREST/Postgres real, no solo contra los fakes en memoria de 7.2/7.3/7.7 — en concreto, que
+      completar el cuestionario sobre un borrador ya guardado actualiza la fila existente en vez de
+      chocar con `UNIQUE(user_id)`, y que un segundo guardado de borrador sobrescribe el primero sin
+      duplicar fila. Añadido `test/integration/questionnaires.integration-spec.ts`; verificado en
+      verde (16/16, junto al resto de la suite de integración) contra el stack local real
 
 ## 8. Backend: módulo `matching` (selección de candidatos)
 

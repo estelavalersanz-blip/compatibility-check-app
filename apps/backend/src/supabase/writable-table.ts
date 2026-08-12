@@ -23,6 +23,16 @@ export interface WritableTable {
   update: (values: Record<string, unknown>) => {
     eq: (column: string, value: unknown) => WritableFilteredQuery;
   };
+  /**
+   * Inserta o actualiza en una sola llamada atómica según la restricción `UNIQUE` indicada en
+   * `onConflict` — usada por `questionnaires` (`UNIQUE(user_id)`) para no tener que decidir a mano
+   * entre `insert`/`update` según exista ya un borrador guardado o no (evita la condición de carrera
+   * de comprobar primero con un `select` y escribir después).
+   */
+  upsert: (
+    values: Record<string, unknown> | Record<string, unknown>[],
+    options: { onConflict: string },
+  ) => WritableFilteredQuery;
 }
 
 /**
