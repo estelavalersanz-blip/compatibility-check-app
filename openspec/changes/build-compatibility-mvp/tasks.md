@@ -113,8 +113,8 @@
 
 ## 5. Backend: módulo `qualities`
 
-- [ ] 5.1 Test e2e: `GET /qualities` devuelve las 15 cualidades del catálogo
-- [ ] 5.2 Implementar `qualities.controller.ts` y `qualities.service.ts` para que pase el test anterior
+- [x] 5.1 Test e2e: `GET /qualities` devuelve las 15 cualidades del catálogo
+- [x] 5.2 Implementar `qualities.controller.ts` y `qualities.service.ts` para que pase el test anterior
 
 ## 6. Backend: módulo `users` (perfil)
 
