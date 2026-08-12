@@ -118,22 +118,22 @@
 
 ## 6. Backend: módulo `users` (perfil)
 
-- [ ] 6.1 Test unitario: `photo-upload.service.ts` sube archivos jpg/png/webp ≤2MB y rechaza formato o
+- [x] 6.1 Test unitario: `photo-upload.service.ts` sube archivos jpg/png/webp ≤2MB y rechaza formato o
       tamaño inválido (contra un cliente de Storage mockeado)
-- [ ] 6.2 Implementar `photo-upload.service.ts` para que pase el test anterior, incluyendo logging del
+- [x] 6.2 Implementar `photo-upload.service.ts` para que pase el test anterior, incluyendo logging del
       resultado de la subida (éxito/fallo, `user_id` si ya existe, sin loguear el binario)
-- [ ] 6.3 Test e2e: `POST /users/me/profile` (tras autenticarse) crea el perfil con nombre, alias único
+- [x] 6.3 Test e2e: `POST /users/me/profile` (tras autenticarse) crea el perfil con nombre, alias único
       y exactamente 5 cualidades válidas, devolviendo 201; rechaza con 4xx si el alias ya existe, hay
       ≠5 cualidades, foto inválida, campos faltantes, o no hay sesión autenticada
-- [ ] 6.4 Implementar `CreateUserProfileCommand` y su `CommandHandler` (invocado desde
+- [x] 6.4 Implementar `CreateUserProfileCommand` y su `CommandHandler` (invocado desde
       `users.controller.ts` en `POST /users/me/profile`), con DTOs de validación y el manejo de la
       violación de la restricción `UNIQUE` de alias como condición de carrera, para que pasen los tests
       anteriores
-- [ ] 6.5 Test e2e: `GET /users/me` devuelve el perfil del usuario autenticado (incluyendo
+- [x] 6.5 Test e2e: `GET /users/me` devuelve el perfil del usuario autenticado (incluyendo
       `needs_recalculation`); `PATCH /users/me` actualiza nombre/alias/foto/cualidades con las mismas
       validaciones que la creación, y marca `needs_recalculation = true` únicamente cuando la selección
       de cualidades enviada difiere de la almacenada
-- [ ] 6.6 Implementar los endpoints de consulta/edición de perfil para que pasen los tests anteriores
+- [x] 6.6 Implementar los endpoints de consulta/edición de perfil para que pasen los tests anteriores
 
 ## 7. Backend: módulo `questionnaires`
 

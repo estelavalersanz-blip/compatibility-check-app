@@ -11,3 +11,14 @@ export interface UserProfile {
   photoUrl: string | null;
   questionnaireCompletedAt: string | null;
 }
+
+/**
+ * Perfil completo del propio usuario autenticado, devuelto por `GET/POST/PATCH /users/me/...`
+ * (sección 6 de `tasks.md`) — a diferencia de `UserProfile` (usado para describir a OTROS usuarios,
+ * p. ej. `Conversation.otherParticipant`), incluye datos que nadie más debe ver: si tiene un
+ * recálculo de compatibilidad pendiente y qué cualidades tiene elegidas.
+ */
+export interface OwnUserProfile extends UserProfile {
+  needsRecalculation: boolean;
+  qualityIds: string[];
+}

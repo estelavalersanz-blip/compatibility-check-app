@@ -470,6 +470,9 @@ uniforme para todos los endpoints:
   Formalizar cada lectura trivial como `Query` + `QueryHandler` añadiría archivos y capas sin
   beneficio real para un proyecto del tamaño de este TFM — se reserva CQRS para donde aporta
   desacoplamiento o centraliza una responsabilidad transversal (logging), no como dogma.
+- **Edición de perfil (`PATCH /users/me`) tampoco es un Command**, a diferencia de la creación: no
+  publica ningún evento que otro módulo necesite escuchar (el recálculo sigue siendo la acción
+  explícita aparte de la decisión 5b) — un servicio normal (`UsersService.updateProfile`) basta.
 
 **Implementación concreta del pipeline de logging (sección 6 de `tasks.md`)**: el enfoque inicial
 (`{ provide: CommandBus, useClass: LoggingCommandBus }`, una subclase de `CommandBus`) resultó estar

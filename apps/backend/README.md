@@ -48,9 +48,12 @@ npm run test:integration    # tests de integración (*.integration-spec.ts) — 
   (`Authorization: Bearer ...`) delegando en `supabase.auth.getUser(token)`, sin verificar la firma
   a mano ni gestionar un secreto propio. Se aplica con `@UseGuards(SupabaseAuthGuard)` a cada
   endpoint protegido a medida que se implementa (perfil, cuestionario, comparaciones).
-- **`src/users/`**: por ahora solo `GET /users/check-alias` — deliberadamente público (sin el
-  guard), comprueba disponibilidad de alias excluyendo al propio usuario cuando la petición trae un
-  JWT válido. Se amplía en secciones posteriores con la creación/edición de perfil.
+- **`src/users/`**: `GET /users/check-alias` (público, sin guard) y, desde la sección 6,
+  `POST /users/me/profile` (alta vía `CreateUserProfileCommand`), `GET /users/me` (404 si aún no hay
+  perfil) y `PATCH /users/me` — estos tres sí detrás de `SupabaseAuthGuard`, primera aplicación real
+  del guard. La foto es obligatoria al crear y opcional al editar (`photo-upload.service.ts`, bucket
+  `user-photos`); `needs_recalculation` solo se marca en la edición si la selección de cualidades
+  enviada difiere de la guardada.
 - **`src/qualities/`**: `GET /qualities` — público, devuelve el catálogo de 15 cualidades
   personales (`Quality[]` de `@compatibility-check-app/shared-types`, primer consumo real de ese
   paquete desde el backend). El catálogo lo puebla el script de seed (sección 18); este módulo solo
