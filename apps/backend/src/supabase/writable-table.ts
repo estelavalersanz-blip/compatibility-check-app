@@ -7,7 +7,15 @@ export interface PostgrestErrorLike {
   code?: string;
 }
 
-export interface WritableSingleResult {
+/**
+ * Como el `PostgrestFilterBuilder` real: awaitable directamente (para inserts/upserts en bloque,
+ * `data` llega como array) y, además, con `.single()` para cuando se sabe que hay una sola fila —
+ * mismo objeto, dos formas de consumirlo, igual que el cliente real de Supabase.
+ */
+export interface WritableSelectResult extends PromiseLike<{
+  data: unknown;
+  error: PostgrestErrorLike | null;
+}> {
   single: () => Promise<{ data: unknown; error: PostgrestErrorLike | null }>;
 }
 
@@ -15,7 +23,7 @@ export interface WritableFilteredQuery extends PromiseLike<{
   data: unknown;
   error: PostgrestErrorLike | null;
 }> {
-  select: (columns: string) => WritableSingleResult;
+  select: (columns: string) => WritableSelectResult;
 }
 
 export interface WritableTable {

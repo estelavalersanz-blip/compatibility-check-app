@@ -166,29 +166,29 @@
 
 ## 8. Backend: módulo `matching` (selección de candidatos)
 
-- [ ] 8.1 Test unitario de `candidate-selector.service.ts` con tabla de casos: 3+ candidatos
+- [x] 8.1 Test unitario de `candidate-selector.service.ts` con tabla de casos: 3+ candidatos
       disponibles, empate en cualidades coincidentes (desempate por antigüedad), 1-2 candidatos
       disponibles, 0 candidatos disponibles
-- [ ] 8.2 Implementar `candidate-selector.service.ts` (consulta de pre-compatibilidad + creación de
+- [x] 8.2 Implementar `candidate-selector.service.ts` (consulta de pre-compatibilidad + creación de
       filas `comparisons` en estado `pending`) para que pasen los tests anteriores, con logging del
       resultado de la selección (`user_id`, candidatos elegidos, `shared_qualities_count`)
-- [ ] 8.3 Test unitario/integración: al completar un usuario nuevo su cuestionario, verificar que NO se
+- [x] 8.3 Test unitario/integración: al completar un usuario nuevo su cuestionario, verificar que NO se
       generan ni modifican comparaciones de usuarios ya existentes (regla de cálculo único)
-- [ ] 8.4 Test unitario: el handler de `QuestionnaireCompletedEvent` en `matching` invoca a
+- [x] 8.4 Test unitario: el handler de `QuestionnaireCompletedEvent` en `matching` invoca a
       `candidate-selector.service.ts` con el `user_id` del evento y, si se crean una o más filas
       `comparisons`, publica `ComparisonsCreatedEvent` con la lista de `comparison_id` creados (y no
       publica nada si no hay candidatos disponibles)
-- [ ] 8.5 Implementar el handler de `QuestionnaireCompletedEvent` y la publicación de
+- [x] 8.5 Implementar el handler de `QuestionnaireCompletedEvent` y la publicación de
       `ComparisonsCreatedEvent` para que pase el test anterior
-- [ ] 8.6 Test unitario: `RecalculateCompatibilityCommandHandler` solo actúa si
+- [x] 8.6 Test unitario: `RecalculateCompatibilityCommandHandler` solo actúa si
       `users.needs_recalculation = true` (rechaza en caso contrario), reutiliza
       `candidate-selector.service.ts`, elimina las comparaciones anteriores del usuario, publica
       `ComparisonsCreatedEvent` con las nuevas, y desmarca `needs_recalculation`
-- [ ] 8.7 Implementar `RecalculateCompatibilityCommand`/Handler para que pase el test anterior
-- [ ] 8.8 Test e2e: `POST /users/me/recalculate` (autenticado) despacha `RecalculateCompatibilityCommand`
+- [x] 8.7 Implementar `RecalculateCompatibilityCommand`/Handler para que pase el test anterior
+- [x] 8.8 Test e2e: `POST /users/me/recalculate` (autenticado) despacha `RecalculateCompatibilityCommand`
       y devuelve 200/201 si `needs_recalculation` era `true`, o 4xx si no había nada pendiente de
       recalcular
-- [ ] 8.9 Implementar el endpoint de recálculo para que pase el test anterior
+- [x] 8.9 Implementar el endpoint de recálculo para que pase el test anterior
 
 ## 9. Backend: módulo `ai` (orquestación de IA)
 

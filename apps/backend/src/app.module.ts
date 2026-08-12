@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CqrsLoggingModule } from './cqrs/cqrs-logging.module';
 import { LoggerModule } from './logger/logger.module';
+import { MatchingModule } from './matching/matching.module';
 import { QualitiesModule } from './qualities/qualities.module';
 import { QuestionnairesModule } from './questionnaires/questionnaires.module';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -18,6 +19,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     QualitiesModule,
     QuestionnairesModule,
+    MatchingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
