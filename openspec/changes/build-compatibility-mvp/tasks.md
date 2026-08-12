@@ -192,43 +192,57 @@
 
 ## 9. Backend: módulo `ai` (orquestación de IA)
 
-- [ ] 9.1 Definir `ai-provider.interface.ts` (contrato común para cualquier proveedor de IA)
-- [ ] 9.2 Test unitario de `groq.provider.ts` contra un cliente HTTP mockeado: éxito, error de red,
+- [x] 9.1 Definir `ai-provider.interface.ts` (contrato común para cualquier proveedor de IA)
+- [x] 9.2 Test unitario de `groq.provider.ts` contra un cliente HTTP mockeado: éxito, error de red,
       respuesta 429/rate-limit
-- [ ] 9.3 Implementar `groq.provider.ts` para que pase el test anterior, con logging de cada llamada
+- [x] 9.3 Implementar `groq.provider.ts` para que pase el test anterior, con logging de cada llamada
       (proveedor, duración, resultado) sin incluir el contenido de las respuestas de usuario
-- [ ] 9.4 Implementar `openrouter.provider.ts` siguiendo la misma interfaz y los mismos criterios de
+- [x] 9.4 Implementar `openrouter.provider.ts` siguiendo la misma interfaz y los mismos criterios de
       test/logging que `groq.provider.ts`
-- [ ] 9.5 Escribir `prompts/compatibility-prompt.ts` con el prompt de "psicólogo especializado en
+- [x] 9.5 Escribir `prompts/compatibility-prompt.ts` con el prompt de "psicólogo especializado en
       relaciones" y el formato de salida JSON esperado (array de resultados por pregunta)
-- [ ] 9.6 Test unitario de `schemas/comparison-result.schema.ts` (Zod): acepta un array válido de
+- [x] 9.6 Test unitario de `schemas/comparison-result.schema.ts` (Zod): acepta un array válido de
       resultados, rechaza claves faltantes, valores fuera de 1.00–10.00 o con más de 2 decimales
-- [ ] 9.7 Implementar el esquema Zod para que pase el test anterior
-- [ ] 9.8 Test unitario de `ai-orchestrator.service.ts`: agrupa 36 preguntas en 6 lotes de 6, valida
+- [x] 9.7 Implementar el esquema Zod para que pase el test anterior
+- [x] 9.8 Test unitario de `ai-orchestrator.service.ts`: agrupa 36 preguntas en 6 lotes de 6, valida
       cada respuesta, reintenta hasta 3 veces con backoff ante respuesta inválida, marca `error` tras
       fallo persistente, y respeta el límite de 2 lotes concurrentes por comparación
-- [ ] 9.9 Implementar `ai-orchestrator.service.ts` para que pase el test anterior, instrumentando log
+- [x] 9.9 Implementar `ai-orchestrator.service.ts` para que pase el test anterior, instrumentando log
       de envío/recepción/reintento de cada lote con `comparison_id` y `question_ids` propagados, sin
       loguear el contenido íntegro de las respuestas
-- [ ] 9.10 Test unitario: el handler de `ComparisonsCreatedEvent` en `ai` dispara
+- [x] 9.10 Test unitario: el handler de `ComparisonsCreatedEvent` en `ai` dispara
       `ai-orchestrator.service.ts` para cada `comparison_id` recibido en el evento, sin que `matching`
       conozca la existencia del módulo `ai`
-- [ ] 9.11 Implementar el handler de `ComparisonsCreatedEvent` para que pase el test anterior
-- [ ] 9.12 Test e2e: `POST /comparisons/:id/reanalyze` sobre una comparación en `error` despacha
+- [x] 9.11 Implementar el handler de `ComparisonsCreatedEvent` para que pase el test anterior
+- [x] 9.12 Test e2e: `POST /comparisons/:id/reanalyze` sobre una comparación en `error` despacha
       `AnalyzeComparisonCommand` y repite el análisis desde cero
-- [ ] 9.13 Implementar `AnalyzeComparisonCommand`/Handler (invocado desde el endpoint de reintento
+- [x] 9.13 Implementar `AnalyzeComparisonCommand`/Handler (invocado desde el endpoint de reintento
       manual y reutilizado por el handler de `ComparisonsCreatedEvent`) para que pase el test anterior
+- [x] 9.14 Test de integración (stack local de Supabase, decisión 11): el insert en bloque de las 36
+      filas de `comparison_question_results` (`.insert([...]).select('id')`, sin `.single()`, nuevo
+      en `writable-table.ts`) y los `.delete()` nuevos sobre esa tabla y
+      `comparison_aggregated_results` funcionan de verdad contra PostgREST/Postgres real, no solo
+      contra los fakes en memoria de 9.8 — en concreto, que reanalizar borra de verdad los
+      resultados/agregado anteriores en vez de acumularlos (`UNIQUE(comparison_id)` en el agregado
+      se satisface porque el borrado ocurre antes), y que un fallo persistente del proveedor de IA no
+      deja ninguna fila nueva en BD real. Añadido
+      `test/integration/ai-orchestrator.integration-spec.ts`; verificado en verde (19/19, junto al
+      resto de la suite de integración) contra el stack local real
 
 ## 10. Backend: módulo `comparisons` (agregado ponderado + endpoints de consulta)
 
-- [ ] 10.1 Test unitario de `weighting.util.ts` (función pura) con tabla de casos: para cada dimensión,
+- [x] 10.1 Test unitario de `weighting.util.ts` (función pura) con tabla de casos: para cada dimensión,
        calcula la media ponderada de sus 6 bloques de preguntas (1–6, 7–12, ..., 31–36) con pesos
        5/5/15/20/25/30%, combina las 6 medias resultantes con los pesos por dimensión (20/25/10/25/
        10/10) para obtener `compatibilidad_final`, y redondea ambos a 2 decimales, sobre datos de
        prueba conocidos (incluyendo el caso de valores en los límites 1.00/10.00)
-- [ ] 10.2 Implementar `weighting.util.ts` para que pase el test anterior, incluyendo el mapeo
+       — **adelantada durante la sección 9**: `ai-orchestrator.service.ts` necesita `weighting.util.ts`
+       para poder dejar de verdad una comparación en `completed` (con su agregado persistido), así que
+       se implementó ahí en vez de esperar a esta sección
+- [x] 10.2 Implementar `weighting.util.ts` para que pase el test anterior, incluyendo el mapeo
        `questionId → índice de bloque (0–5)` y persistiendo ambos vectores de pesos en
-       `weights: { dimension, block }`
+       `weights: { dimension, block }` — en `apps/backend/src/comparisons/weighting.util.ts`
+       (ver nota de 10.1)
 - [ ] 10.3 Test e2e: `GET /users/me/comparisons` devuelve estado y datos del candidato (alias, foto,
        `shared_qualities_count`) de cada comparación, y el resultado agregado cuando está disponible
 - [ ] 10.4 Test e2e: `GET /comparisons/:id/detail` devuelve el detalle de las 36 comparaciones por
