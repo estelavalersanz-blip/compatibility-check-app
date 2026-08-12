@@ -34,11 +34,16 @@ npm run test:integration    # tests de integración (*.integration-spec.ts) — 
 
 - **`src/logger/`**: logger estructurado único (`nestjs-pino`), con transport condicional a Better
   Stack/Logtail vía `LOGTAIL_SOURCE_TOKEN`. Nunca usar `console.log`.
-- **`src/cqrs/`**: `LoggingCommandBus` — sustituye al `CommandBus` de `@nestjs/cqrs` por defecto,
-  registrando automáticamente inicio/fin/error de cada Command con un id de correlación.
+- **`src/cqrs/`**: `CommandLoggingBootstrapper` — sustituye el método `execute` de la ÚNICA
+  instancia real de `CommandBus` en `onApplicationBootstrap`, registrando automáticamente
+  inicio/fin/error de cada Command con un id de correlación. No es un
+  `{ provide: CommandBus, useClass: ... }` (esa vía crea una segunda instancia sin los handlers que
+  `CqrsModule` registra sobre la suya propia — ver `design.md`, decisión 6b, para el porqué).
 - **`src/supabase/`**: `SupabaseService` — única puerta de acceso a datos con la `service_role` key
   (módulo `@Global()`); el resto de servicios de dominio dependen de esta clase, nunca de
-  `@supabase/supabase-js` directamente.
+  `@supabase/supabase-js` directamente. `writable-table.ts` es la vía de escape para `.insert()`/
+  `.update()`, que sin un `Database` genérico real resuelven a `never` (ver `design.md`, decisión 7)
+  — úsala en cualquier escritura nueva en vez de llamar a `.insert()`/`.update()` directamente.
 - **`src/auth/`**: `SupabaseAuthGuard` (módulo `@Global()`) — valida el JWT de Supabase
   (`Authorization: Bearer ...`) delegando en `supabase.auth.getUser(token)`, sin verificar la firma
   a mano ni gestionar un secreto propio. Se aplica con `@UseGuards(SupabaseAuthGuard)` a cada

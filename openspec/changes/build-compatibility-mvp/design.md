@@ -431,6 +431,19 @@ acceso a datos. `weighting.util.ts` es una función pura (array de resultados po
 objeto agregado), sin efectos secundarios, lo que permite testearla con datos en memoria sin BD real —
 requisito directo de la metodología TDD adoptada para este proyecto.
 
+**`SupabaseService.getClient()` no tiene un `Database` genérico real** (`createClient(url, key,
+options)` se llama sin pasarle un tipo de esquema — generarlo desde el esquema real con
+`supabase gen types typescript` queda como mejora futura, no aplicada en esta v1). Esto no afecta a
+`.select()`/`.eq()`/`.delete()`, pero sí a `.insert()`/`.update()`: su firma en
+`@supabase/postgrest-js` es `Row extends Relation['Insert'] ? ... : never`, y sin un schema real
+`Relation['Insert']` no existe — cualquier `.insert()`/`.update()` resuelve su parámetro a `never` y
+no compila (descubierto en la sección 6, `CreateUserProfileHandler`/`UsersService`, los primeros
+`.insert()`/`.update()` reales del proyecto). `apps/backend/src/supabase/writable-table.ts` es la vía
+de escape: relaja el tipo justo antes de `.insert()`/`.update()` a una forma declarada a mano, sin
+perder el chequeo del resto del código — usarla en cualquier escritura futura (`questionnaires`,
+`comparisons`, `conversations`, etc.) en vez de llamar a `.insert()`/`.update()` directamente sobre
+`client.from(tabla)`.
+
 ### 6b. Mediator/CQRS selectivo (`@nestjs/cqrs`) para desacoplar el flujo y centralizar el logging
 
 Se adopta `@nestjs/cqrs` (equivalente NestJS de MediatR) de forma **selectiva**, no como patrón
@@ -457,6 +470,22 @@ uniforme para todos los endpoints:
   Formalizar cada lectura trivial como `Query` + `QueryHandler` añadiría archivos y capas sin
   beneficio real para un proyecto del tamaño de este TFM — se reserva CQRS para donde aporta
   desacoplamiento o centraliza una responsabilidad transversal (logging), no como dogma.
+
+**Implementación concreta del pipeline de logging (sección 6 de `tasks.md`)**: el enfoque inicial
+(`{ provide: CommandBus, useClass: LoggingCommandBus }`, una subclase de `CommandBus`) resultó estar
+**roto para el despacho real de Commands**, descubierto al implementar `CreateUserProfileCommand` — el
+primer `@CommandHandler` real del proyecto. `CqrsModule.onApplicationBootstrap()` registra los
+handlers descubiertos sobre SU PROPIA instancia interna de `CommandBus` (`handlers` es un `Map` de
+instancia); un override declarado en otro módulo que solo hace `imports: [CqrsModule]` no sustituye
+esa instancia interna, crea una segunda, huérfana, sin ningún handler — `CommandHandlerNotFoundException`
+en cuanto se despachaba el primer Command real, algo que el test aislado de `LoggingCommandBus` (sin
+pasar por el bootstrap de `CqrsModule`) nunca habría detectado. Reemplazado por
+`CommandLoggingBootstrapper` (`apps/backend/src/cqrs/command-logging.bootstrapper.ts`): recibe
+inyectada la ÚNICA instancia real de `CommandBus` (sin token propio que la sustituya) y le sustituye
+el método `execute` en `onApplicationBootstrap`, después de que `CqrsModule` ya haya registrado los
+handlers — mismo comportamiento observable (logging de inicio/fin/error con id de correlación), pero
+ahora verificado también de extremo a extremo por el test e2e de `POST /users/me/profile`, no solo
+por el test unitario aislado.
 
 ### 7b. Cambio de contraseña con reautenticación explícita
 

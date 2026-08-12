@@ -24,7 +24,10 @@
     // Restringido explícitamente: en el monorepo, sin esto, TS incluye automáticamente TODOS los
     // paquetes de node_modules/@types de cualquier workspace (incluido @types/jasmine del
     // frontend, hoisteado a la raíz), y sus matchers globales chocan con los de @types/jest
-    // (p. ej. `expect(...).toHaveLength` deja de resolverse).
-    "types": ["node", "jest"]
+    // (p. ej. `expect(...).toHaveLength` deja de resolverse). Efecto secundario de esta lista
+    // explícita (sección 6): cualquier otro `@types/*` que aumente un namespace global (como
+    // `@types/multer` con `Express.Multer.File`, usado por `photo-upload.service.ts`) también hay
+    // que añadirlo aquí a mano, o el tipo global no se resuelve (`'File' is an 'error' type`).
+    "types": ["node", "jest", "multer"]
   }
 }
