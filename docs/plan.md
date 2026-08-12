@@ -738,8 +738,8 @@ red, rate limits, JSON mal formado, timeouts).
 ## Archivos críticos a crear
 
 - `package.json` (raíz, workspaces)
-- `.github/workflows/ci.yml` (lint + test + build, y `test:integration` contra el stack local de
-  Supabase — ver decisión 10/11)
+- `.github/workflows/ci.yml` (lint + test + test:e2e + build, y `test:integration` contra el stack
+  local de Supabase — ver decisión 10/11)
 - `packages/shared-types/src/{answer-set,comparison-result,aggregated-result,quality,user-profile,conversation,message}.ts`
 - `supabase/migrations/0001_init.sql` (incluye `users` con FK a `auth.users`, `alias` único,
   `qualities`, `user_qualities`, `comparisons`, `conversations`, `messages`, políticas RLS, etc.)
@@ -807,8 +807,8 @@ red, rate limits, JSON mal formado, timeouts).
    en formularios/cuestionario/chat, tarjetas del dashboard apiladas en móvil y radar chart sin
    desbordar.
 7. Confirmar que el workflow de GitHub Actions (`ci.yml`) pasa en verde en un PR de prueba (lint + test +
-   build + `test:integration`) antes de mergear a `main`, y que Vercel/Render despliegan automáticamente
-   al mergear (sin ningún paso manual ni job de Actions disparando el deploy).
+   test:e2e + build + `test:integration`) antes de mergear a `main`, y que Vercel/Render despliegan
+   automáticamente al mergear (sin ningún paso manual ni job de Actions disparando el deploy).
 8. Desplegar en Render + Vercel + Supabase (free tier, incluyendo Auth, Storage y RLS) y repetir el flujo
    completo desde las URLs públicas para validar CORS, subida de fotos, variables de entorno, el
    cold-start de Render y que los logs llegan tanto a Render (tail en vivo) como a Better Stack/Logtail

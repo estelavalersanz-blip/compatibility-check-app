@@ -13,9 +13,9 @@ Trabajo de Fin de Máster.
   (recompilado desde Sass con la paleta de marca AfinIA) + `@supabase/supabase-js`.
 - **Datos/Auth/Storage**: [Supabase](https://supabase.com/) (PostgreSQL + Auth + Storage).
 - **Tipos compartidos**: `packages/shared-types` (contrato único frontend/backend, validado con Zod).
-- **CI**: GitHub Actions (lint + test + build, y tests de integración contra el stack local de
-  Supabase). Despliegue vía integración nativa de Vercel (frontend) y Render (backend) — sin
-  Terraform ni workflow de deploy propio.
+- **CI**: GitHub Actions (lint + tests unitarios + tests e2e + build, y tests de integración contra
+  el stack local de Supabase). Despliegue vía integración nativa de Vercel (frontend) y Render
+  (backend) — sin Terraform ni workflow de deploy propio.
 
 ## Estructura del monorepo
 
@@ -46,6 +46,7 @@ Requiere Node.js 24+ y npm. Los tests de integración además requieren
 npm install                          # instala todos los workspaces desde la raíz
 npm run lint                         # ESLint (backend + frontend)
 npm test                             # tests unitarios (Jest + Karma/Jasmine), sin Docker
+npm run test:e2e                     # tests e2e del backend (AppModule en memoria, sin Docker)
 npm run build                        # build de producción de ambas apps
 ```
 

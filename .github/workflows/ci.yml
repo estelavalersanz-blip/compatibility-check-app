@@ -31,6 +31,13 @@ jobs:
       - name: Tests unitarios (backend + frontend)
         run: npm test
 
+      # *.e2e-spec.ts arranca `AppModule` completo en memoria contra `SupabaseService` mockeada
+      # (`test/setup/e2e-env.ts`) — no depende de Docker ni del stack local de Supabase, así que
+      # vive en este job (no en el de integración). No renombrar este job (`name:` de arriba): la
+      # protección de la rama `main` exige por nombre literal este check y el de integración.
+      - name: Tests e2e (backend)
+        run: npm run test:e2e
+
       - name: Build (backend + frontend)
         run: npm run build
 

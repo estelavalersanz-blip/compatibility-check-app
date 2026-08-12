@@ -553,9 +553,12 @@ end-to-end.
 
 **CI (GitHub Actions)**: un workflow (`.github/workflows/ci.yml`) corre en cada push y cada PR contra
 `main`: instala dependencias del monorepo (npm workspaces), y para `apps/backend` y `apps/frontend`
-ejecuta lint, la suite de tests (Jest/Karma) y el build de producción. La rama `main` queda protegida
-para exigir que este workflow pase en verde antes de poder mergear — es la única puerta de calidad; no
-hay un segundo pipeline paralelo que reinventar.
+ejecuta lint, la suite de tests unitarios (Jest/Karma), los tests e2e del backend (`*.e2e-spec.ts`,
+sin Docker — ver decisión 11) y el build de producción. La rama `main` queda protegida para exigir
+que este workflow pase en verde antes de poder mergear — es la única puerta de calidad; no hay un
+segundo pipeline paralelo que reinventar. (`test:e2e` se incorporó a este job en la sección 4 de
+`tasks.md`: hasta entonces `ci.yml` nunca ejecutaba `*.e2e-spec.ts`, dejando sin cubrir por branch
+protection la única capa que verifica routing/guards/DTOs/status codes reales vía HTTP.)
 
 **CD (despliegue), sin YAML propio de despliegue**: ni el frontend ni el backend se despliegan *desde*
 GitHub Actions — cada plataforma usa su propia integración nativa con el repo de GitHub:
@@ -632,10 +635,15 @@ reutiliza entre tests — aprovechando los `ON DELETE CASCADE` ya definidos en `
 `signInWithPassword` contra una cuenta del pool y opera con su JWT real — así se ejercita `auth.uid()`
 de verdad, no una simulación de qué usuario "debería" ser.
 
-**Unitarios e integración quedan separados**: `*.spec.ts` (unitarios, mockeados, sin Docker) frente a
-`*.integration-spec.ts` (necesitan el stack local corriendo), con dos scripts npm (`test`/
-`test:integration`) y dos steps distintos en `.github/workflows/ci.yml` (decisión 10) — el ciclo rápido
-de TDD con unitarios no depende de tener Docker levantado en cada guardado.
+**Unitarios, e2e e integración quedan separados**: `*.spec.ts` (unitarios, mockeados, sin Docker) y
+`*.e2e-spec.ts` (arrancan `AppModule` completo en memoria con `SupabaseService` sustituida por un
+fake — `.overrideProvider(SupabaseService).useValue(...)`, ver `test/setup/e2e-env.ts` — para
+ejercitar routing/guards/DTOs/status codes reales vía HTTP sin depender de Docker) quedan ambos frente
+a `*.integration-spec.ts` (sí necesitan el stack local corriendo — son los únicos que ejercitan
+RLS/Postgres real). Tres scripts npm (`test`/`test:e2e`/`test:integration`): los dos primeros son
+steps distintos pero dentro del mismo job de lint/build de `.github/workflows/ci.yml` (decisión 10,
+ninguno necesita Docker); el tercero vive en el job de integración aparte — el ciclo rápido de TDD
+con unitarios/e2e no depende de tener Docker levantado en cada guardado.
 
 ## Risks / Trade-offs
 

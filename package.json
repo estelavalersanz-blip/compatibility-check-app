@@ -10,6 +10,7 @@
   "scripts": {
     "lint": "npm run lint --workspace=packages/shared-types && npm run lint --workspace=apps/backend && npm run lint --workspace=apps/frontend",
     "test": "npm run test --workspace=packages/shared-types && npm run test --workspace=apps/backend && npm run test --workspace=apps/frontend",
+    "test:e2e": "npm run test:e2e --workspace=apps/backend",
     "test:integration": "npm run test:integration --workspace=apps/backend",
     "build": "npm run build --workspace=packages/shared-types && npm run build --workspace=apps/backend && npm run build --workspace=apps/frontend",
     "format": "prettier --write \"{apps,packages}/**/src/**/*.{ts,html,scss}\""

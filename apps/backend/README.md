@@ -23,7 +23,8 @@ npm run start:prod        # ejecuta el build
 npm run lint               # ESLint
 
 npm test                   # tests unitarios (*.spec.ts) — sin Docker
-npm run test:e2e            # tests e2e contra la app levantada en memoria (*.e2e-spec.ts)
+npm run test:e2e            # tests e2e contra la app levantada en memoria (*.e2e-spec.ts), sin
+                             # Docker — corre en CI junto a los unitarios (ver ci.yml)
 npm run test:integration    # tests de integración (*.integration-spec.ts) — requiere el stack
                              # local de Supabase corriendo (`npx supabase start` desde la raíz del
                              # repo) y sus credenciales exportadas, ver README de la raíz
