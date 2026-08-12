@@ -160,9 +160,11 @@ compatibility-check-app/
 │   ├── comparison-result.ts          # interfaz ComparisonResult (JSON prefijado del análisis IA)
 │   └── aggregated-result.ts          # interfaz AggregatedResult + pesos por dimensión
 ├── apps/backend/src/                 # NestJS
-│   ├── auth/                         # NUEVO: guard de JWT de Supabase + comprobación de alias único
-│   │   └── supabase-auth.guard.ts
+│   ├── auth/                         # guard de JWT de Supabase (sección 4)
+│   │   ├── supabase-auth.guard.ts
+│   │   └── supabase-token.ts         # resolución de usuario reutilizable (guard estricto y opcional)
 │   ├── users/                        # perfil (nombre + alias + foto + 5 cualidades)
+│   │   ├── users.controller.ts       # arranca en la sección 4 solo con GET /users/check-alias (público)
 │   │   ├── commands/create-user-profile.command.ts (+ handler)
 │   │   └── photo-upload.service.ts   # sube a Supabase Storage vía service_role key
 │   ├── qualities/                    # catálogo de las 15 cualidades personales
@@ -330,7 +332,9 @@ guard que valida el JWT de Supabase:
 
 ```
 GET   /qualities                      → catálogo de las 15 cualidades personales (público)
-GET   /users/check-alias?alias=...    → disponibilidad de un alias (excluyendo al propio usuario)
+GET   /users/check-alias?alias=...    → disponibilidad de un alias (público a propósito, sin exigir
+                                         sesión; si la petición sí trae un JWT válido, excluye el
+                                         propio alias del usuario autenticado de la comprobación)
 POST  /users/me/profile               → (autenticado) multipart/form-data { name, alias, photo, qualityIds[5] }
                                          valida alias único, sube la foto a Supabase Storage, crea el
                                          perfil + user_qualities

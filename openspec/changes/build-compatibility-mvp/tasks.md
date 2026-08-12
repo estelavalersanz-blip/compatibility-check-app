@@ -103,13 +103,13 @@
 
 ## 4. Backend: módulo `auth`
 
-- [ ] 4.1 Test unitario: `SupabaseAuthGuard` acepta una request con un JWT de Supabase válido y
+- [x] 4.1 Test unitario: `SupabaseAuthGuard` acepta una request con un JWT de Supabase válido y
       rechaza una sin token o con token inválido/expirado
-- [ ] 4.2 Implementar `auth/supabase-auth.guard.ts` para que pase el test anterior, aplicándolo a los
+- [x] 4.2 Implementar `auth/supabase-auth.guard.ts` para que pase el test anterior, aplicándolo a los
       endpoints protegidos de perfil, cuestionario y comparaciones
-- [ ] 4.3 Test e2e: `GET /users/check-alias?alias=...` devuelve disponible/no disponible según exista
+- [x] 4.3 Test e2e: `GET /users/check-alias?alias=...` devuelve disponible/no disponible según exista
       ya el alias en BD (excluyendo el propio usuario si está autenticado)
-- [ ] 4.4 Implementar el endpoint de comprobación de alias para que pase el test anterior
+- [x] 4.4 Implementar el endpoint de comprobación de alias para que pase el test anterior
 
 ## 5. Backend: módulo `qualities`
 

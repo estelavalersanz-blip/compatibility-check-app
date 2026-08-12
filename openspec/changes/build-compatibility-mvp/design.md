@@ -62,6 +62,16 @@ bastante código de infraestructura (hashing, tokens de recuperación con expira
 sin aportar nada que Supabase Auth no resuelva ya gratis, contradiciendo el criterio de "acotado" del
 TFM.
 
+**Implementación concreta (sección 4 de `tasks.md`)**: `SupabaseAuthGuard` delega la validación en
+`supabase.auth.getUser(token)` (vía `SupabaseService`, la misma puerta de acceso que el resto del
+backend) en vez de verificar la firma del JWT a mano — evita gestionar un segundo secreto
+(`SUPABASE_JWT_SECRET`) además de `SUPABASE_SERVICE_ROLE_KEY`, a costa de una llamada de red a
+Supabase por petición autenticada (aceptable al volumen de una demo de TFM). Única excepción
+documentada: `GET /users/check-alias` es deliberadamente público (sin `SupabaseAuthGuard`) porque
+debe aceptar tanto tráfico autenticado como anónimo; reutiliza la misma resolución de usuario sin
+exigirla (`resolveOptionalUser`, en `auth/supabase-token.ts`) solo para excluir el alias propio del
+usuario autenticado, si lo hay, de la comprobación de disponibilidad.
+
 ### 3c. Tabla de perfil `users` separada de la identidad (`auth.users`)
 
 `users.id` es una foreign key 1:1 a `auth.users.id` (no se duplica email/contraseña en `users`). `users`

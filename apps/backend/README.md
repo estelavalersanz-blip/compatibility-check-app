@@ -38,6 +38,13 @@ npm run test:integration    # tests de integración (*.integration-spec.ts) — 
 - **`src/supabase/`**: `SupabaseService` — única puerta de acceso a datos con la `service_role` key
   (módulo `@Global()`); el resto de servicios de dominio dependen de esta clase, nunca de
   `@supabase/supabase-js` directamente.
+- **`src/auth/`**: `SupabaseAuthGuard` (módulo `@Global()`) — valida el JWT de Supabase
+  (`Authorization: Bearer ...`) delegando en `supabase.auth.getUser(token)`, sin verificar la firma
+  a mano ni gestionar un secreto propio. Se aplica con `@UseGuards(SupabaseAuthGuard)` a cada
+  endpoint protegido a medida que se implementa (perfil, cuestionario, comparaciones).
+- **`src/users/`**: por ahora solo `GET /users/check-alias` — deliberadamente público (sin el
+  guard), comprueba disponibilidad de alias excluyendo al propio usuario cuando la petición trae un
+  JWT válido. Se amplía en secciones posteriores con la creación/edición de perfil.
 - **`test/setup/`**, **`test/factories/`**: infraestructura de tests de integración (pool de cuentas
   `auth.users`, reset de tablas de dominio, factories de fixtures) — ver `design.md`, decisión 11.
   `test/setup/e2e-env.ts` da credenciales ficticias a los tests e2e (que no deben depender de
