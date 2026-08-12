@@ -243,15 +243,24 @@
        `questionId → índice de bloque (0–5)` y persistiendo ambos vectores de pesos en
        `weights: { dimension, block }` — en `apps/backend/src/comparisons/weighting.util.ts`
        (ver nota de 10.1)
-- [ ] 10.3 Test e2e: `GET /users/me/comparisons` devuelve estado y datos del candidato (alias, foto,
+- [x] 10.3 Test e2e: `GET /users/me/comparisons` devuelve estado y datos del candidato (alias, foto,
        `shared_qualities_count`) de cada comparación, y el resultado agregado cuando está disponible
-- [ ] 10.4 Test e2e: `GET /comparisons/:id/detail` devuelve el detalle de las 36 comparaciones por
+- [x] 10.4 Test e2e: `GET /comparisons/:id/detail` devuelve el detalle de las 36 comparaciones por
        pregunta de una comparación completada (pregunta, puntuaciones por dimensión, `compatibilidad`,
        `explicación`), y **la respuesta no contiene en ningún campo** `respuesta_usuario_1` ni
        `respuesta_usuario_2`, aunque esos campos sí existan en el registro almacenado en BD
-- [ ] 10.5 Implementar `results.controller.ts`/`comparisons.controller.ts` y los servicios necesarios,
+- [x] 10.5 Implementar `results.controller.ts`/`comparisons.controller.ts` y los servicios necesarios,
        incluyendo el mapeo que filtra `respuesta_usuario_1`/`respuesta_usuario_2` del DTO de salida antes
-       de responder, para que pasen los tests anteriores
+       de responder, para que pasen los tests anteriores — `GET /users/me/comparisons` vive en
+       `my-comparisons.controller.ts` aparte (no cuelga del prefijo `comparisons/`), pero comparte
+       `comparisons.service.ts`. Añadido de más, no pedido explícitamente por ninguna tarea pero
+       exigido por la propia lógica de privacidad del proyecto: `GET /comparisons/:id/detail`
+       comprueba que la comparación sea del usuario autenticado (404 igual si no existe o si no es
+       suya, sin distinguir los dos casos) — `comparisons` no tiene RLS/GRANT a `authenticated`
+       (decisión 3c), así que sin esta comprobación cualquier usuario podría leer el detalle de
+       cualquier comparación ajena por id. Nuevos tipos compartidos `ComparisonSummary`/
+       `ComparisonQuestionDetail` en `packages/shared-types` (no había tarea de sección 2 para
+       ellos, igual que `user-profile.mapper.ts` en la sección 6 tampoco tuvo una tarea propia)
 
 ## 10b. Backend: módulo `chat` (conversaciones y mensajes)
 

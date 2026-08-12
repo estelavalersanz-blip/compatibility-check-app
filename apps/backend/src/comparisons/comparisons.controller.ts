@@ -1,9 +1,12 @@
-import { BadRequestException, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
+import { ComparisonQuestionDetail } from '@compatibility-check-app/shared-types';
 import { PinoLogger } from 'nestjs-pino';
 import { AnalyzeComparisonCommand } from '../ai/commands/analyze-comparison.command';
+import type { AuthenticatedRequest } from '../auth/supabase-token';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ComparisonsService } from './comparisons.service';
 
 interface ComparisonStatusRow {
   status: string;
@@ -14,8 +17,8 @@ function asComparisonStatusRow(row: unknown): ComparisonStatusRow | null {
 
 /**
  * `comparisons` como recurso propio (ai-compatibility-analysis spec, "Reintento manual de una
- * comparación en error") — la sección 10 añadirá aquí mismo `GET /users/me/comparisons` y
- * `GET /comparisons/:id/detail`, mismo controller, mismo recurso.
+ * comparación en error"). `GET /users/me/comparisons` vive aparte, en `my-comparisons.controller.ts`
+ * (no cuelga de este prefijo) — pero comparte el mismo `ComparisonsService`.
  */
 @Controller('comparisons')
 @UseGuards(SupabaseAuthGuard)
@@ -24,8 +27,19 @@ export class ComparisonsController {
     private readonly supabaseService: SupabaseService,
     private readonly commandBus: CommandBus,
     private readonly logger: PinoLogger,
+    private readonly comparisonsService: ComparisonsService,
   ) {
     this.logger.setContext(ComparisonsController.name);
+  }
+
+  /** Sección 10 — mismas reglas que `ComparisonsService.findDetail`: solo la propia comparación
+   *  (404 tanto si no existe como si no es del usuario autenticado) y solo si ya está `completed`. */
+  @Get(':id/detail')
+  detail(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ComparisonQuestionDetail[]> {
+    return this.comparisonsService.findDetail(id, request.user.id);
   }
 
   /**
