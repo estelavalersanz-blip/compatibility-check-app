@@ -575,21 +575,89 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 17b. Frontend: chat interno
 
-- [ ] 17b.1 Test de componente: `features/chats` (listado) muestra una fila por conversación con
+- [x] 17b.1 Test de componente: `features/chats` (listado) muestra una fila por conversación con
        foto/alias del otro participante, el último mensaje y su fecha, ordenadas por actividad más
        reciente, marcando visualmente las que tienen mensajes sin leer
-- [ ] 17b.2 Implementar `features/chats` (listado) para que pase el test anterior, consumiendo
-       `GET /conversations`
-- [ ] 17b.3 Test de componente: `features/chats/:id` (conversación) muestra los mensajes en orden
+- [x] 17b.2 Implementar `features/chats` (listado) para que pase el test anterior, consumiendo
+       `GET /conversations`. El componente no reordena — el backend (sección 10b) ya devuelve el orden
+       por actividad reciente
+- [x] 17b.3 Test de componente: `features/chats/:id` (conversación) muestra los mensajes en orden
        cronológico, los propios alineados de forma distinta a los del otro participante, permite enviar
        un mensaje nuevo con el campo de texto del `card-footer`, y hace scroll automático al último
        mensaje al entrar o al recibir uno nuevo
-- [ ] 17b.4 Implementar `features/chats/:id` (conversación) para que pase el test anterior, consumiendo
-       `GET /conversations/:id/messages` y `POST /conversations/:id/messages`
-- [ ] 17b.5 Test de componente: mientras una conversación está abierta, se sondea
+- [x] 17b.4 Implementar `features/chats/:id` (conversación) para que pase el test anterior, consumiendo
+       `GET /conversations/:id/messages` y `POST /conversations/:id/messages`. `ChatService` (frontend)
+       ganó `getMessages`/`sendMessage` — no había tarea propia para ellos, igual que otros wrappers
+       finos de secciones anteriores. Cabecera con alias/foto del otro participante resuelta
+       reutilizando `GET /conversations` (buscando por id en la lista) — no existe un
+       `GET /conversations/:id` propio, y no hacía falta añadirlo solo para esto. El input de texto usa
+       el mismo patrón de señal + `(input)` ya usado en `features/questionnaire` (no `ngModel`/
+       `FormsModule`: nunca usado en este proyecto, y mezcla peor con las señales de un componente
+       zoneless que el patrón ya establecido)
+- [x] 17b.5 Test de componente: mientras una conversación está abierta, se sondea
        `GET /conversations/:id/messages?after=<cursor>` cada ~4s y los mensajes nuevos se añaden sin
-       recargar toda la conversación; el sondeo se detiene al salir de la pantalla
-- [ ] 17b.6 Implementar el sondeo de la conversación abierta para que pase el test anterior
+       recargar toda la conversación; el sondeo se detiene al salir de la pantalla. **Cambio real de
+       backend, sección 10b, para cumplir esta tarea de sección 17b tal cual está escrita**: el
+       endpoint `GET /conversations/:id/messages` (implementado en la 10b sin ningún parámetro) nunca
+       había soportado un cursor `after` — se añadió `?after=<ISO>` opcional (`ChatController`/
+       `ChatService.getMessages`, backend), con dos tests e2e nuevos (con y sin `after`, este último
+       para no romper el comportamiento ya existente); el filtrado de "leídos" sigue aplicándose sobre
+       toda la conversación, no solo sobre la porción devuelta por `after` — mientras la conversación
+       está abierta, cualquier mensaje nuevo se considera leído de inmediato. Sin test de Karma con
+       `fakeAsync`/`tick()` para el disparo del propio `interval()` (nunca usado en este proyecto;
+       mismo criterio ya aplicado en `features/processing`, sección 15: se confía en
+       `interval`/`takeUntilDestroyed` de RxJS, ya probados, y se testea en su lugar la lógica propia de
+       fusión de mensajes nuevos, `applyMessages`, de forma directa vía el flujo de envío) — verificado
+       en su lugar de extremo a extremo en el navegador (ver más abajo)
+- [x] 17b.6 Implementar el sondeo de la conversación abierta para que pase el test anterior
+       (`afterNextRender` para el scroll tras cada actualización de `messages()` — la vía correcta de
+       Angular para tocar el DOM justo después de que la vista refleje un cambio de señal, funciona
+       igual en zoneless; test de scroll verificado con contenido real suficiente para desbordar el
+       contenedor, no simulado)
+
+**Guard nuevo, no pedido literalmente por ninguna tarea de esta sección pero necesario para que
+`/settings`/`/chats`/`/chats/:id` tengan sentido**: `questionnaireCompletedGuard`
+(`core/guards/questionnaire-completed.guard.ts`) — un usuario con perfil pero sin cuestionario
+completado nunca podía llegar a estas 3 rutas desde la cabecera (`minimalNav` solo oculta esos botones
+en `/registration`, no en `/questionnaire`) y quedarse en un estado sin sentido (el chat nunca puede
+tener candidatos elegibles sin `comparisons`, y "Editar tus respuestas" apuntaría a un cuestionario
+inexistente). Aplicado junto a `profileGuard` (después, nunca antes) en esas 3 rutas; no aplica a
+`/questionnaire` ni a `/dashboard` (ver comentario en `app.routes.ts`). **Bug real encontrado por el
+propio test de este guard, no por la implementación de la sección 17b en sí**: `ChatConversationComponent`
+leía `session()?.user.id` — el `?.` solo protegía `session()`, no `.user` — un `TypeError` real en
+cuanto una ruta protegida se monta con un `AuthService` falso que no incluye `.user` (el fake mínimo
+compartido de la sección 11, `fakeUsersService`/`fakeAuthService` de `core/testing/fakes.ts`). Arreglado
+con `session()?.user?.id` (mismo patrón corregido en `settings.component.ts`, que tenía el mismo fallo
+en `changePassword()`) y completando `fakeAuthService`/`fakeChatService` con datos realistas
+(`user.id`/`user.email`, `getMessages`/`sendMessage`) para que cualquier ruta protegida que acabe
+montando `SettingsComponent`/`ChatConversationComponent` de verdad tenga lo que necesita — mismo
+criterio ya aplicado a `fakeUsersService`/`checkAlias` en la sección 17.
+
+**Verificado de extremo a extremo en el navegador** con dos usuarios de prueba reales (perfil +
+cuestionario completo + una comparación + una conversación con mensajes, insertados por SQL para
+agilizar): listado con alias/fecha/último mensaje/indicador de no leídos correcto, conversación con
+burbujas alineadas correctamente (propias en naranja a la derecha, ajenas en Papaya Whip a la
+izquierda), envío real de un mensaje (persistido en BD, campo de texto se vacía), acceso asimétrico
+confirmado (B ve la conversación con A desde el menú aunque A no aparezca entre sus propias
+comparaciones, spec `internal-chat`), y — la comprobación más importante de esta sección — un mensaje
+nuevo enviado por un participante aparece solo en la pantalla del otro a los pocos segundos, sin
+recargar la página, confirmando que el sondeo con cursor `after` funciona de verdad contra el backend y
+Supabase reales, no solo en los tests. También confirmado en vivo (sección 17b, guard nuevo): con
+`questionnaire_completed_at` vacío, `/settings` redirige a `/questionnaire` en vez de mostrar la
+pantalla. 119/119 tests de frontend + 19/19 e2e de backend (chat) + lint limpio + build limpio en ambos
+workspaces tras los cambios.
+
+**Nota metodológica para sesiones futuras que verifiquen chat con dos usuarios reales a la vez**: dos
+pestañas del mismo origen (`http://localhost:4200`) en este navegador **comparten** el `localStorage`
+donde Supabase persiste la sesión — iniciar sesión como B en una segunda pestaña sobrescribe la sesión
+compartida, y `@supabase/supabase-js` sincroniza ese cambio a la primera pestaña vía el evento
+`storage`, de forma que las peticiones salientes de AMBAS pestañas acaban autenticadas como "quien
+inició sesión más recientemente en cualquiera de las dos", no como quien parecía tener la sesión activa
+en esa pestaña concreta (verificado real: un mensaje enviado desde la pestaña de B se persistió en BD
+con el `sender_id` de A). Para probar de verdad dos usuarios a la vez haría falta aislar cada sesión
+(perfiles de navegador distintos, o modo incógnito por pestaña) — mientras tanto, la técnica ya usada
+aquí (una sola sesión real + la otra simulada por SQL directo) sigue siendo la más fiable para verificar
+el sondeo sin este artefacto.
 
 ## 18. Semilla de datos sintéticos
 

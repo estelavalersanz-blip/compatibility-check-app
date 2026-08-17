@@ -147,24 +147,37 @@ interface UpdateChain<T> {
   then: (resolve: (result: { data: null; error: null }) => void) => void;
 }
 
+/** `.eq()`/`.gt()`/`.in()` encadenables en cualquier combinación antes de `.order()` — a diferencia
+ *  del resto de tablas de este fake (ramas fijas de dos niveles), `getMessages` (tarea 17b, sondeo
+ *  con cursor) necesita `.eq('conversation_id', ...).gt('created_at', after)` a la vez. */
+interface MessagesSelectChain {
+  eq: (column: keyof FakeMessageRow, value: unknown) => MessagesSelectChain;
+  gt: (column: keyof FakeMessageRow, value: unknown) => MessagesSelectChain;
+  in: (column: keyof FakeMessageRow, values: unknown[]) => MessagesSelectChain;
+  order: () => Promise<{ data: FakeMessageRow[]; error: null }>;
+}
+
+function messagesSelectChain(
+  db: FakeDatabase,
+  predicates: Array<(row: FakeMessageRow) => boolean>,
+): MessagesSelectChain {
+  return {
+    eq: (column, value) => messagesSelectChain(db, [...predicates, (m) => m[column] === value]),
+    gt: (column, value) =>
+      messagesSelectChain(db, [...predicates, (m) => (m[column] as string) > (value as string)]),
+    in: (column, values) =>
+      messagesSelectChain(db, [...predicates, (m) => values.includes(m[column])]),
+    order: () =>
+      Promise.resolve({
+        data: sortedByCreatedAt(db.messages.filter((m) => predicates.every((p) => p(m)))),
+        error: null,
+      }),
+  };
+}
+
 function messagesTable(db: FakeDatabase) {
   return {
-    select: () => ({
-      eq: (column: keyof FakeMessageRow, value: unknown) => ({
-        order: () =>
-          Promise.resolve({
-            data: sortedByCreatedAt(db.messages.filter((m) => m[column] === value)),
-            error: null,
-          }),
-      }),
-      in: (column: keyof FakeMessageRow, values: unknown[]) => ({
-        order: () =>
-          Promise.resolve({
-            data: sortedByCreatedAt(db.messages.filter((m) => values.includes(m[column]))),
-            error: null,
-          }),
-      }),
-    }),
+    select: (): MessagesSelectChain => messagesSelectChain(db, []),
     insert: (values: Record<string, unknown>) => ({
       select: () => ({
         single: () => {
@@ -477,6 +490,31 @@ describe('Chat interno (e2e)', () => {
       expect(body.find((m) => m.senderId === USER_A.id)?.readAt).toBeNull();
       expect(db.messages.find((m) => m.id === 'msg-2')?.read_at).not.toBeNull();
       expect(db.messages.find((m) => m.id === 'msg-1')?.read_at).toBeNull();
+    });
+
+    it('con el parámetro "after", devuelve solo los mensajes posteriores a ese cursor (sondeo, tarea 17b.5/17b.6)', async () => {
+      app = await buildApp(createFakeSupabaseService(db, AUTH_TOKENS));
+
+      const response = await request(app.getHttpServer())
+        .get('/conversations/conv-a-b/messages')
+        .query({ after: '2024-01-01T00:00:01.000Z' }) // justo el created_at de "Primero"
+        .set('Authorization', 'Bearer jwt-a')
+        .expect(200);
+
+      const body = response.body as Array<{ body: string }>;
+      expect(body.map((m) => m.body)).toEqual(['Segundo']);
+    });
+
+    it('sin "after", devuelve el historial completo (comportamiento sin cambios respecto a antes de la 17b)', async () => {
+      app = await buildApp(createFakeSupabaseService(db, AUTH_TOKENS));
+
+      const response = await request(app.getHttpServer())
+        .get('/conversations/conv-a-b/messages')
+        .set('Authorization', 'Bearer jwt-a')
+        .expect(200);
+
+      const body = response.body as Array<{ body: string }>;
+      expect(body.map((m) => m.body)).toEqual(['Primero', 'Segundo']);
     });
 
     it('no marca como leídos los mensajes de otras conversaciones', async () => {

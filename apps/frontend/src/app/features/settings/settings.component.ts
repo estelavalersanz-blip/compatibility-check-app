@@ -261,7 +261,7 @@ export class SettingsComponent {
     this.passwordError.set(null);
     this.passwordSuccess.set(false);
     const { currentPassword, password } = this.passwordForm.getRawValue();
-    const email = this.authService.session()?.user.email ?? '';
+    const email = this.authService.session()?.user?.email ?? '';
 
     try {
       await this.authService.signInWithPassword(email, currentPassword);

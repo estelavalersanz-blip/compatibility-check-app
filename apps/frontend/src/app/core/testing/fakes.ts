@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { Conversation, OwnUserProfile } from '@compatibility-check-app/shared-types';
+import { Conversation, Message, OwnUserProfile } from '@compatibility-check-app/shared-types';
 import { of } from 'rxjs';
 import { AuthService } from '../auth.service';
 import { ChatService } from '../chat.service';
@@ -14,9 +14,15 @@ type FakeAuthService = Pick<
  * Fake compartido de `AuthService` para tests de guards/`core/shell` — nunca toca Supabase real.
  * `session` es un signal de verdad (no una función suelta): `ShellComponent` lo lee dentro de un
  * `computed()`, que exige un productor reactivo real, no cualquier función con la misma firma.
+ * `user.id`/`user.email` (sección 17b) — cualquier ruta protegida que se navegue vía `app.routes`
+ * real puede acabar montando `ChatConversationComponent`, que lee `session()?.user.id` como campo de
+ * instancia (se evalúa siempre al construir, no solo al enviar un formulario) — sin esto, un fake
+ * sin `.user` lanza `TypeError` en cuanto se monta, igual que el gotcha ya documentado de
+ * `checkAlias`/`fakeUsersService` de la sección 17.
  */
 export function fakeAuthService(hasSession: boolean): FakeAuthService {
-  const sessionSignal = signal(hasSession ? ({ access_token: 'jwt' } as never) : null);
+  const session = { access_token: 'jwt', user: { id: 'auth-user-fake', email: 'fake@example.com' } };
+  const sessionSignal = signal(hasSession ? (session as never) : null);
   return {
     session: sessionSignal.asReadonly(),
     hasSession: () => sessionSignal() !== null,
@@ -26,10 +32,25 @@ export function fakeAuthService(hasSession: boolean): FakeAuthService {
   };
 }
 
+/** `getMessages`/`sendMessage` añadidos en la sección 17b — mismo motivo que `user.id` arriba:
+ *  `ChatConversationComponent` puede acabar montado por cualquier test que navegue por `app.routes`
+ *  real hasta `/chats/:id` con perfil y cuestionario ya completados. */
 export function fakeChatService(
   conversations: Conversation[] = [],
-): Pick<ChatService, 'listConversations'> {
-  return { listConversations: () => of(conversations) };
+): Pick<ChatService, 'listConversations' | 'getMessages' | 'sendMessage'> {
+  return {
+    listConversations: () => of(conversations),
+    getMessages: () => of([]),
+    sendMessage: (_conversationId: string, body: string) =>
+      of({
+        id: 'fake-message',
+        conversationId: _conversationId,
+        senderId: 'auth-user-fake',
+        body,
+        createdAt: new Date(0).toISOString(),
+        readAt: null,
+      } satisfies Message),
+  };
 }
 
 /**

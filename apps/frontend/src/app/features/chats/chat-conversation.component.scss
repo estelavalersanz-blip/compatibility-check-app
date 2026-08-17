@@ -1,0 +1,42 @@
+// Valores literales, no variables Sass — mismo criterio que el resto de componentes de este
+// proyecto (`quality-pill`, `registration`): el Sass de un componente Angular se compila aislado,
+// sin ver los overrides de `styles.scss`.
+.chat-messages {
+  height: 60vh; // altura fija, nunca 100vh a pelo (deja sitio a la cabecera del shell/card)
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.chat-message__bubble {
+  max-width: 75%;
+  padding: 0.5rem 0.85rem;
+  border-radius: 14px;
+  background: #fdf0d5; // Papaya Whip — mensajes del otro participante
+  color: #000000;
+  align-self: flex-start;
+  overflow-wrap: break-word; // nunca desborda el ancho de la card con una palabra larga/URL
+}
+
+.chat-message__time {
+  font-size: 0.7rem;
+  color: var(--bs-secondary-color);
+  margin-top: 2px;
+}
+
+.chat-message--mine {
+  align-items: flex-end;
+}
+
+.chat-message--mine .chat-message__bubble {
+  background: #fb8500;
+  color: #ffffff;
+  align-self: flex-end;
+}

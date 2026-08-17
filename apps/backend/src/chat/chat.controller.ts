@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -42,9 +43,14 @@ export class ChatController {
     return this.chatService.listConversations(request.user.id);
   }
 
+  /** `?after=<cursor ISO>` opcional (tarea 17b.5/17b.6) — sin él, historial completo (sin cambios). */
   @Get(':id/messages')
-  getMessages(@Param('id') id: string, @Req() request: AuthenticatedRequest): Promise<Message[]> {
-    return this.chatService.getMessages(id, request.user.id);
+  getMessages(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+    @Query('after') after?: string,
+  ): Promise<Message[]> {
+    return this.chatService.getMessages(id, request.user.id, after);
   }
 
   @Post(':id/messages')

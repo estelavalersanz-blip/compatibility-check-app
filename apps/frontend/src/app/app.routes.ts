@@ -1,24 +1,25 @@
 import { Routes } from '@angular/router';
 import { mainRouteGuard } from './core/guards/main-route.guard';
 import { profileGuard } from './core/guards/profile.guard';
+import { questionnaireCompletedGuard } from './core/guards/questionnaire-completed.guard';
 import { ShellComponent } from './core/shell/shell.component';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
+import { ChatConversationComponent } from './features/chats/chat-conversation.component';
+import { ChatsComponent } from './features/chats/chats.component';
 import { LandingComponent } from './features/landing/landing.component';
 import { ProcessingComponent } from './features/processing/processing.component';
 import { QuestionnaireComponent } from './features/questionnaire/questionnaire.component';
 import { RegistrationComponent } from './features/registration/registration.component';
 import { ResultsDashboardComponent } from './features/results-dashboard/results-dashboard.component';
 import { SettingsComponent } from './features/settings/settings.component';
-import { PlaceholderComponent } from './shared/placeholder/placeholder.component';
 
 /**
- * Tabla de rutas (secciones 11/11d/12/13/14/15/16/17 de `tasks.md`). Las rutas de secciones aún no
- * implementadas (17b en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección
- * futura sustituye su propio `component` por la feature real, sin tocar la estructura de
- * guards/shell de aquí.
+ * Tabla de rutas (secciones 11/11d/12/13/14/15/16/17/17b de `tasks.md`) — con esta sección, todas
+ * las pantallas de frontend ya son componentes reales (`PlaceholderComponent` deja de usarse aquí;
+ * las secciones 18 en adelante son seed/despliegue/verificación, sin pantallas nuevas).
  */
 export const routes: Routes = [
   // Ruta principal: sin sesión, `mainRouteGuard` deja pasar y se muestra la landing (tarea 11d.3);
@@ -70,27 +71,31 @@ export const routes: Routes = [
         canActivate: [profileGuard],
         data: { title: 'Dashboard' },
       },
+      // `settings`/`chats`/`chats/:id` (a diferencia de `questionnaire`/`dashboard`) exigen además
+      // haber completado el cuestionario una primera vez (`questionnaireCompletedGuard`) — sin esto,
+      // la cabecera ya permitía entrar aquí desde `/questionnaire` sin haberlo completado
+      // (`minimalNav` solo oculta esos botones en `/registration`), dejando ambas pantallas en un
+      // estado sin sentido: "Editar tus respuestas" apuntaría a un cuestionario que aún no existe, y
+      // el chat nunca puede tener conversaciones sin `comparisons` todavía.
       {
         path: 'settings',
         component: SettingsComponent,
-        canActivate: [profileGuard],
+        canActivate: [profileGuard, questionnaireCompletedGuard],
         data: { title: 'Configuración' },
       },
       {
         path: 'chats',
-        component: PlaceholderComponent,
-        canActivate: [profileGuard],
+        component: ChatsComponent,
+        canActivate: [profileGuard, questionnaireCompletedGuard],
         data: { title: 'Chats' },
       },
-      // Destino real del botón "Chatear" de cada tarjeta del dashboard (tarea 16.7). Añadida ahora,
-      // de forma preventiva — lección aprendida en la sección 14 (`/processing` no existía y
-      // `router.navigate` lanzaba `NG04002` en el navegador, invisible para Karma porque cada spec
-      // usa su propia tabla de rutas aislada) — en vez de esperar a que la sección 17b la necesite
-      // de verdad y volver a redescubrir el mismo fallo.
+      // Destino real del botón "Chatear" de cada tarjeta del dashboard (tarea 16.7) y de cada fila
+      // de `features/chats`. La ruta ya existía como placeholder desde la sección 16 (lección de la
+      // 14 aplicada preventivamente); esta sección solo sustituye el componente.
       {
         path: 'chats/:id',
-        component: PlaceholderComponent,
-        canActivate: [profileGuard],
+        component: ChatConversationComponent,
+        canActivate: [profileGuard, questionnaireCompletedGuard],
         data: { title: 'Chat' },
       },
     ],

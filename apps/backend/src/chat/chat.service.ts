@@ -178,20 +178,28 @@ export class ChatService {
   }
 
   /**
-   * `GET /conversations/:id/messages`: exige ser participante (mismo 404 tanto si la conversación
-   * no existe como si existe pero no es suya — minimización de información, igual criterio que
-   * `ComparisonsService.findDetail`) y marca como leídos los mensajes dirigidos al usuario
-   * autenticado (nunca los que él mismo envió) que siguieran sin leer.
+   * `GET /conversations/:id/messages` (`?after=<cursor ISO>` opcional, tarea 17b.5/17b.6): exige ser
+   * participante (mismo 404 tanto si la conversación no existe como si existe pero no es suya —
+   * minimización de información, igual criterio que `ComparisonsService.findDetail`) y marca como
+   * leídos los mensajes dirigidos al usuario autenticado (nunca los que él mismo envió) que
+   * siguieran sin leer — **sobre toda la conversación, no solo sobre la porción devuelta por
+   * `after`**: mientras la conversación está abierta y se sondea, cualquier mensaje nuevo se
+   * considera leído de inmediato, no solo el primero que se cargó al entrar.
    */
-  async getMessages(conversationId: string, userId: string): Promise<Message[]> {
+  async getMessages(conversationId: string, userId: string, after?: string): Promise<Message[]> {
     const client = this.supabaseService.getClient();
     await this.assertParticipant(client, conversationId, userId);
 
-    const { data: messageRows, error: messagesError } = await client
+    let query = client
       .from('messages')
       .select(MESSAGE_COLUMNS)
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
+      .eq('conversation_id', conversationId);
+    if (after) {
+      query = query.gt('created_at', after);
+    }
+    const { data: messageRows, error: messagesError } = await query.order('created_at', {
+      ascending: true,
+    });
     if (messagesError) {
       throw new Error(`No se pudieron consultar los mensajes: ${messagesError.message}`);
     }

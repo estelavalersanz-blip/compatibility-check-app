@@ -7,6 +7,7 @@ import { of, throwError } from 'rxjs';
 import { routes } from '../../app.routes';
 import { AuthService } from '../../core/auth.service';
 import { ChatService } from '../../core/chat.service';
+import { ComparisonsService } from '../../core/comparisons.service';
 import { MatchingService } from '../../core/matching.service';
 import { QuestionnaireService } from '../../core/questionnaire.service';
 import { fakeAuthService, fakeChatService, fakeUsersService } from '../../core/testing/fakes';
@@ -523,6 +524,10 @@ describe('QuestionnaireComponent — navegación contra la tabla de rutas real (
           },
         },
         { provide: MatchingService, useValue: { recalculate: () => of({}) } },
+        // El envío final navega a `/processing`, que monta `ProcessingComponent` real — necesita
+        // esto en su constructor, sin relación con lo que este test en sí comprueba (mismo criterio
+        // ya aplicado en `profile.guard.spec.ts`/`main-route.guard.spec.ts`, sección 17).
+        { provide: ComparisonsService, useValue: { findMine: () => of([]) } },
       ],
     });
 
