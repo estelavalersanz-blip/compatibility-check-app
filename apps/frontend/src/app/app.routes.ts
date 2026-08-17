@@ -7,13 +7,14 @@ import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 import { LandingComponent } from './features/landing/landing.component';
+import { ProcessingComponent } from './features/processing/processing.component';
 import { QuestionnaireComponent } from './features/questionnaire/questionnaire.component';
 import { RegistrationComponent } from './features/registration/registration.component';
 import { PlaceholderComponent } from './shared/placeholder/placeholder.component';
 
 /**
- * Tabla de rutas (secciones 11/11d/12/13/14 de `tasks.md`). Las rutas de secciones aún no
- * implementadas (15 en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección
+ * Tabla de rutas (secciones 11/11d/12/13/14/15 de `tasks.md`). Las rutas de secciones aún no
+ * implementadas (16 en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección
  * futura sustituye su propio `component` por la feature real, sin tocar la estructura de
  * guards/shell de aquí.
  */
@@ -53,15 +54,11 @@ export const routes: Routes = [
         canActivate: [profileGuard],
         data: { title: 'Cuestionario' },
       },
-      // `features/processing` (sección 15, aún sin implementar) — destino real de "Enviar
-      // cuestionario" en modo creación (tarea 14.5b). Ruta añadida ahora, no en la sección 11: aquella
-      // solo scaffoldeó las 5 rutas ya conocidas entonces (registration/questionnaire/dashboard/
-      // settings/chats); esta es la primera vez que algo navega de verdad a "/processing", y sin la
-      // ruta, `router.navigate(['/processing'])` lanza `NG04002` (ruta inexistente) — descubierto en
-      // la verificación en el navegador de esta misma sección, no antes.
+      // Destino real de "Enviar cuestionario" en modo creación (tarea 14.5b). Ruta añadida en la
+      // sección 14 (no en la 11, que solo scaffoldeó las 5 rutas ya conocidas entonces).
       {
         path: 'processing',
-        component: PlaceholderComponent,
+        component: ProcessingComponent,
         canActivate: [profileGuard],
         data: { title: 'Analizando tu compatibilidad' },
       },

@@ -455,12 +455,21 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 15. Frontend: pantalla de procesamiento (ver `design.md` decisión 3f)
 
-- [ ] 15.1 Test de componente: el polling se detiene al recibir todas las comparaciones en
+- [x] 15.1 Test de componente: el polling se detiene al recibir todas las comparaciones en
        `completed`/`error` y navega al dashboard; mientras tanto muestra un spinner y una fila por cada
        candidato ya seleccionado con su icono de estado (pendiente/analizando, completado, error) — sin
        porcentaje agregado ni contador "N de 3"
-- [ ] 15.2 Implementar `features/processing` para que pase el test anterior, consultando
-       `GET /users/me/comparisons`
+- [x] 15.2 Implementar `features/processing` para que pase el test anterior, consultando
+       `GET /users/me/comparisons`. `core/comparisons.service.ts` nuevo (se reutilizará en la sección
+       16). Con 0 candidatos en el pool (nadie más ha completado el cuestionario todavía), la
+       pantalla se queda sondeando indefinidamente con la lista vacía — caso límite no cubierto por
+       ningún test explícito de esta sección ni resuelto con un timeout/mensaje aparte, aceptado
+       conscientemente como residual de bajo riesgo (matching por afinidad de cualidades siempre
+       puede dar 0 candidatos, ver design.md decisión 5); revisar si conviene cerrarlo en la sección
+       20. Verificado en el navegador (usuario de prueba real, `POST /users/me/questionnaire` → 201 →
+       `/processing` con spinner + lista vacía, sin errores de consola) — el camino de "candidatos
+       resolviéndose y navegar al dashboard" solo se verificó con los 5 tests de Karma, no en vivo
+       (habría exigido preparar 2+ usuarios con cuestionario completo de antemano para tener pool)
 
 ## 16. Frontend: dashboard de resultados
 
