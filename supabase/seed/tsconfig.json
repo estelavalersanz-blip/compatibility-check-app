@@ -1,0 +1,21 @@
+{
+  // Config mínima y autocontenida, solo para poder ejecutar `seed.ts` de forma standalone con
+  // `ts-node` (`npm run seed` desde la raíz, ver tsconfig.json de la raíz... — bueno, este mismo
+  // fichero). Deliberadamente NO usa `nodenext` (a diferencia de apps/backend/tsconfig.json): ese
+  // modo de resolución es más estricto sobre extensiones/ESM y no aporta nada aquí, mientras que
+  // "commonjs"/"node" es el modo más probado de `ts-node` en su configuración por defecto.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    // Sin esto, TS incluiría automáticamente TODOS los `@types/*` hoisteados a la raíz del
+    // monorepo (incluido `@types/jasmine` del frontend) — mismo gotcha ya documentado en
+    // apps/backend/tsconfig.json, aplicado aquí de forma preventiva.
+    "types": ["node"]
+  },
+  "include": ["*.ts"]
+}

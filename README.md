@@ -82,6 +82,31 @@ npm run test:integration
 npx supabase stop
 ```
 
+### Semilla de datos sintéticos
+
+`supabase/seed/seed.ts` puebla el catálogo de 15 cualidades, 10 usuarios sintéticos completos
+(`supabase/seed/seed-users.json`, congelado — sin llamadas al proveedor de IA) y una cuenta de
+demostración sin perfil (sección 18 de `tasks.md`). Idempotente: se puede ejecutar varias veces sin
+duplicar ni recrear nada.
+
+```bash
+npx supabase start
+set -a
+eval "$(npx supabase status -o env \
+  --override-name api.url=SUPABASE_URL \
+  --override-name auth.anon_key=SUPABASE_ANON_KEY \
+  --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+  --override-name db.url=SUPABASE_DB_URL)"
+set +a
+npm run seed
+```
+
+Contra el proyecto real (tras la tarea 19.1), exporta en su lugar `SUPABASE_URL` y
+`SUPABASE_SERVICE_ROLE_KEY` de ese proyecto antes de `npm run seed`. La cuenta de demostración
+(`demo@seed.compatibility-check.local`) se crea con una contraseña aleatoria no comunicada; para
+usarla en una presentación en vivo, resetea su contraseña a mano desde el Dashboard de Supabase
+(nunca se documenta en ningún fichero versionado, ver tarea 18.5).
+
 ## Documentación y flujo de trabajo
 
 Este proyecto sigue [OpenSpec](https://github.com/Fission-AI/OpenSpec): el detalle formal de

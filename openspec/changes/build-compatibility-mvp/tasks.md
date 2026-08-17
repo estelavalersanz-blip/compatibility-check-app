@@ -661,25 +661,93 @@ el sondeo sin este artefacto.
 
 ## 18. Semilla de datos sintéticos
 
-- [ ] 18.1 Cargar en `qualities` el catálogo confirmado de 15 cualidades: empatía, humor, ambición,
+- [x] 18.1 Cargar en `qualities` el catálogo confirmado de 15 cualidades: empatía, humor, ambición,
        creatividad, honestidad, aventura, estabilidad, curiosidad, generosidad, paciencia, sociabilidad,
        independencia, sensibilidad, disciplina, espontaneidad
-- [ ] 18.2 Curar `supabase/seed/seed-users.json` con 10 usuarios sintéticos (ya generados en `seed-users.json`) (email, alias único,
+- [x] 18.2 Curar `supabase/seed/seed-users.json` con 10 usuarios sintéticos (ya generados en `seed-users.json`) (email, alias único,
        nombre, foto genérica, 5 cualidades, 36 respuestas) con perfiles variados de compatibilidad
-- [ ] 18.3 Test del script de seed: tras ejecutarlo dos veces sobre una base de datos vacía, el estado
+- [x] 18.3 Test del script de seed: tras ejecutarlo dos veces sobre una base de datos vacía, el estado
        resultante es idéntico (idempotencia/reproducibilidad), no realiza llamadas de red al proveedor
        de IA, y cada perfil sintético tiene su cuenta de `auth.users` correspondiente
-- [ ] 18.4 Implementar `supabase/seed/seed.ts` para que pase el test anterior: crea cada cuenta de
+- [x] 18.4 Implementar `supabase/seed/seed.ts` para que pase el test anterior: crea cada cuenta de
        autenticación vía la Admin API de Supabase (`service_role` key, contraseña aleatoria no
        comunicada), sube las fotos genéricas a Storage, e inserta cualidades, perfiles (`users`),
        `user_qualities` y `questionnaires`
-- [ ] 18.5 Crear, aparte de los 10 usuarios sintéticos completos, **una cuenta de demostración**
+- [x] 18.5 Crear, aparte de los 10 usuarios sintéticos completos, **una cuenta de demostración**
        (`auth.users` con email/contraseña conocidos, pero **sin** fila en `users`) para la presentación:
        al iniciar sesión con ella debe aterrizar en completar perfil paso 1 (ver spec
        `user-registration`, "Sin perfil, cualquier ruta redirige..."), mostrando ese flujo en vivo. La
        contraseña de esta cuenta se define y comunica fuera del repositorio (no en `tasks.md`/specs ni
        en ningún fichero versionado) — solo el email/alias de la cuenta puede documentarse si hace falta
        identificarla
+
+**Decisión de estructura, no pedida literalmente por ninguna tarea pero necesaria para implementarlas**:
+`supabase/seed/seed.ts` es *standalone* a propósito — no importa nada de `apps/backend/src` ni de
+NestJS (sí importa `@compatibility-check-app/shared-types` para validar el cuestionario contra el mismo
+`answerSetSchema` que usa el backend real, el único acoplamiento que tiene sentido). No es un workspace
+npm propio (no tiene `package.json`): se apoya en que `@supabase/supabase-js`/`typescript`/`ts-node` ya
+están hoisteados a `node_modules` de la raíz por los workspaces existentes, con un
+`supabase/seed/tsconfig.json` mínimo propio (mismo gotcha de `"types": ["node"]` que
+`apps/backend/tsconfig.json`, para no arrastrar `@types/jasmine` hoisteado). Ejecutable a mano con
+`npm run seed` (nuevo script en el `package.json` de la raíz,
+`ts-node --project supabase/seed/tsconfig.json supabase/seed/seed.ts`), leyendo `SUPABASE_URL`/
+`SUPABASE_SERVICE_ROLE_KEY` de `process.env` igual que `SupabaseService` — nunca automático.
+
+**Idempotencia (18.3), a nivel de perfil completo, no campo a campo**: `seedQualities` inserta solo los
+nombres que falten (comprobados primero por `name`, UNIQUE en BD); `ensureAuthUser` busca primero por
+email (`auth.admin.listUsers`) y solo crea si no existe; y `seedUser` comprueba si ya hay fila en
+`public.users` para ese id — si la hay, se salta entero el resto del perfil (cualidades, cuestionario,
+descarga/subida de la foto) en vez de intentar sincronizar campo a campo. Asimetría deliberada frente al
+pool de cuentas de test (`apps/backend/test/setup/global-setup.ts`, que sí resetea la contraseña en cada
+ejecución porque los tests necesitan conocerla): `ensureAuthUser` **nunca** toca la contraseña de una
+cuenta ya existente — para los 10 sintéticos da igual (nadie inicia sesión con ellos), pero para la
+cuenta de demostración (18.5) resetearla en cada re-seed destruiría la contraseña "conocida" que el
+desarrollador haya definido a mano fuera del repositorio para una presentación.
+
+**Fotos genéricas (18.2/18.4)**: DiceBear (`https://api.dicebear.com`, estilo `avataaars`, semilla
+determinista = `seedKey` de cada usuario) también renderiza cada avatar en PNG server-side, no solo SVG
+— se pide PNG explícitamente porque el bucket `user-photos` (`supabase/config.toml`,
+`allowed_mime_types`) solo admite jpg/png/webp, igual que `photo-upload.service.ts` exige para las fotos
+de usuarios reales; subir el SVG tal cual lo rechazaría el propio bucket. El campo `photoUrl` de
+`seed-users.json` queda como metadato/documentación (apunta a la variante SVG); `seed.ts` deriva la URL
+PNG a partir de `seedKey`, no de ese campo.
+
+**Sin llamadas al proveedor de IA (18.3)**: `seed.ts` inserta directamente en `questionnaires` con
+`service_role`, sin pasar por `CompleteQuestionnaireHandler` ni por el `EventBus` de Nest — nunca se
+publica `QuestionnaireCompletedEvent`, así que el módulo `matching` nunca se entera de estos usuarios (no
+se crea ninguna fila en `comparisons`) hasta que un usuario real completa su propio cuestionario y los
+selecciona como candidatos (`candidate-selector.service.ts`, ya cubierto desde la sección 8 — no hace
+falta que el seed dispare nada). Verificado en el test también de forma estructural: ninguna línea de
+`import`/`require` de `seed.ts` menciona Groq/OpenRouter ni sale de `supabase/seed`.
+
+**Test (18.3) — dónde vive y por qué**: `apps/backend/test/integration/seed.integration-spec.ts`, no
+`supabase/seed/` — es el único sitio del monorepo con el harness de test de integración ya montado
+(stack local, pool de Auth, `resetDomainTables`), y añadir un workspace nuevo solo para el test de un
+script no compensaba. Reach deliberado hacia fuera de `apps/backend` (`import { runSeed } from
+'../../../../supabase/seed/seed'`) — dirección inversa a como los demás módulos de este proyecto
+importan `shared-types` (vía workspace), pero es el propio test alcanzando el código que prueba, no un
+acoplamiento en tiempo de ejecución del backend. `resetDomainTables()` nunca toca `auth.users` (reutiliza
+el pool entre tests, `test/setup/`) — así que el propio test borra por email, en un `beforeAll`, las 11
+cuentas de Auth del seed antes de empezar, para que sea repetible indefinidamente contra el mismo stack
+local sin depender de un `npx supabase db reset` externo (confirmado real: sin este borrado, una segunda
+ejecución del test contra el mismo stack local hereda las cuentas de la ejecución anterior y falla la
+aserción de "recién creada", no por un fallo de `seed.ts` sino por un estado heredado del propio test).
+**Gotcha real de este mismo fichero**: una aserción de tipo (`as {...}`) en una asignación local
+desapareció sola al ejecutar `eslint --fix` (`no-unnecessary-type-assertion`), dejando un `any` sin avisar
+más que con el propio `no-unsafe-assignment` — mismo patrón ya documentado en
+`complete-questionnaire.handler.ts` ("el `as` vive en un `return`, nunca en una asignación local"),
+aplicado aquí con `asSeedUserProfileRow`/`asQuestionnaireAnswersRow`.
+
+**Verificado end-to-end contra el stack local real** (`npx supabase db reset` + `npx supabase start`):
+`npm run test:integration` completo en verde (21/21, incluidos los 2 tests nuevos), ejecutado dos veces
+seguidas sin reset entre medias para confirmar que es repetible de verdad; `npm run seed` (CLI standalone
+vía `ts-node`, ruta de compilación distinta a la del test) ejecutado a mano contra el stack local,
+resultado real: 15 cualidades, 10 usuarios nuevos y la cuenta de demostración creada; confirmado por SQL
+directo que las 11 cuentas quedan en `auth.users` con los emails esperados. `npm test`/`npm run
+test:e2e`/`npm run lint`/`npm run build` (los 3 workspaces) en verde tras los cambios — 2 warnings
+`no-unsafe-argument` nuevos en el test nuevo, mismo tipo ya tolerado en el resto del proyecto (`warn`, no
+`error`, en `eslint.config.mjs`) por el mismo motivo documentado en `SupabaseService`
+(`SupabaseClient` bare vs. `ReturnType<typeof createClient>`).
 
 ## 19. Despliegue gratuito (ver `design.md` decisión 10 — sin Terraform, sin YAML de deploy propio)
 

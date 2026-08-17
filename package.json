@@ -14,7 +14,8 @@
     "test:e2e": "npm run test:e2e --workspace=apps/backend",
     "test:integration": "npm run test:integration --workspace=apps/backend",
     "build": "npm run build --workspace=packages/shared-types && npm run build --workspace=apps/backend && npm run build --workspace=apps/frontend",
-    "format": "prettier --write \"{apps,packages}/**/src/**/*.{ts,html,scss}\""
+    "format": "prettier --write \"{apps,packages}/**/src/**/*.{ts,html,scss}\"",
+    "seed": "ts-node --project supabase/seed/tsconfig.json supabase/seed/seed.ts"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
