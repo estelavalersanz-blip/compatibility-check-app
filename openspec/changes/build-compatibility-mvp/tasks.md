@@ -346,24 +346,34 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 13. Frontend: completar perfil (registro paso 2, wizard de 2 pasos — ver `design.md` decisión 3e)
 
-- [ ] 13.0 Test de componente: la pantalla se presenta en 2 pasos con paginación por puntos (2 puntos,
+- [x] 13.0 Test de componente: la pantalla se presenta en 2 pasos con paginación por puntos (2 puntos,
        el actual relleno) — paso 1 (foto + nombre completo + alias) y paso 2 (cualidades); el botón
        "Siguiente" del paso 1 solo avanza de paso (no llama a `POST /users/me/profile`) y permanece
        deshabilitado mientras foto/nombre/alias no sean válidos; el envío real ocurre solo al pulsar
        "Finalizar" en el paso 2, con los datos de ambos pasos juntos en una única llamada
-- [ ] 13.1 Test de componente: las 15 cualidades del paso 2 se muestran como píldoras (no cards); al
+- [x] 13.1 Test de componente: las 15 cualidades del paso 2 se muestran como píldoras (no cards); al
        llegar a 5 seleccionadas, las píldoras no marcadas quedan deshabilitadas (no se puede marcar una
        sexta) hasta que se desmarca alguna de las 5 — desmarcar siempre es posible; y "Finalizar"
        permanece deshabilitado mientras la selección no sea exactamente 5
-- [ ] 13.2 Test de componente (paso 1): el campo de alias valida en vivo contra `GET /users/check-alias`
+- [x] 13.2 Test de componente (paso 1): el campo de alias valida en vivo contra `GET /users/check-alias`
        y muestra si está disponible u ocupado
-- [ ] 13.3 Test de componente: la cabecera de esta pantalla (Shell A) muestra el botón de cerrar sesión
+- [x] 13.3 Test de componente: la cabecera de esta pantalla (Shell A) muestra el botón de cerrar sesión
        pero **no** el enlace de Configuración, a diferencia del resto de pantallas de Shell A
-- [ ] 13.4 Implementar `features/registration` como wizard de 2 pasos (estado local `currentStep`, sin
+- [x] 13.4 Implementar `features/registration` como wizard de 2 pasos (estado local `currentStep`, sin
        llamada al backend entre pasos), con subida de foto con preview circular y validación de alias en
        el paso 1, y las píldoras de cualidad (`shared/quality-pill`) en el paso 2, para que pasen los
        tests anteriores, consumiendo `GET /qualities`, `GET /users/check-alias` y — solo al pulsar
-       "Finalizar" — `POST /users/me/profile` con los campos de ambos pasos
+       "Finalizar" — `POST /users/me/profile` con los campos de ambos pasos. **Gap real encontrado y
+       arreglado durante la verificación en el navegador** (no una tarea propia de la sección, pero
+       bloqueaba su comprobación end-to-end): `apps/backend/src/main.ts` nunca había llamado a
+       `app.enableCors(...)` — primera vez que el frontend hace una llamada HTTP real al backend desde
+       el navegador (11/11d/12 solo llamaban a Supabase Auth), así que el hueco llevaba ahí desde la
+       sección 1 sin manifestarse. Sin CORS, el preflight `OPTIONS` de cualquier petición con
+       `Authorization` o `multipart/form-data` respondía 404 y el navegador abortaba la petición real
+       antes de enviarla — afectaba a `GET /users/check-alias`, `GET /qualities` (autenticada) y
+       `POST /users/me/profile` por igual. Arreglado con `CORS_ORIGIN` (env var opcional, lista por
+       comas, cae a `http://localhost:4200` sin definir) documentada en `.env.example`, para que la
+       tarea 19.4 solo tenga que añadir la URL real de Vercel cuando exista
 
 ## 14. Frontend: cuestionario de 36 preguntas
 

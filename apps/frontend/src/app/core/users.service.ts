@@ -4,6 +4,15 @@ import { OwnUserProfile } from '@compatibility-check-app/shared-types';
 import { Observable, catchError, of, shareReplay, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+/** Payload de `POST /users/me/profile` (registro paso 2, sección 13) — los datos de ambos pasos del
+ *  wizard juntos, en un único envío. */
+export interface CreateProfilePayload {
+  name: string;
+  alias: string;
+  qualityIds: string[];
+  photo: File;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   private readonly http = inject(HttpClient);
@@ -31,5 +40,33 @@ export class UsersService {
 
   invalidateOwnProfile(): void {
     this.ownProfile$ = null;
+  }
+
+  /**
+   * `GET /users/check-alias` — validación en vivo del campo alias (tarea 13.2, vía
+   * `shared/alias-available.validator.ts`; reutilizado también por `features/settings` en la sección
+   * 17). Pública en el backend: funciona con o sin sesión, aunque en esta pantalla siempre hay una
+   * (registro paso 2, ya autenticado).
+   */
+  checkAlias(alias: string): Observable<{ available: boolean }> {
+    return this.http.get<{ available: boolean }>(`${environment.apiBaseUrl}/users/check-alias`, {
+      params: { alias },
+    });
+  }
+
+  /**
+   * `POST /users/me/profile` (registro paso 2, design.md decisión 3e) — único envío del wizard de 2
+   * pasos, con los datos de ambos pasos juntos. `multipart/form-data` porque incluye la foto;
+   * `qualityIds` se repite un campo por cada id seleccionado (el backend, `UsersController.
+   * parseProfileBody`, ya normaliza esa forma repetida a array). No se fija manualmente el header
+   * `Content-Type`: el navegador debe generar el boundary del multipart él mismo.
+   */
+  createProfile(payload: CreateProfilePayload): Observable<OwnUserProfile> {
+    const body = new FormData();
+    body.set('name', payload.name);
+    body.set('alias', payload.alias);
+    payload.qualityIds.forEach((id) => body.append('qualityIds', id));
+    body.set('photo', payload.photo, payload.photo.name);
+    return this.http.post<OwnUserProfile>(`${environment.apiBaseUrl}/users/me/profile`, body);
   }
 }

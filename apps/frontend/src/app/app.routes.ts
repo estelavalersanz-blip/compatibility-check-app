@@ -7,12 +7,13 @@ import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 import { LandingComponent } from './features/landing/landing.component';
+import { RegistrationComponent } from './features/registration/registration.component';
 import { PlaceholderComponent } from './shared/placeholder/placeholder.component';
 
 /**
- * Tabla de rutas (secciones 11/11d/12 de `tasks.md`). Las rutas de secciones aún no implementadas (13
- * en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección futura sustituye su
- * propio `component` por la feature real, sin tocar la estructura de guards/shell de aquí.
+ * Tabla de rutas (secciones 11/11d/12/13 de `tasks.md`). Las rutas de secciones aún no implementadas
+ * (14 en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección futura sustituye
+ * su propio `component` por la feature real, sin tocar la estructura de guards/shell de aquí.
  */
 export const routes: Routes = [
   // Ruta principal: sin sesión, `mainRouteGuard` deja pasar y se muestra la landing (tarea 11d.3);
@@ -39,7 +40,7 @@ export const routes: Routes = [
       // adonde ProfileGuard redirige. `minimalNav` oculta chat/configuración en la cabecera.
       {
         path: 'registration',
-        component: PlaceholderComponent,
+        component: RegistrationComponent,
         data: { title: 'Completar perfil', minimalNav: true },
       },
       {

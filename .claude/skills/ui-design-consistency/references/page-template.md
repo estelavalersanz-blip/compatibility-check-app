@@ -118,7 +118,7 @@ No copiar en `features/registration` y `features/settings` por separado — es u
       [label]="quality.label"
       [selected]="quality.selected"
       [selectedCount]="selectedCount()"
-      (toggle)="onToggle(quality)" />
+      (toggled)="onToggle(quality)" />
   }
 </div>
 ```

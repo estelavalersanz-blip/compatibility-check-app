@@ -722,7 +722,10 @@ comportamiento no cambia, solo el estilo: dos reglas siguen siendo de comportami
    propia acción de marcar, no solo el botón de guardar.
 
 Marcado exacto para el componente compartido `shared/quality-pill`, usado en registro paso 2 y en
-configuración (ver `SKILL.md`, sección "Sistema de botones, iconos y formularios"):
+configuración (ver `SKILL.md`, sección "Sistema de botones, iconos y formularios"). El output se llama
+**`toggled`, no `toggle`** (implementado así en la sección 13 tras un fallo real de lint):
+`@angular-eslint/no-output-native` rechaza cualquier nombre de output que coincida con un evento nativo
+del DOM (`toggle` es el de `<details>`) — usa siempre `toggled` al copiar este bloque:
 
 ```html
 <!-- apps/frontend/src/app/shared/quality-pill/quality-pill.component.html -->
@@ -732,7 +735,7 @@ configuración (ver `SKILL.md`, sección "Sistema de botones, iconos y formulari
   [class.quality-pill--selected]="selected"
   [attr.aria-pressed]="selected"
   [disabled]="!selected && selectedCount >= 5"
-  (click)="toggle.emit()">
+  (click)="toggled.emit()">
   {{ label }}
 </button>
 ```
@@ -747,7 +750,7 @@ estado propio de cada píldora individual):
       [label]="quality.label"
       [selected]="quality.selected"
       [selectedCount]="selectedCount()"
-      (toggle)="onToggle(quality)" />
+      (toggled)="onToggle(quality)" />
   }
 </div>
 ```
@@ -831,7 +834,7 @@ En **modo edición** (`mode === 'edit'`), esta pantalla no se muestra nunca — 
     <div class="d-flex flex-wrap gap-2 justify-content-center mb-4">
       @for (quality of qualities(); track quality.id) {
         <app-quality-pill [label]="quality.label" [selected]="quality.selected"
-                           [selectedCount]="selectedCount()" (toggle)="onToggle(quality)" />
+                           [selectedCount]="selectedCount()" (toggled)="onToggle(quality)" />
       }
     </div>
     <div class="d-flex justify-content-end">

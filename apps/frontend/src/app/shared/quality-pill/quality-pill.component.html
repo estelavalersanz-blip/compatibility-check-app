@@ -1,0 +1,10 @@
+<button
+  type="button"
+  class="btn quality-pill rounded-pill"
+  [class.quality-pill--selected]="selected()"
+  [attr.aria-pressed]="selected()"
+  [disabled]="!selected() && selectedCount() >= 5"
+  (click)="toggled.emit()"
+>
+  {{ label() }}
+</button>
