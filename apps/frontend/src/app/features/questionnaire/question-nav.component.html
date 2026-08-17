@@ -1,0 +1,32 @@
+<div class="d-flex align-items-center justify-content-center gap-3 mt-3">
+  <button
+    type="button"
+    class="btn btn-link p-0 text-body"
+    [disabled]="currentIndex() === 0"
+    (click)="previousQuestion()"
+    aria-label="Pregunta anterior"
+  >
+    <i class="bi bi-chevron-left fs-5"></i>
+  </button>
+  <div class="d-flex gap-2">
+    @for (question of questions(); track question.id; let qi = $index) {
+      <button
+        type="button"
+        class="question-nav__dot"
+        [class.question-nav__dot--answered]="question.answered"
+        [disabled]="qi > maxReachedIndex()"
+        [attr.aria-label]="'Ir a la pregunta ' + (qi + 1)"
+        (click)="goToQuestion(qi)"
+      ></button>
+    }
+  </div>
+  <button
+    type="button"
+    class="btn btn-link p-0 text-body"
+    [disabled]="currentIndex() === questions().length - 1"
+    (click)="nextQuestion()"
+    aria-label="Siguiente pregunta"
+  >
+    <i class="bi bi-chevron-right fs-5"></i>
+  </button>
+</div>

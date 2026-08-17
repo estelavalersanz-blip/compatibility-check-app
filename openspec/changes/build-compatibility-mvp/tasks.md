@@ -377,49 +377,49 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 14. Frontend: cuestionario de 36 preguntas
 
-- [ ] 14.0 Test de componente: en **modo creación** (primera vez), antes del bloque 1 se muestra una
+- [x] 14.0 Test de componente: en **modo creación** (primera vez), antes del bloque 1 se muestra una
        pantalla de bienvenida (fondo degradado, título "Cuestionario de compatibilidad", botón
        "Iniciar") que da paso al wizard solo al pulsarla; en **modo edición** esta pantalla no aparece
        nunca — se entra directo al wizard ya prerellenado (ver `design.md` decisión 3h)
-- [ ] 14.1 Test de componente: las 36 preguntas se agrupan en 6 bloques presentados como un **wizard de
+- [x] 14.1 Test de componente: las 36 preguntas se agrupan en 6 bloques presentados como un **wizard de
        6 pasos** — en cada momento solo se monta el bloque activo (nunca los 6 a la vez), con una flecha
        para volver al bloque anterior (o salir del cuestionario si es el bloque 1) y un botón para
        avanzar al siguiente sin exigir que el bloque actual esté completo
-- [ ] 14.2 Test de componente: encima del bloque activo se muestra una barra de progreso segmentada en 6
+- [x] 14.2 Test de componente: encima del bloque activo se muestra una barra de progreso segmentada en 6
        tramos con ancho proporcional al peso del bloque (5/15/20/25/30, ver `design-tokens.md`), cada
        tramo relleno según la proporción de sus 6 preguntas respondidas — sin mostrar el porcentaje de
        peso como texto en ningún sitio — y los bloques 1 y 2 (mismo peso, 5%) reciben exactamente el
        mismo ancho/gradiente
-- [ ] 14.3 Test de componente: el `card-header` del bloque activo aplica la clase
+- [x] 14.3 Test de componente: el `card-header` del bloque activo aplica la clase
        `question-block--weight-XX` según su peso (ver `design-tokens.md`), y un bloque ya completado
        (6/6) por el que ya se avanzó queda marcado con un check en su tramo de la barra de progreso
-- [ ] 14.3b Test de componente: hacer clic en el tramo de un bloque ya visitado (índice ≤ el bloque más
+- [x] 14.3b Test de componente: hacer clic en el tramo de un bloque ya visitado (índice ≤ el bloque más
        avanzado alcanzado) navega directamente a revisarlo/editarlo sin pasar por los bloques
        intermedios; los tramos de bloques aún no alcanzados no son clicables. Al revisar un bloque
        anterior, el botón del `card-footer` cambia a "Volver a donde estabas" y, al pulsarlo, regresa al
        bloque más avanzado alcanzado (no simplemente al siguiente)
-- [ ] 14.4 Test de componente: al cargar la pantalla, se consulta `GET /users/me/questionnaire` y se
+- [x] 14.4 Test de componente: al cargar la pantalla, se consulta `GET /users/me/questionnaire` y se
        prerellenan las respuestas ya guardadas (parciales o completas), posicionando el wizard en el
        primer bloque incompleto; cada respuesta se autoguarda contra `PUT /users/me/questionnaire/draft`
        (p. ej. al perder el foco o al cambiar de bloque), sin depender de `localStorage`
-- [ ] 14.5 Test de componente: el botón del bloque 6 muestra "Enviar cuestionario" en modo creación o
+- [x] 14.5 Test de componente: el botón del bloque 6 muestra "Enviar cuestionario" en modo creación o
        "Guardar y recalcular compatibilidad" en modo edición, y permanece deshabilitado mientras no haya
        respuesta para las 36 preguntas; en los bloques 1-5 el botón "Siguiente bloque" nunca se
        deshabilita por respuestas pendientes
-- [ ] 14.5b Test de componente: en modo edición, pulsar el botón del bloque 6 encadena
+- [x] 14.5b Test de componente: en modo edición, pulsar el botón del bloque 6 encadena
        `PATCH /users/me/questionnaire` seguido de `POST /users/me/recalculate` (sin paso manual
        intermedio) y navega al dashboard al completarse ambas llamadas; en modo creación, pulsarlo llama
        solo a `POST /users/me/questionnaire` y navega a `features/processing`
-- [ ] 14.6 Test de componente: dentro del bloque activo, cada pregunta ocupa toda la pantalla (ya no
+- [x] 14.6 Test de componente: dentro del bloque activo, cada pregunta ocupa toda la pantalla (ya no
        pestañas `NgbNav`); debajo hay una fila de 6 puntos + flechas prev/next, cada punto relleno si su
        pregunta está respondida, clicable para saltar directo a ella solo si ya fue visitada
        (`currentQuestionIndex`/`maxReachedQuestionIndex`, alcance local al bloque activo), y cambiar de
        pregunta aplica la transición de `question-pane` salvo que el test simule
        `prefers-reduced-motion: reduce`, en cuyo caso el cambio de pregunta sigue funcionando sin
        animación
-- [ ] 14.7 Test de componente: el `textarea` de la pregunta activa ocupa el 100% del ancho de la card
+- [x] 14.7 Test de componente: el `textarea` de la pregunta activa ocupa el 100% del ancho de la card
        (no una columna estrecha) y tiene al menos `rows="4"` de alto
-- [ ] 14.8 Implementar `features/questionnaire` como wizard de 6 pasos (un bloque montado a la vez, con
+- [x] 14.8 Implementar `features/questionnaire` como wizard de 6 pasos (un bloque montado a la vez, con
        `currentBlockIndex`/`maxReachedBlockIndex` para poder revisar bloques anteriores sin perder el
        sitio donde ibas), con la pantalla de bienvenida previa en modo creación (tarea 14.0), la barra de
        progreso segmentada por peso y sus tramos clicables, la cabecera con flecha de volver, el
@@ -428,12 +428,30 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
        transición, el `textarea` a ancho completo y `rows="4"`, el autoguardado de borrador y el botón
        del bloque 6 (`btn-dark`) condicionado según el modo (tarea 14.5/14.5b), para que pasen los tests
        anteriores
-- [ ] 14.9 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (sin
+- [x] 14.9 Diseñar `features/questionnaire` como componente reutilizable en modo "creación" (sin
        pantalla de bienvenida omitida, borrador + `POST /users/me/questionnaire` al final) y modo
        "edición" (sin pantalla de bienvenida, prerellenado, `PATCH /users/me/questionnaire` +
        `POST /users/me/recalculate` encadenados al final), accesible en modo edición como ruta propia
        (`/questionnaire?mode=edit`, no una vista embebida) desde el botón "Editar tus respuestas" de
-       `features/settings`
+       `features/settings`. **Dos gaps reales encontrados y arreglados durante la verificación en el
+       navegador** (ninguno tarea propia de la sección, ambos invisibles para los 76 tests de Karma —
+       cada test provee su propia tabla de rutas aislada, nunca ejercitan `app.routes.ts` real):
+       (1) `packages/shared-types/src/index.ts` usaba `export * from './questions'` para el catálogo
+       `QUESTIONS` — primer VALOR real (no un tipo) que el frontend importa de `shared-types`; el
+       helper `__exportStar` que genera TypeScript para `export *` copia propiedades dinámicamente en
+       tiempo de ejecución, un patrón que ni Node ni `ng build`/Karma (bundlers de un solo paso)
+       tienen problema en resolver, pero que el dev server de Angular (`ng serve`, interop CJS→ESM
+       nativo del navegador para paquetes de workspace enlazados por symlink) no puede analizar
+       estáticamente — `SyntaxError: ... does not provide an export named 'QUESTIONS'`. Arreglado con
+       una re-exportación nombrada explícita (`export { QUESTIONS, type Question } from
+       './questions'`). (2) `/processing` nunca se había añadido a `app.routes.ts` (ni siquiera como
+       `PlaceholderComponent`) — la sección 11 solo scaffoldeó las 5 rutas ya conocidas entonces
+       (registration/questionnaire/dashboard/settings/chats); el botón "Enviar cuestionario" de esta
+       sección es la primera cosa que navega de verdad a esa ruta, y sin ella `router.navigate(...)`
+       lanza `NG04002: 'processing'`. Arreglada añadiendo la ruta placeholder que faltaba, y se añadió
+       un test de regresión nuevo (`questionnaire.component.spec.ts`, describe "navegación contra la
+       tabla de rutas real") que usa `app.routes` de verdad vía `RouterTestingHarness` en vez de una
+       tabla de rutas aislada, precisamente para que este tipo de hueco no vuelva a pasar inadvertido
 
 ## 15. Frontend: pantalla de procesamiento (ver `design.md` decisión 3f)
 
