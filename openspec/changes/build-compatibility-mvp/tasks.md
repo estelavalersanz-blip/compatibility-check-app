@@ -515,27 +515,63 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 17. Frontend: configuración de perfil
 
-- [ ] 17.1 Test de componente: el formulario de configuración prerellena los datos actuales y aplica
+- [x] 17.1 Test de componente: el formulario de configuración prerellena los datos actuales y aplica
        las mismas reglas de cualidades (píldoras `shared/quality-pill`, tope de marcado en 5, bloqueo de
        envío si ≠5) y de alias (validación en vivo) que el registro — aquí sí en un único formulario, no
        en el wizard de 2 pasos de `features/registration`
-- [ ] 17.1b Test de componente: tras guardar cambios de perfil, si la respuesta indica
+- [x] 17.1b Test de componente: tras guardar cambios de perfil, si la respuesta indica
        `needsRecalculation = true`, aparece un aviso con un botón "Recalcular compatibilidad ahora" que
        llama a `POST /users/me/recalculate` y navega al dashboard; si no cambió la selección de
-       cualidades, no aparece ningún aviso
-- [ ] 17.2 Implementar `features/settings` (edición de nombre/alias/foto/cualidades, con el aviso y
+       cualidades, no aparece ningún aviso. **Matiz real encontrado escribiendo este test**:
+       `UsersService.updateProfile` (backend, tarea 6.5/6.6) solo ESCRIBE `needs_recalculation = true`
+       cuando las cualidades cambian, pero nunca lo resetea a `false` cuando no cambian (el `patch` de
+       Postgres simplemente omite esa columna) — así que la respuesta de un guardado que NO tocó
+       cualidades puede traer `needsRecalculation: true` heredado de un recálculo pendiente anterior y
+       ajeno a ese guardado (p. ej. tras editar el cuestionario desde otra pantalla). El aviso de esta
+       tarea se basa en si ESTE guardado cambió la selección (comparando contra las cualidades cargadas
+       al entrar), no solo en el valor crudo de la respuesta — ver el comentario en
+       `settings.component.ts`/`.spec.ts`. No se tocó el backend de la sección 6 para este matiz (fuera
+       de alcance de esta sección; el frontend ya lo compensa correctamente)
+- [x] 17.2 Implementar `features/settings` (edición de nombre/alias/foto/cualidades, con el aviso y
        botón de la tarea anterior) para que pasen los tests anteriores, consumiendo `GET /users/me`,
-       `PATCH /users/me` y `POST /users/me/recalculate`
-- [ ] 17.3 Test de componente: el cambio de contraseña exige la contraseña actual y la reintenta contra
+       `PATCH /users/me` y `POST /users/me/recalculate`. Añadido `UsersService.updateProfile()`
+       (`UpdateProfilePayload`, foto opcional a diferencia de `createProfile`) — no había tarea propia
+       de sección para él, igual que `createProfile` en la 13. **3 cards apiladas** en vez de una sola
+       (perfil, contraseña, cuestionario — 3 acciones de guardado independientes): nuevo "caso especial"
+       documentado en `page-template.md`
+- [x] 17.3 Test de componente: el cambio de contraseña exige la contraseña actual y la reintenta contra
        Supabase antes de llamar a `updateUser`; si la contraseña actual es incorrecta, no se cambia
-- [ ] 17.4 Implementar la sección de cambio de contraseña dentro de `features/settings` para que pase
-       el test anterior
-- [ ] 17.5 Test de componente: `features/settings` muestra un resumen del cuestionario (fecha de
+- [x] 17.4 Implementar la sección de cambio de contraseña dentro de `features/settings` para que pase
+       el test anterior (design.md decisión 7b), reutilizando `AuthService.signInWithPassword`/
+       `updatePassword` ya existentes (sección 12) — sin añadir ningún método nuevo a `AuthService`
+- [x] 17.5 Test de componente: `features/settings` muestra un resumen del cuestionario (fecha de
        finalización) y un botón "Editar tus respuestas" que **navega** a `/questionnaire?mode=edit` (no
        despliega el wizard dentro de la propia pantalla de configuración)
-- [ ] 17.6 Implementar la sección de cuestionario de `features/settings` (resumen + navegación) para
+- [x] 17.6 Implementar la sección de cuestionario de `features/settings` (resumen + navegación) para
        que pase el test anterior — el guardado en sí, y el recálculo encadenado, viven en
-       `features/questionnaire` en modo edición (tareas 14.5/14.5b/14.9), no se duplican aquí
+       `features/questionnaire` en modo edición (tareas 14.5/14.5b/14.9), no se duplican aquí.
+       **Bug real encontrado y arreglado durante la verificación** (no una tarea propia de la sección,
+       de la misma familia que los gaps de rutas de las secciones 14/16, pero a la inversa: aquí el
+       problema lo causa una ruta que SÍ existía como placeholder y pasa a tener contenido real):
+       al cablear `/settings` a `SettingsComponent` de verdad en `app.routes.ts`, la suite completa de
+       Karma empezó a fallar de forma intermitente y a colgarse (Chrome Headless se desconectaba a los
+       30s) — `profile.guard.spec.ts` (sección 11) navega por las 4 rutas protegidas usando
+       `app.routes` real con un `UsersService` falso mínimo (`fakeUsersService`, solo
+       `getOwnProfile`/`invalidateOwnProfile`, escrito en la sección 11 cuando `/settings` aún era un
+       `PlaceholderComponent`); al montar de verdad `SettingsComponent`, su formulario engancha
+       `aliasAvailableValidator` sobre ese mismo `UsersService` falso, y en cuanto se hace `patchValue`
+       (carga inicial del perfil) el validador asíncrono llama a `usersService.checkAlias(...)`, que no
+       existe en ese fake — `TypeError` real, pero lanzado dentro del mecanismo interno de señales que
+       ejecuta validadores async (fuera del ciclo síncrono de creación del componente), así que escapa
+       al manejo de errores del Router y descoloca al test runner en vez de fallar limpiamente el test
+       que lo origina — de ahí el aspecto de "flake" (la posición del fallo variaba según el orden
+       aleatorio de Jasmine). Aislado con bisección manual de `--include` hasta un repro mínimo de 2
+       ficheros. Arreglado añadiendo `checkAlias`/`updateProfile` a `fakeUsersService`
+       (`core/testing/fakes.ts`) y completando los providers de `profile.guard.spec.ts`/
+       `main-route.guard.spec.ts` (`QuestionnaireService`/`ComparisonsService`/`QualitiesService`/
+       `MatchingService`) para que cualquier componente real que esas rutas lleguen a montar en el
+       futuro tenga lo que necesita, en vez de depender de que sus llamadas HTTP fallen en silencio.
+       101/101 tests + lint limpio + `ng build` limpio tras el arreglo
 
 ## 17b. Frontend: chat interno
 

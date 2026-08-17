@@ -13,6 +13,16 @@ export interface CreateProfilePayload {
   photo: File;
 }
 
+/** Payload de `PATCH /users/me` (configuración, sección 17) — a diferencia de la creación, la foto
+ *  es opcional: si no se reenvía, el backend conserva la ya guardada (`UsersService.updateProfile`,
+ *  backend). */
+export interface UpdateProfilePayload {
+  name: string;
+  alias: string;
+  qualityIds: string[];
+  photo?: File;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   private readonly http = inject(HttpClient);
@@ -68,5 +78,21 @@ export class UsersService {
     payload.qualityIds.forEach((id) => body.append('qualityIds', id));
     body.set('photo', payload.photo, payload.photo.name);
     return this.http.post<OwnUserProfile>(`${environment.apiBaseUrl}/users/me/profile`, body);
+  }
+
+  /**
+   * `PATCH /users/me` (`features/settings`, sección 17) — mismas reglas de validación que la
+   * creación, pero `photo` es opcional: solo se añade al `FormData` si el usuario eligió una nueva
+   * (el backend conserva la ya guardada si el campo no llega).
+   */
+  updateProfile(payload: UpdateProfilePayload): Observable<OwnUserProfile> {
+    const body = new FormData();
+    body.set('name', payload.name);
+    body.set('alias', payload.alias);
+    payload.qualityIds.forEach((id) => body.append('qualityIds', id));
+    if (payload.photo) {
+      body.set('photo', payload.photo, payload.photo.name);
+    }
+    return this.http.patch<OwnUserProfile>(`${environment.apiBaseUrl}/users/me`, body);
   }
 }

@@ -2,9 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { OwnUserProfile } from '@compatibility-check-app/shared-types';
+import { of } from 'rxjs';
 import { routes } from '../../app.routes';
 import { AuthService } from '../auth.service';
 import { ChatService } from '../chat.service';
+import { ComparisonsService } from '../comparisons.service';
+import { MatchingService } from '../matching.service';
+import { QualitiesService } from '../qualities.service';
+import { QuestionnaireService } from '../questionnaire.service';
 import { fakeAuthService, fakeChatService, fakeUsersService } from '../testing/fakes';
 import { UsersService } from '../users.service';
 
@@ -28,6 +33,15 @@ async function navigateTo(url: string, profile: OwnUserProfile | null): Promise<
       { provide: AuthService, useValue: fakeAuthService(true) },
       { provide: UsersService, useValue: fakeUsersService(profile) },
       { provide: ChatService, useValue: fakeChatService() },
+      // Este test navega de verdad por `app.routes` con perfil ya completado, así que puede acabar
+      // montando cualquiera de los componentes reales de las 4 rutas protegidas
+      // (`QuestionnaireComponent`/`ResultsDashboardComponent`/`SettingsComponent`) — cada uno
+      // necesita estos servicios en su constructor, sin relación con lo que este guard en sí
+      // comprueba.
+      { provide: QuestionnaireService, useValue: { getAnswers: () => of([]) } },
+      { provide: ComparisonsService, useValue: { findMine: () => of([]) } },
+      { provide: QualitiesService, useValue: { getAll: () => of([]) } },
+      { provide: MatchingService, useValue: { recalculate: () => of({}) } },
     ],
   });
 

@@ -32,11 +32,23 @@ export function fakeChatService(
   return { listConversations: () => of(conversations) };
 }
 
+/**
+ * `checkAlias`/`updateProfile` añadidos en la sección 17: cualquier ruta protegida que se navegue vía
+ * `app.routes` real (p. ej. `profile.guard.spec.ts`, que recorre `/questionnaire`/`/dashboard`/
+ * `/settings`/`/chats` con perfil ya completado) puede acabar montando de verdad
+ * `features/settings`, y su formulario engancha `aliasAvailableValidator` sobre este mismo
+ * `UsersService` en cuanto se hace `patchValue` — sin `checkAlias` aquí, esa validación asíncrona
+ * lanza `TypeError` de verdad (visto en el navegador/CI: el error escapa fuera del ciclo síncrono de
+ * creación del componente, vía el mismo mecanismo interno de señales que ejecuta los validadores
+ * async, y descoloca al test runner en vez de fallar limpiamente el test que lo originó).
+ */
 export function fakeUsersService(
   profile: OwnUserProfile | null,
-): Pick<UsersService, 'getOwnProfile' | 'invalidateOwnProfile'> {
+): Pick<UsersService, 'getOwnProfile' | 'invalidateOwnProfile' | 'checkAlias' | 'updateProfile'> {
   return {
     getOwnProfile: () => of(profile),
     invalidateOwnProfile: () => undefined,
+    checkAlias: () => of({ available: true }),
+    updateProfile: () => of(profile ?? (null as unknown as OwnUserProfile)),
   };
 }

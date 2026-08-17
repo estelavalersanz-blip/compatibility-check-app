@@ -72,4 +72,42 @@ describe('UsersService', () => {
 
     await expectAsync(result).toBeRejectedWith(jasmine.any(HttpErrorResponse));
   });
+
+  it('updateProfile() envía PATCH /users/me con FormData, sin campo "photo" si no se selecciona una nueva (tarea 17.2)', async () => {
+    const result = firstValueFrom(
+      service.updateProfile({
+        name: 'Ada Lovelace',
+        alias: 'ada2',
+        qualityIds: ['q1', 'q2', 'q3', 'q4', 'q5'],
+      }),
+    );
+
+    const req = httpMock.expectOne(PROFILE_URL);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body instanceof FormData).toBe(true);
+    const body = req.request.body as FormData;
+    expect(body.get('name')).toBe('Ada Lovelace');
+    expect(body.get('alias')).toBe('ada2');
+    expect(body.getAll('qualityIds').length).toBe(5);
+    expect(body.get('photo')).toBeNull(); // no se reenvía si no se eligió una foto nueva
+    req.flush(ownProfile());
+
+    expect(await result).toEqual(ownProfile());
+  });
+
+  it('updateProfile() incluye la foto en el FormData cuando sí se selecciona una nueva (tarea 17.2)', async () => {
+    const photo = new File(['x'], 'nueva.jpg', { type: 'image/jpeg' });
+    firstValueFrom(
+      service.updateProfile({ name: 'Ada', alias: 'ada', qualityIds: ['q1', 'q2', 'q3', 'q4', 'q5'], photo }),
+    );
+
+    const req = httpMock.expectOne(PROFILE_URL);
+    const body = req.request.body as FormData;
+    // No `.toBe()`/identidad de objeto: el `File` no sobrevive con la misma referencia al pasar por
+    // `FormData`/`HttpTestingController` en este entorno de test — se comprueba por contenido.
+    const sentPhoto = body.get('photo') as File;
+    expect(sentPhoto.name).toBe('nueva.jpg');
+    expect(sentPhoto.type).toBe('image/jpeg');
+    req.flush(ownProfile());
+  });
 });

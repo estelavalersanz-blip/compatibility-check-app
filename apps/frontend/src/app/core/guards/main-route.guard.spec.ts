@@ -2,9 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { OwnUserProfile } from '@compatibility-check-app/shared-types';
+import { of } from 'rxjs';
 import { routes } from '../../app.routes';
 import { AuthService } from '../auth.service';
 import { ChatService } from '../chat.service';
+import { ComparisonsService } from '../comparisons.service';
+import { MatchingService } from '../matching.service';
+import { QuestionnaireService } from '../questionnaire.service';
 import { fakeAuthService, fakeChatService, fakeUsersService } from '../testing/fakes';
 import { UsersService } from '../users.service';
 
@@ -28,6 +32,12 @@ async function navigateToRoot(hasValidSession: boolean, profile: OwnUserProfile 
       { provide: AuthService, useValue: fakeAuthService(hasValidSession) },
       { provide: UsersService, useValue: fakeUsersService(profile) },
       { provide: ChatService, useValue: fakeChatService() },
+      // `/` puede resolver a `QuestionnaireComponent`/`ResultsDashboardComponent` reales (ver
+      // `profile.guard.spec.ts` para el mismo criterio) — sus constructores necesitan estos
+      // servicios, sin relación con lo que este guard en sí comprueba.
+      { provide: QuestionnaireService, useValue: { getAnswers: () => of([]) } },
+      { provide: ComparisonsService, useValue: { findMine: () => of([]) } },
+      { provide: MatchingService, useValue: { recalculate: () => of({}) } },
     ],
   });
 

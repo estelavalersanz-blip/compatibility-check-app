@@ -198,3 +198,11 @@ inventes aquí:
   estático, es la lista de mensajes con scroll propio (altura fija, `overflow-y: auto`); el
   `card-footer` es el único formulario real de la pantalla (input de texto + botón de enviar). Ver
   `design-tokens.md` para el marcado y CSS completos de las burbujas.
+- **`features/settings`** (sección 17): 3 cards apiladas (`.mb-4` entre ellas), no una sola — "perfil"
+  (foto/nombre/alias/cualidades), "cambiar contraseña" y "tu cuestionario" (resumen + navegación a
+  `/questionnaire?mode=edit`) son 3 acciones de guardado independientes, cada una con su propio
+  `card-footer`/botón/estado de error, a diferencia del resto de pantallas de Shell A que editan una
+  única entidad de una vez. El picker de foto y las píldoras de cualidad reutilizan el mismo marcado
+  que `features/registration` (paso 1/paso 2), pero aquí en un solo formulario, sin wizard — y la foto
+  es opcional (si no se toca, se conserva la ya guardada), a diferencia del registro donde es
+  obligatoria.
