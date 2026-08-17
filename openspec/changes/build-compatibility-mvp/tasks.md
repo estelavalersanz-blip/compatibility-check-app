@@ -473,26 +473,45 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 16. Frontend: dashboard de resultados
 
-- [ ] 16.1 Test de componente: las tarjetas de resultado se ordenan de mayor a menor
+- [x] 16.1 Test de componente: las tarjetas de resultado se ordenan de mayor a menor
        `compatibilidad_final`, muestran el alias del candidato (no el nombre), y el detalle de las 36
        preguntas solo se muestra al expandir
-- [ ] 16.2 Test de componente: el detalle expandible de cada pregunta muestra el texto de la pregunta,
+- [x] 16.2 Test de componente: el detalle expandible de cada pregunta muestra el texto de la pregunta,
        sus puntuaciones por dimensión y la explicación de la IA, y **no renderiza en ningún elemento**
        el texto de la respuesta propia ni la del candidato, aunque el objeto recibido del backend
        llegara a incluirlos (defensa en profundidad además del filtrado en el backend)
-- [ ] 16.3 Implementar `features/results-dashboard` (tarjetas con foto/alias/score, radar chart con
+- [x] 16.3 Implementar `features/results-dashboard` (tarjetas con foto/alias/score, radar chart con
        `ng2-charts`, detalle expandible sin respuestas) para que pasen los tests anteriores, consumiendo
        `GET /users/me/comparisons` y `GET /comparisons/:id/detail`
-- [ ] 16.4 Test de componente: el botón "recalcular compatibilidad" aparece deshabilitado/oculto cuando
+- [x] 16.4 Test de componente: el botón "recalcular compatibilidad" aparece deshabilitado/oculto cuando
        `needs_recalculation` es `false`, habilitado cuando es `true`, y tras pulsarlo y completarse el
        recálculo el dashboard se refresca con las nuevas tarjetas/gráficos
-- [ ] 16.5 Implementar el botón de recalcular compatibilidad en `features/results-dashboard` para que
+- [x] 16.5 Implementar el botón de recalcular compatibilidad en `features/results-dashboard` para que
        pase el test anterior, consumiendo `POST /users/me/recalculate` y refrescando `GET
        /users/me/comparisons` tras completarse
-- [ ] 16.6 Test de componente: cada tarjeta de resultado muestra un botón "Chatear" que, al pulsarlo,
+- [x] 16.6 Test de componente: cada tarjeta de resultado muestra un botón "Chatear" que, al pulsarlo,
        llama a `POST /conversations` con el candidato de esa tarjeta y navega a la conversación devuelta
-- [ ] 16.7 Implementar el botón "Chatear" en cada tarjeta de `features/results-dashboard` para que pase
-       el test anterior
+- [x] 16.7 Implementar el botón "Chatear" en cada tarjeta de `features/results-dashboard` para que pase
+       el test anterior. **Instalado `ng2-charts`/`chart.js`/`@angular/cdk`** (no eran dependencias
+       hasta ahora) y registrados en `app.config.ts` (`provideCharts(withDefaultRegisterables())`) —
+       necesario también en cada test de componente (`TestBed` no carga `app.config.ts`, así que sin
+       repetir el provider en el propio spec, cualquier tarjeta `completed` lanza en Karma "radialLinear
+       is not a registered scale"). **Presupuesto de bundle (`angular.json`) subido de 1MB a 1.5MB**
+       de error — Chart.js por sí solo ya empuja el inicial a ~1.18MB; el warning en 500kB (ya aceptado
+       desde secciones anteriores) se deja igual. Otros dos hallazgos reales, ninguno de la misma
+       familia que los de la sección 14: (1) `{{ question.explicación }}` no compila — el lexer de
+       expresiones de plantilla de Angular no admite tildes en notación de punto sobre identificadores
+       (`Unexpected character [ó]`), aunque sea una propiedad TS válida; arreglado con notación de
+       corchetes, `question['explicación']`. (2) `/chats/:id` no existía en `app.routes.ts` — añadida
+       de forma preventiva esta vez (placeholder, `PlaceholderComponent`), antes de que la sección 17b
+       la necesite de verdad, aplicando la lección de la sección 14 en vez de repetir el mismo
+       redescubrimiento. Verificado de extremo a extremo en el navegador con dos usuarios de prueba
+       reales y una comparación `completed` insertada a mano por SQL directamente en
+       `comparisons`/`comparison_aggregated_results`/`comparison_question_results` (sin clave real de
+       Groq no se puede llegar a `completed` por el pipeline real de IA) — confirmado que ni backend ni
+       frontend exponen `respuesta_usuario_1`/`respuesta_usuario_2` aunque la fila de BD sí las
+       tuviera, que el radar chart renderiza con los colores de marca, y que "Chatear" crea la
+       conversación real y navega a `/chats/:id`. 88/88 tests + lint limpio + `ng build` limpio
 
 ## 17. Frontend: configuración de perfil
 

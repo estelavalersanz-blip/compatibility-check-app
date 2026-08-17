@@ -10,11 +10,12 @@ import { LandingComponent } from './features/landing/landing.component';
 import { ProcessingComponent } from './features/processing/processing.component';
 import { QuestionnaireComponent } from './features/questionnaire/questionnaire.component';
 import { RegistrationComponent } from './features/registration/registration.component';
+import { ResultsDashboardComponent } from './features/results-dashboard/results-dashboard.component';
 import { PlaceholderComponent } from './shared/placeholder/placeholder.component';
 
 /**
- * Tabla de rutas (secciones 11/11d/12/13/14/15 de `tasks.md`). Las rutas de secciones aún no
- * implementadas (16 en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección
+ * Tabla de rutas (secciones 11/11d/12/13/14/15/16 de `tasks.md`). Las rutas de secciones aún no
+ * implementadas (17 en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección
  * futura sustituye su propio `component` por la feature real, sin tocar la estructura de
  * guards/shell de aquí.
  */
@@ -64,7 +65,7 @@ export const routes: Routes = [
       },
       {
         path: 'dashboard',
-        component: PlaceholderComponent,
+        component: ResultsDashboardComponent,
         canActivate: [profileGuard],
         data: { title: 'Dashboard' },
       },
@@ -79,6 +80,17 @@ export const routes: Routes = [
         component: PlaceholderComponent,
         canActivate: [profileGuard],
         data: { title: 'Chats' },
+      },
+      // Destino real del botón "Chatear" de cada tarjeta del dashboard (tarea 16.7). Añadida ahora,
+      // de forma preventiva — lección aprendida en la sección 14 (`/processing` no existía y
+      // `router.navigate` lanzaba `NG04002` en el navegador, invisible para Karma porque cada spec
+      // usa su propia tabla de rutas aislada) — en vez de esperar a que la sección 17b la necesite
+      // de verdad y volver a redescubrir el mismo fallo.
+      {
+        path: 'chats/:id',
+        component: PlaceholderComponent,
+        canActivate: [profileGuard],
+        data: { title: 'Chat' },
       },
     ],
   },

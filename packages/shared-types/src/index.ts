@@ -1,5 +1,14 @@
 export * from './answer-set';
-export * from './comparison-result';
+// Re-exportación explícita — `DIMENSIONS` es un valor real (array), no solo un tipo; se necesita en
+// el frontend desde la sección 16 (`features/results-dashboard`, para iterar las 6 dimensiones del
+// radar chart) y `export *` no lo resuelve en `ng serve` (ver el comentario del mismo patrón, más
+// abajo, junto a `QUESTIONS` — aplicado aquí de forma preventiva, no tras otro fallo real).
+export {
+  DIMENSIONS,
+  comparisonResultSchema,
+  type ComparisonResult,
+  type Dimension,
+} from './comparison-result';
 export * from './aggregated-result';
 export * from './comparison-summary';
 export * from './comparison-detail';

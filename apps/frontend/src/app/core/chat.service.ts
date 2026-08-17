@@ -16,4 +16,14 @@ export class ChatService {
   listConversations(): Observable<Conversation[]> {
     return this.http.get<Conversation[]>(`${environment.apiBaseUrl}/conversations`);
   }
+
+  /** `POST /conversations` — botón "Chatear" de cada tarjeta de `features/results-dashboard`
+   *  (sección 16); idempotente en el backend (crea o devuelve la ya existente), la UI nunca decide
+   *  cuál de las dos ocurrió. Solo devuelve el id — el resto de la conversación se carga al navegar
+   *  a `features/chats/:id` (sección 17b). */
+  startConversation(candidateUserId: string): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`${environment.apiBaseUrl}/conversations`, {
+      candidateUserId,
+    });
+  }
 }

@@ -1,0 +1,113 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
+  <div>
+    <h1 class="h3 mb-1">Tus compatibilidades</h1>
+    <p class="text-body-secondary mb-0">Ordenadas de mayor a menor compatibilidad.</p>
+  </div>
+  <button
+    type="button"
+    class="btn btn-outline-dark"
+    [disabled]="!needsRecalculation() || recalculating()"
+    (click)="recalculateNow()"
+  >
+    <i class="bi bi-arrow-clockwise"></i> Recalcular compatibilidad
+  </button>
+</div>
+
+@if (chatError()) {
+  <div class="alert alert-danger py-2 mt-3" role="alert">{{ chatError() }}</div>
+}
+
+@if (loading()) {
+  <div class="d-flex justify-content-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando…</span>
+    </div>
+  </div>
+} @else if (comparisons().length === 0) {
+  <div class="alert alert-warning d-flex align-items-center gap-2 mt-3" role="alert">
+    <i class="bi bi-info-circle"></i>
+    <span>Todavía no tienes ninguna comparación calculada.</span>
+  </div>
+} @else {
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mt-3">
+    @for (card of comparisons(); track card.id) {
+      <div class="col">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <img [src]="card.candidate.photoUrl" class="rounded-circle" width="48" height="48" alt="" />
+              <div>
+                <div class="fw-semibold">{{ card.candidate.alias }}</div>
+                @if (card.result) {
+                  <div class="text-body-secondary small">
+                    Compatibilidad: {{ card.result.compatibilidad_final }}
+                  </div>
+                }
+              </div>
+            </div>
+
+            @if (card.status === 'completed' && card.result) {
+              <div style="height: 220px">
+                <canvas baseChart [type]="'radar'" [data]="chartDataFor(card)" [options]="chartOptions">
+                </canvas>
+              </div>
+            } @else if (card.status === 'error') {
+              <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-0" role="alert">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>No se pudo completar este análisis.</span>
+              </div>
+            } @else {
+              <div class="d-flex justify-content-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Analizando…</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (card.expanded && card.status === 'completed') {
+            <div class="card-body border-top">
+              @if (card.detailLoading) {
+                <div class="d-flex justify-content-center py-3">
+                  <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Cargando…</span>
+                  </div>
+                </div>
+              } @else if (card.detailError) {
+                <div class="alert alert-danger py-2 mb-0" role="alert">No se pudo cargar el detalle.</div>
+              } @else {
+                @for (question of card.detail ?? []; track question.questionId) {
+                  <div class="mb-3">
+                    <p class="fw-semibold mb-1">{{ question.pregunta }}</p>
+                    <p class="small text-body-secondary mb-1">
+                      Compatibilidad: {{ question.compatibilidad }} · Emocional: {{ question.emocional }} ·
+                      Valores: {{ question.valores }} · Estilo: {{ question.estilo }} · Intereses:
+                      {{ question.intereses }} · Madurez: {{ question.madurez }} · Apertura:
+                      {{ question.apertura }}
+                    </p>
+                    <!-- Notación de corchetes, no `question.explicación`: el lexer de expresiones de
+                         plantilla de Angular no admite tildes en identificadores de notación de
+                         punto ("Unexpected character [ó]"), aunque sea una propiedad TS válida —
+                         `['explicación']` es una cadena literal, no un identificador, y sí compila. -->
+                    <p class="small mb-0">{{ question['explicación'] }}</p>
+                  </div>
+                }
+              }
+            </div>
+          }
+
+          <div class="card-footer bg-white d-flex justify-content-end gap-2">
+            @if (card.status === 'completed') {
+              <button type="button" class="btn btn-outline-dark btn-sm" (click)="toggleExpanded(card.id)">
+                {{ card.expanded ? 'Ocultar detalle' : 'Ver detalle' }}
+              </button>
+            }
+            <button type="button" class="btn btn-dark btn-sm" (click)="startChat(card.candidate.id)">
+              <i class="bi bi-chat-dots"></i> Chatear
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
