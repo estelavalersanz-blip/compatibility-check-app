@@ -15,3 +15,26 @@ $font-family-base: 'Poppins', 'DM Sans', 'Roboto', system-ui, sans-serif;
 
 // 3. Bootstrap Icons (fuente de iconos, independiente de las variables de arriba)
 @import 'bootstrap-icons/font/bootstrap-icons.css';
+
+// 4. Logo de marca (`.brand-mark`/`.brand-mark--white`) — GLOBAL a propósito, no en
+// `shared/brand-mark/brand-mark.component.scss`: el encapsulamiento de vista de Angular
+// (`ViewEncapsulation.Emulated`) hace que el CSS de un componente solo aplique a los elementos
+// de SU PROPIA plantilla. `<app-brand-mark>` (el navbar de core/shell) no lo necesita aquí porque ya
+// usa esas clases dentro de su propio componente, pero cualquier SVG del logo inlineado a mano en
+// OTRA plantilla (Shell B — login/registro/forgot/reset de la sección 12 — y la landing, que
+// necesita clases por-`<path>` para animar el ensamblaje y por eso no puede usar `<app-brand-mark>`)
+// solo puede heredar estas reglas si viven aquí, en el CSS global — descubierto de verdad en el
+// navegador implementando la landing (sección 11d): el logo salía en negro por defecto en vez de
+// blanco hasta mover esto de un fichero encapsulado a este.
+.brand-mark {
+  fill: currentColor; // hereda el color de texto del contenedor — nunca un color fijo aquí
+  width: 28px;
+  height: 28px;
+}
+
+// Shell B (fondo degradado): color fijo en blanco, no currentColor — el fondo ahí nunca es blanco
+.brand-mark--white {
+  fill: #ffffff;
+  width: 48px;
+  height: 48px;
+}

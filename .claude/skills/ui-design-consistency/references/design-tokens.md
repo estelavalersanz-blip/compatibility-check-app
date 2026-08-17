@@ -92,7 +92,7 @@ componente compartido (`shared/brand-mark`) — no lo redibujes ni le añadas un
 ```
 
 ```scss
-// apps/frontend/src/app/shared/brand-mark/brand-mark.component.scss
+// apps/frontend/src/styles.scss — GLOBAL, no en brand-mark.component.scss (ver por qué debajo)
 .brand-mark {
   fill: currentColor; // hereda el color de texto del contenedor — nunca un color fijo aquí
   width: 28px;
@@ -106,6 +106,16 @@ componente compartido (`shared/brand-mark`) — no lo redibujes ni le añadas un
   height: 48px;
 }
 ```
+
+**Estas dos clases van en `styles.scss` global, NUNCA en `brand-mark.component.scss`** — descubierto
+como bug real en el navegador implementando la landing (sección 11d): el `ViewEncapsulation.Emulated`
+por defecto de Angular hace que el CSS de un componente solo aplique a los elementos de SU PROPIA
+plantilla. `<app-brand-mark>` (usado tal cual en `core/shell`) no necesita nada más, pero **Shell B
+(login/registro/forgot/reset, sección 12) y la landing inlinean el SVG a mano** en su propia plantilla
+en vez de usar `<app-brand-mark>` — la landing porque cada `<path>` necesita su propia clase de
+animación escalonada, Shell B porque copia el bloque `<svg>` de la sección "Shell B" de este documento
+tal cual. Un SVG inlineado así solo hereda `fill`/tamaño si estas clases son globales; si viven en el
+componente, el logo sale con el negro por defecto de un `<path>` sin `fill` propio.
 
 `.brand-mark--accent` (naranja sobre card blanca) queda **obsoleta** — era la variante de Shell B antes
 del rediseño a fondo degradado a pantalla completa (ver sección siguiente). No la reintroduzcas.

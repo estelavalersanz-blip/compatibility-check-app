@@ -1,0 +1,4 @@
+// `.brand-mark`/`.brand-mark--white` viven en `src/styles.scss` (global), no aquí — a propósito:
+// cualquier SVG del logo inlineado a mano en OTRA plantilla (Shell B, landing) también necesita
+// estas clases, y el CSS de un componente encapsulado no llega fuera de su propia plantilla. Ver el
+// comentario en `styles.scss` para el porqué completo (bug real encontrado en la sección 11d).

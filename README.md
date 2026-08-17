@@ -57,6 +57,13 @@ npm run start:dev --workspace=apps/backend    # backend en watch mode (http://lo
 npm run start --workspace=apps/frontend       # frontend en dev server (http://localhost:4200)
 ```
 
+Desde la sección 11 (`core/shell`, guards de ruta), el frontend ya llama de verdad a Supabase Auth y
+al backend (antes era un scaffold vacío que no necesitaba ninguno de los dos arrancado). Para
+recorrer la app más allá de la landing pública hace falta, además, `npx supabase start` (mismo stack
+local que usan los tests de integración) y el backend en marcha — `apps/frontend/src/environments/
+environment.ts` ya apunta a sus URLs por defecto (`http://127.0.0.1:54321` / `http://localhost:3000`),
+sin configuración adicional.
+
 ### Tests de integración
 
 Ejercitan RLS y el esquema real de Postgres contra el stack local de Supabase (nunca el proyecto

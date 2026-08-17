@@ -1,0 +1,52 @@
+<nav class="navbar navbar-expand-md navbar-light bg-white border-bottom sticky-top">
+  <div class="container">
+    <span class="navbar-brand d-flex align-items-center gap-2">
+      <app-brand-mark />
+      AfinIA
+    </span>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navShell"
+      aria-controls="navShell"
+      aria-label="Abrir menú"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navShell">
+      @if (hasSession()) {
+        <ul class="navbar-nav ms-auto align-items-md-center gap-2">
+          @if (!minimalNav()) {
+            <li class="nav-item">
+              <button type="button" class="btn btn-link nav-link position-relative" routerLink="/chats">
+                <i class="bi bi-chat-dots"></i> Chats
+                @if (hasUnreadMessages()) {
+                  <span
+                    class="position-absolute top-0 start-100 translate-middle p-1 bg-secondary border border-light rounded-circle"
+                  >
+                    <span class="visually-hidden">Mensajes sin leer</span>
+                  </span>
+                }
+              </button>
+            </li>
+            <li class="nav-item">
+              <button type="button" class="btn btn-link nav-link" routerLink="/settings">
+                <i class="bi bi-gear"></i> Configuración
+              </button>
+            </li>
+          }
+          <li class="nav-item">
+            <button type="button" class="btn btn-outline-dark btn-sm" (click)="logout()">
+              <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+            </button>
+          </li>
+        </ul>
+      }
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4 py-md-5">
+  <router-outlet />
+</main>

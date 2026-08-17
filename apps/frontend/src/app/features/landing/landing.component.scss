@@ -1,0 +1,106 @@
+.landing-hero {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #fb8500 0%, #be1e2d 100%);
+  background-size: 200% 200%;
+  animation: landing-gradient-shift 14s ease-in-out infinite;
+}
+
+@keyframes landing-gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 30%;
+  }
+  50% {
+    background-position: 100% 70%;
+  }
+}
+
+.landing-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  max-width: 22ch;
+  animation: landing-fade-up 500ms ease-out 620ms both;
+}
+.landing-sub {
+  max-width: 34ch;
+  font-size: 0.95rem;
+  animation: landing-fade-up 500ms ease-out 760ms both;
+}
+.landing-cta {
+  animation: landing-fade-up 500ms ease-out 900ms both;
+}
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// El logo se ensambla: cada uno de los 5 <path> aparece con fundido + escala, escalonados ~80ms.
+// El SVG va inline aquí (no como <app-brand-mark>) porque cada <path> necesita su propia clase de
+// animación escalonada — el `fill: #fff` de `.brand-mark--white` ya aplica (esa clase vive en
+// `styles.scss`, global, precisamente para que un SVG inlineado a mano como este la reciba).
+.landing-mark {
+  &__p1 {
+    animation: landing-mark-in 350ms ease-out 0ms both;
+  }
+  &__p2 {
+    animation: landing-mark-in 350ms ease-out 80ms both;
+  }
+  &__p3 {
+    animation: landing-mark-in 350ms ease-out 160ms both;
+  }
+  &__p4 {
+    animation: landing-mark-in 350ms ease-out 240ms both;
+  }
+  &__p5 {
+    animation: landing-mark-in 350ms ease-out 320ms both;
+  }
+}
+
+@keyframes landing-mark-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+    transform-origin: center;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// `prefers-reduced-motion` real (producción) — todo visible de inmediato, degradado estático.
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero {
+    animation: none;
+  }
+  .landing-title,
+  .landing-sub,
+  .landing-cta,
+  .landing-mark path {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Mismas reglas, pero disparadas por una clase (en vez de por la media query del navegador): permite
+// simularlo en tests de componente sin depender de que el entorno del test soporte forzar la media
+// query real (tarea 11d.2, "con prefers-reduced-motion: reduce simulado").
+.landing-hero--reduced-motion {
+  animation: none;
+}
+.landing-title--reduced-motion,
+.landing-sub--reduced-motion,
+.landing-cta--reduced-motion,
+.landing-mark--reduced-motion path {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}

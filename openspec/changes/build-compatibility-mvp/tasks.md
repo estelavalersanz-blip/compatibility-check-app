@@ -289,40 +289,40 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 11. Frontend: shell de la aplicación autenticada
 
-- [ ] 11.1 Test de componente: la cabecera muestra los botones de chat, configuración y cerrar sesión
+- [x] 11.1 Test de componente: la cabecera muestra los botones de chat, configuración y cerrar sesión
        solo cuando hay una sesión activa, en ese orden (chat a la izquierda de configuración), y el
        botón de cerrar sesión limpia la sesión y redirige a autenticación
-- [ ] 11.2 Implementar el layout/cabecera compartido (`core/shell` o similar) con los botones de chat,
+- [x] 11.2 Implementar el layout/cabecera compartido (`core/shell` o similar) con los botones de chat,
        configuración y cerrar sesión (esquina superior derecha, en ese orden), para que pase el test
        anterior
-- [ ] 11.2b Test de componente: el icono de chat de la cabecera muestra un indicador visual cuando
+- [x] 11.2b Test de componente: el icono de chat de la cabecera muestra un indicador visual cuando
        `GET /conversations` reporta al menos un mensaje sin leer en cualquier conversación, y deja de
        mostrarlo cuando no queda ninguno
-- [ ] 11.2c Implementar el sondeo del contador de no leídos (~20-30s) y el indicador en el icono de chat
+- [x] 11.2c Implementar el sondeo del contador de no leídos (~20-30s) y el indicador en el icono de chat
        para que pase el test anterior
-- [ ] 11.3 Test de componente/routing: **con sesión activa**, la ruta principal (`/`) resuelve a
+- [x] 11.3 Test de componente/routing: **con sesión activa**, la ruta principal (`/`) resuelve a
        completar perfil (paso 1) si `GET /users/me` indica que el usuario no tiene fila de perfil aún;
        si tiene perfil pero no ha completado nunca su cuestionario, resuelve al cuestionario; en caso
        contrario, al dashboard de resultados — en ese orden de prioridad
-- [ ] 11.4 Implementar el guard/resolver de enrutamiento de la página principal para que pase el test
+- [x] 11.4 Implementar el guard/resolver de enrutamiento de la página principal para que pase el test
        anterior
-- [ ] 11.5 Test de routing: un usuario autenticado sin perfil que intenta navegar directamente (por URL)
+- [x] 11.5 Test de routing: un usuario autenticado sin perfil que intenta navegar directamente (por URL)
        a `/questionnaire`, `/dashboard`, `/settings` o `/chats` es redirigido a completar perfil (paso
        1) en vez de acceder a la ruta solicitada; un usuario con perfil ya completado no sufre esa
        redirección (ver spec `user-registration`, "Sin perfil, cualquier ruta redirige...")
-- [ ] 11.6 Implementar `ProfileGuard` (guard de ruta de Angular aplicado a todas las rutas autenticadas
+- [x] 11.6 Implementar `ProfileGuard` (guard de ruta de Angular aplicado a todas las rutas autenticadas
        salvo `features/registration`) para que pase el test anterior, reutilizando la misma consulta a
        `GET /users/me` que el resolver de la tarea 11.4 (sin duplicar la llamada por cada guard)
 
 ## 11d. Frontend: landing pública (ver `design.md` decisión 3g)
 
-- [ ] 11d.1 Test de componente/routing: **sin sesión activa**, la ruta principal (`/`) muestra
+- [x] 11d.1 Test de componente/routing: **sin sesión activa**, la ruta principal (`/`) muestra
        `features/landing` (titular, subtítulo explicando el producto, un único botón); **con sesión
        activa**, `/` no muestra la landing y resuelve igual que el test 11.3
-- [ ] 11d.2 Test de componente: el botón de la landing navega a `/auth/login`; con
+- [x] 11d.2 Test de componente: el botón de la landing navega a `/auth/login`; con
        `prefers-reduced-motion: reduce` simulado, el titular/subtítulo/botón y el logo son visibles de
        inmediato sin depender de que termine ninguna animación
-- [ ] 11d.3 Implementar `features/landing` (fondo degradado reutilizado de Shell B, animación de entrada
+- [x] 11d.3 Implementar `features/landing` (fondo degradado reutilizado de Shell B, animación de entrada
        del logo + titular/subtítulo/botón, degradado de fondo con desplazamiento lento) y el guard de `/`
        que decide entre landing y la resolución autenticada, para que pasen los tests anteriores
 
