@@ -38,3 +38,14 @@ $font-family-base: 'Poppins', 'DM Sans', 'Roboto', system-ui, sans-serif;
   width: 48px;
   height: 48px;
 }
+
+// 5. Shell B (`core/auth-shell`, sección 12): texto/labels/enlaces en blanco sobre el degradado.
+// GLOBAL por el mismo motivo que el bloque anterior — el formulario de cada pantalla
+// (`features/auth/*`) llega proyectado vía `<ng-content>` dentro de `AuthShellComponent`, y conserva
+// su PROPIO encapsulamiento de vista, no el del wrapper. Los `form-control` mantienen su fondo claro
+// de Bootstrap sin tocar (nunca transparentes sobre el degradado, perderían legibilidad).
+.auth-shell .form-label,
+.auth-shell .form-text,
+.auth-shell a {
+  color: #ffffff;
+}

@@ -52,4 +52,47 @@ export class AuthService {
   async signOut(): Promise<void> {
     await this.supabase.auth.signOut();
   }
+
+  /**
+   * Sección 12 — cada método lanza el `AuthError` de Supabase tal cual si lo hay (nunca lo traduce a
+   * un mensaje aquí: la decisión de qué mostrar depende de la pantalla — p. ej. login nunca distingue
+   * cuál de los dos datos falló, registro sí distingue "email ya en uso"). El componente que llama
+   * decide con `isAuthApiError`/`error.code` (`@supabase/supabase-js` re-exporta ambos de
+   * `@supabase/auth-js`), no con comparación de mensajes en texto.
+   */
+  async signInWithPassword(email: string, password: string): Promise<void> {
+    const { error } = await this.supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      throw error;
+    }
+  }
+
+  /** Con `enable_confirmations = false` (`supabase/config.toml`), abre sesión de inmediato — sin
+   *  paso de confirmación por email (verificado contra el stack local: un email ya registrado
+   *  responde con `AuthApiError`, `code: 'user_already_exists'`, no con un "falso éxito"). */
+  async signUp(email: string, password: string): Promise<void> {
+    const { error } = await this.supabase.auth.signUp({ email, password });
+    if (error) {
+      throw error;
+    }
+  }
+
+  /** Verificado contra el stack local: un email inexistente responde `error: null` igual que uno
+   *  existente — Supabase ya evita filtrar qué emails están registrados, sin necesitar lógica propia
+   *  aquí para mostrar siempre el mismo mensaje de confirmación (spec `authentication`). */
+  async resetPasswordForEmail(email: string): Promise<void> {
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email);
+    if (error) {
+      throw error;
+    }
+  }
+
+  /** Para la pantalla de destino del enlace de recuperación (tarea 12.7) — Supabase ya estableció la
+   *  sesión de recuperación a partir del token de la URL antes de que este método se llame. */
+  async updatePassword(newPassword: string): Promise<void> {
+    const { error } = await this.supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      throw error;
+    }
+  }
 }

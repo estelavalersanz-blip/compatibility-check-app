@@ -2,12 +2,16 @@ import { Routes } from '@angular/router';
 import { mainRouteGuard } from './core/guards/main-route.guard';
 import { profileGuard } from './core/guards/profile.guard';
 import { ShellComponent } from './core/shell/shell.component';
+import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
+import { LoginComponent } from './features/auth/login/login.component';
+import { RegisterComponent } from './features/auth/register/register.component';
+import { ResetPasswordComponent } from './features/auth/reset-password/reset-password.component';
 import { LandingComponent } from './features/landing/landing.component';
 import { PlaceholderComponent } from './shared/placeholder/placeholder.component';
 
 /**
- * Tabla de rutas (secciones 11/11d de `tasks.md`). Las rutas de secciones aún no implementadas (12 en
- * adelante) usan `PlaceholderComponent` como marcador temporal — cada sección futura sustituye su
+ * Tabla de rutas (secciones 11/11d/12 de `tasks.md`). Las rutas de secciones aún no implementadas (13
+ * en adelante) usan `PlaceholderComponent` como marcador temporal — cada sección futura sustituye su
  * propio `component` por la feature real, sin tocar la estructura de guards/shell de aquí.
  */
 export const routes: Routes = [
@@ -20,14 +24,11 @@ export const routes: Routes = [
     canActivate: [mainRouteGuard],
   },
 
-  // Shell B — pantallas públicas de autenticación (sin navbar). Solo se registra `/auth/login` por
-  // ahora: es la única que necesita esta sección (destino de "cerrar sesión" y del guard sin
-  // sesión); el resto (`register`, `forgot-password`, `reset-password`) los añade la sección 12.
-  {
-    path: 'auth/login',
-    component: PlaceholderComponent,
-    data: { title: 'Iniciar sesión' },
-  },
+  // Shell B — pantallas públicas de autenticación (sin navbar, sección 12).
+  { path: 'auth/login', component: LoginComponent },
+  { path: 'auth/register', component: RegisterComponent },
+  { path: 'auth/forgot-password', component: ForgotPasswordComponent },
+  { path: 'auth/reset-password', component: ResetPasswordComponent },
 
   // Shell A — aplicación autenticada, cabecera compartida (tarea 11.2).
   {

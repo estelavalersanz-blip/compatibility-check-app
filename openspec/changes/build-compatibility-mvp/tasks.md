@@ -328,20 +328,20 @@ esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
 ## 12. Frontend: autenticación
 
-- [ ] 12.1 Test de componente: el formulario de login rechaza el envío con email/contraseña vacíos y
+- [x] 12.1 Test de componente: el formulario de login rechaza el envío con email/contraseña vacíos y
        muestra el error genérico de credenciales inválidas devuelto por el backend/Supabase
-- [ ] 12.2 Implementar `features/auth/login` (email + contraseña + enlace "¿olvidaste tu contraseña?")
+- [x] 12.2 Implementar `features/auth/login` (email + contraseña + enlace "¿olvidaste tu contraseña?")
        usando `supabase.auth.signInWithPassword`, para que pase el test anterior
-- [ ] 12.3 Test de componente: el formulario de registro (paso 1) valida formato de email y fortaleza
+- [x] 12.3 Test de componente: el formulario de registro (paso 1) valida formato de email y fortaleza
        mínima de contraseña antes de enviar, y muestra el error si el email ya existe
-- [ ] 12.4 Implementar `features/auth/register` (paso 1: email + contraseña) usando
+- [x] 12.4 Implementar `features/auth/register` (paso 1: email + contraseña) usando
        `supabase.auth.signUp`, redirigiendo al paso 2 (completar perfil) tras el alta, para que pase el
        test anterior
-- [ ] 12.5 Test de componente: el formulario de "olvidé mi contraseña" muestra siempre el mismo mensaje
+- [x] 12.5 Test de componente: el formulario de "olvidé mi contraseña" muestra siempre el mismo mensaje
        de confirmación, exista o no el email
-- [ ] 12.6 Implementar `features/auth/forgot-password` usando `supabase.auth.resetPasswordForEmail`
+- [x] 12.6 Implementar `features/auth/forgot-password` usando `supabase.auth.resetPasswordForEmail`
        para que pase el test anterior
-- [ ] 12.7 Implementar `features/auth/reset-password` (pantalla de destino del enlace del email) para
+- [x] 12.7 Implementar `features/auth/reset-password` (pantalla de destino del enlace del email) para
        establecer una nueva contraseña con `supabase.auth.updateUser`
 
 ## 13. Frontend: completar perfil (registro paso 2, wizard de 2 pasos — ver `design.md` decisión 3e)

@@ -1,0 +1,10 @@
+// El degradado de fondo aplica al propio `<div class="auth-shell">` de ESTE componente, así que sí
+// puede vivir aquí. Las reglas de `.form-label`/enlaces en blanco, en cambio, viven en `styles.scss`
+// GLOBAL, no aquí: el contenido de cada pantalla llega proyectado vía `<ng-content>` desde
+// `LoginComponent`/`RegisterComponent`/etc., que conservan SU PROPIO encapsulamiento de vista, no el
+// de este wrapper — mismo motivo exacto que `.brand-mark`/`.brand-mark--white` (ver `styles.scss`,
+// descubierto como bug real en la sección 11d).
+.auth-shell {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #fb8500 0%, #be1e2d 100%);
+}

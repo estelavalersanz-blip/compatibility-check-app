@@ -230,14 +230,22 @@ fondo claro). Las 4 pantallas comparten el mismo fondo y esqueleto; solo cambia 
 del formulario.
 
 ```scss
-// apps/frontend/src/app/features/auth/auth-shell.component.scss (o equivalente compartido)
+// apps/frontend/src/app/core/auth-shell/auth-shell.component.scss — el degradado sí puede ir aquí
+// (aplica al propio elemento de la plantilla de ESTE componente)
 .auth-shell {
   min-height: 100vh;
   background: linear-gradient(160deg, #FB8500 0%, #BE1E2D 100%);
 }
+```
 
-// Botón principal sobre este fondo — misma regla que el resto de la app (btn-dark), no un caso especial
-// Inputs: fondo claro fijo para mantener legibilidad, texto/labels/enlaces en blanco alrededor de ellos
+```scss
+// apps/frontend/src/styles.scss — GLOBAL, NO en auth-shell.component.scss: si `AuthShellComponent`
+// envuelve el formulario de cada pantalla vía `<ng-content>` (recomendado, para no repetir el
+// degradado + logo 4 veces), ese formulario llega proyectado desde `LoginComponent`/
+// `RegisterComponent`/etc. y conserva SU PROPIO encapsulamiento de vista — el CSS de
+// `auth-shell.component.scss` no lo alcanza (mismo motivo exacto que `.brand-mark`/`.brand-mark--white`
+// más arriba, bug real descubierto en la sección 11d/12). Inputs: fondo claro fijo para mantener
+// legibilidad; texto/labels/enlaces en blanco alrededor de ellos.
 .auth-shell .form-label,
 .auth-shell .form-text,
 .auth-shell a {
