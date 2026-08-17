@@ -267,24 +267,24 @@
 Las tablas `conversations`/`messages` y sus políticas RLS ya se crean en la sección 3 (0001_init.sql);
 esta sección es la lógica de negocio y los endpoints que se apoyan en ellas.
 
-- [ ] 10b.2 Test e2e: `POST /conversations` con un `candidateUserId` que sí aparece en las
+- [x] 10b.2 Test e2e: `POST /conversations` con un `candidateUserId` que sí aparece en las
        `comparisons` del usuario autenticado (como `requester_user_id`) crea la conversación y
        devuelve 201; si ya existía, devuelve la misma conversación sin duplicarla (idempotente)
-- [ ] 10b.3 Test e2e: `POST /conversations` con un `candidateUserId` que **no** aparece entre las
+- [x] 10b.3 Test e2e: `POST /conversations` con un `candidateUserId` que **no** aparece entre las
        `comparisons` del usuario autenticado como `requester_user_id` devuelve 4xx sin crear nada
-- [ ] 10b.4 Implementar `chat.controller.ts`/`chat.service.ts` para `POST /conversations`, validando la
+- [x] 10b.4 Implementar `chat.controller.ts`/`chat.service.ts` para `POST /conversations`, validando la
        elegibilidad contra `comparisons` con `service_role` (igual que `matching`), para que pasen los
        tests anteriores
-- [ ] 10b.5 Test e2e: `GET /conversations` devuelve las conversaciones del usuario autenticado (sea
+- [x] 10b.5 Test e2e: `GET /conversations` devuelve las conversaciones del usuario autenticado (sea
        `user_a_id` o `user_b_id`), con alias/foto del otro participante, el último mensaje y si hay no
        leídos, ordenadas por actividad más reciente primero
-- [ ] 10b.6 Test e2e: `GET /conversations/:id/messages` devuelve los mensajes de una conversación en
+- [x] 10b.6 Test e2e: `GET /conversations/:id/messages` devuelve los mensajes de una conversación en
        orden cronológico y marca como leídos los mensajes dirigidos al usuario autenticado que estuvieran
        sin leer; devuelve 4xx si el usuario autenticado no es participante de esa conversación
-- [ ] 10b.7 Test e2e: `POST /conversations/:id/messages` con un `body` no vacío persiste el mensaje y lo
+- [x] 10b.7 Test e2e: `POST /conversations/:id/messages` con un `body` no vacío persiste el mensaje y lo
        devuelve; con `body` vacío devuelve 4xx sin persistir nada; con un usuario no participante de la
        conversación devuelve 4xx
-- [ ] 10b.8 Implementar los endpoints de los dos tests anteriores para que pasen, incluyendo el cálculo
+- [x] 10b.8 Implementar los endpoints de los dos tests anteriores para que pasen, incluyendo el cálculo
        del contador de no leídos en `GET /conversations`
 
 ## 11. Frontend: shell de la aplicación autenticada

@@ -26,10 +26,23 @@ export interface WritableFilteredQuery extends PromiseLike<{
   select: (columns: string) => WritableSelectResult;
 }
 
+/**
+ * Como `WritableFilteredQuery` (awaitable + `.select()`), pero además permite seguir encadenando
+ * más condiciones (`.eq()`/`.neq()`/`.is()`) — necesario para `chat.service.ts` (sección 10b), que
+ * marca como leídos los mensajes de una conversación con más de un filtro a la vez
+ * (`conversation_id` + `sender_id` distinto del usuario + `read_at` todavía nulo), a diferencia del
+ * resto de `.update()` de este proyecto hasta ahora, que solo necesitaban un único `.eq()`.
+ */
+export interface WritableUpdateFilterQuery extends WritableFilteredQuery {
+  eq: (column: string, value: unknown) => WritableUpdateFilterQuery;
+  neq: (column: string, value: unknown) => WritableUpdateFilterQuery;
+  is: (column: string, value: null) => WritableUpdateFilterQuery;
+}
+
 export interface WritableTable {
   insert: (values: Record<string, unknown> | Record<string, unknown>[]) => WritableFilteredQuery;
   update: (values: Record<string, unknown>) => {
-    eq: (column: string, value: unknown) => WritableFilteredQuery;
+    eq: (column: string, value: unknown) => WritableUpdateFilterQuery;
   };
   /**
    * Inserta o actualiza en una sola llamada atómica según la restricción `UNIQUE` indicada en

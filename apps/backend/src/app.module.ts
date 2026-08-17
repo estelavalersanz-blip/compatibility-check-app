@@ -3,6 +3,7 @@ import { AiModule } from './ai/ai.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ChatModule } from './chat/chat.module';
 import { ComparisonsModule } from './comparisons/comparisons.module';
 import { CqrsLoggingModule } from './cqrs/cqrs-logging.module';
 import { LoggerModule } from './logger/logger.module';
@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module';
     MatchingModule,
     AiModule,
     ComparisonsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
