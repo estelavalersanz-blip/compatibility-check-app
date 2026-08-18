@@ -62,4 +62,19 @@ describe('mainRouteGuard (tareas 11.3/11.4)', () => {
     const profile = ownProfile({ questionnaireCompletedAt: '2024-01-01T00:00:00.000Z' });
     expect(await navigateToRoot(true, profile)).toBe('/dashboard');
   });
+
+  // El guard solo debe mirar perfil/cuestionario (ver comentario del propio guard) — nunca
+  // `needsRecalculation` ni el estado de las comparaciones, aunque haya recálculo pendiente (spec
+  // `results-dashboard`: dashboard "independientemente de si tiene comparaciones pendientes de
+  // análisis o de recálculo"). Sin este test, un guard mal escrito que añadiera por error esa
+  // condición seguiría en verde. `ComparisonsService` aquí sigue fijo a `of([])` (no hay fake
+  // parametrizable como `fakeUsersService`, solo el inline de `navigateToRoot`), así que solo se
+  // varía `needsRecalculation`.
+  it('con perfil, cuestionario completado y needsRecalculation en true, redirige al dashboard igual', async () => {
+    const profile = ownProfile({
+      questionnaireCompletedAt: '2024-01-01T00:00:00.000Z',
+      needsRecalculation: true,
+    });
+    expect(await navigateToRoot(true, profile)).toBe('/dashboard');
+  });
 });

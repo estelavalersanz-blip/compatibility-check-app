@@ -12,6 +12,7 @@ import { of } from 'rxjs';
 import { ChatService } from '../../core/chat.service';
 import { ComparisonsService } from '../../core/comparisons.service';
 import { MatchingService } from '../../core/matching.service';
+import { expectNoHorizontalOverflow } from '../../core/testing/no-horizontal-overflow';
 import { UsersService } from '../../core/users.service';
 import { ResultsDashboardComponent } from './results-dashboard.component';
 
@@ -263,5 +264,53 @@ describe('ResultsDashboardComponent — estados de carga y vacío', () => {
     const { fixture } = setup({ comparisons: [] });
     expect(root(fixture).querySelector('.alert-warning')).not.toBeNull();
     expect(cards(fixture).length).toBe(0);
+  });
+});
+
+describe('ResultsDashboardComponent — indicador de progreso agregado (spec results-dashboard, escenario "Estado de procesamiento antes de completarse")', () => {
+  it('muestra "X de Y analizadas" mientras alguna comparación sigue en pending/analyzing', () => {
+    const { fixture } = setup({
+      comparisons: [
+        fakeComparison({ id: 'cmp-1', status: 'completed' }),
+        fakeComparison({ id: 'cmp-2', status: 'analyzing', result: null }),
+        fakeComparison({ id: 'cmp-3', status: 'pending', result: null }),
+      ],
+    });
+
+    const badge = root(fixture).querySelector('.badge');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent?.trim()).toBe('1 de 3 analizadas');
+  });
+
+  it('no muestra el indicador cuando todas las comparaciones ya han terminado (completed/error)', () => {
+    const { fixture } = setup({
+      comparisons: [
+        fakeComparison({ id: 'cmp-1', status: 'completed' }),
+        fakeComparison({ id: 'cmp-2', status: 'error', result: null }),
+      ],
+    });
+
+    expect(root(fixture).querySelector('.badge')).toBeNull();
+  });
+});
+
+describe('ResultsDashboardComponent — responsive (tarea 21.5)', () => {
+  it('el grid usa columnas responsive (1 en móvil, hasta 3 en escritorio) y el radar chart se configura para adaptarse a su contenedor', () => {
+    const { fixture } = setup();
+    const row = root(fixture).querySelector('.row');
+
+    // Depende de una media query real del viewport (igual que navbar-expand-md, tarea 21.1) — se
+    // comprueba por estructura, no forzando un ancho (eso no engañaría a `@media`).
+    expect(row?.classList.contains('row-cols-1')).toBe(true);
+    expect(row?.classList.contains('row-cols-md-2')).toBe(true);
+    expect(row?.classList.contains('row-cols-lg-3')).toBe(true);
+
+    expect(fixture.componentInstance.chartOptions?.responsive).toBe(true);
+    expect(fixture.componentInstance.chartOptions?.maintainAspectRatio).toBe(false);
+  });
+
+  it('el radar chart no desborda su contenedor en viewport móvil (~375px)', async () => {
+    const { fixture } = setup();
+    await expectNoHorizontalOverflow(root(fixture), 375);
   });
 });

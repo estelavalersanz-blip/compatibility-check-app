@@ -10,6 +10,7 @@ import { ChatService } from '../../core/chat.service';
 import { QualitiesService } from '../../core/qualities.service';
 import { CreateProfilePayload, UsersService } from '../../core/users.service';
 import { fakeAuthService, fakeChatService } from '../../core/testing/fakes';
+import { expectNoHorizontalOverflow } from '../../core/testing/no-horizontal-overflow';
 import { RegistrationComponent } from './registration.component';
 
 // Selector/plantilla propios (no el `BlankComponent` por defecto de otros specs, p. ej.
@@ -300,5 +301,17 @@ describe('Cabecera de Shell A en completar perfil (tarea 13.3)', () => {
     expect(navItems[0].textContent).toContain('Cerrar sesión');
     expect(root.querySelector('.navbar-nav')?.textContent).not.toContain('Configuración');
     expect(root.querySelector('.navbar-nav')?.textContent).not.toContain('Chats');
+  });
+});
+
+describe('RegistrationComponent — responsive (tarea 21.3)', () => {
+  it('el formulario de completar perfil (pasos 1 y 2) no genera scroll horizontal en viewport móvil (~375px)', async () => {
+    const { fixture } = setup({ qualities: QUALITIES });
+
+    await fillValidStep1(fixture);
+    await expectNoHorizontalOverflow(fixture.nativeElement as HTMLElement, 375);
+
+    goToStep2(fixture);
+    await expectNoHorizontalOverflow(fixture.nativeElement as HTMLElement, 375);
   });
 });

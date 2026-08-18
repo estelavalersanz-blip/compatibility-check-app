@@ -113,7 +113,20 @@ se integra visualmente dentro de tarjetas Bootstrap.
 
 La skill de Claude Code `.claude/skills/ui-design-consistency/` traduce esta decisión (y las 3c-ter y
 3d) en un checklist concreto y una plantilla de partida para cada pantalla, de forma que la consistencia
-entre las 8 pantallas del frontend no dependa de recordarlo manualmente en cada sesión de trabajo.
+entre las 12 pantallas del frontend no dependa de recordarlo manualmente en cada sesión de trabajo.
+
+**Consecuencia real encontrada en la tarea 21.7 (verificación manual responsive)**: al no cargar el
+bundle JS de Bootstrap, cualquier componente que dependa de él para su INTERACCIÓN (no solo su CSS)
+queda inerte, no solo modales/dropdowns como se previó originalmente aquí — el menú hamburguesa de
+`core/shell` (`navbar-toggler` con `data-bs-toggle="collapse"`) era, en la práctica, imposible de
+abrir en móvil: Bootstrap solo aporta el CSS de `.collapse`/`.collapse.show`
+(`display: none`/`block`), nunca el JS que añade esa clase al pulsar el toggler. Confirmado real
+contra la app en marcha (no solo sospechado): a 375px, `.navbar-collapse` seguía midiendo
+`display: none` después del clic. Arreglado con el mismo criterio ya adoptado aquí para modales/
+dropdowns — reimplementado en Angular puro (una señal `navCollapsed` en `shell.component.ts`, sin
+ninguna dependencia del JS de Bootstrap) — en vez de reconsiderar la decisión de no cargarlo.
+Cualquier otro uso futuro de un componente interactivo "de solo-CSS" de Bootstrap (`data-bs-*` sin
+`ngb*`) debe darse por no funcional hasta reimplementarlo así.
 
 ### 3c-ter. Diseño completamente responsive (mobile-first, solo acceso web)
 
@@ -125,6 +138,17 @@ colapsa a menú hamburguesa en móvil; el stepper del cuestionario y los formula
 disponible sin scroll horizontal; las tarjetas del dashboard pasan de 3 columnas en escritorio a 1
 columna apilada en móvil; los gráficos radar (`ng2-charts`) se redimensionan al contenedor en vez de
 tener un tamaño fijo en píxeles.
+
+**Gap real encontrado y arreglado en la tarea 21.5/21.6**: "se redimensionan al contenedor" no se
+cumplía solo con `chartOptions: { responsive: true, maintainAspectRatio: false }` — Chart.js fija
+además un `width`/`height` en píxeles como estilo **inline** sobre el propio `<canvas>` al
+construirse (medido contra el ancho de su contenedor en ese momento), y una regla de hoja de estilos
+normal nunca gana a un inline. Confirmado real con un test que mide `scrollWidth` dentro de un
+contenedor de 375px (no solo comprobando `chartOptions`): el canvas desbordaba 340px. Arreglado en
+`results-dashboard.component.scss` con `canvas { width: 100% !important; max-width: 100% !important }`
+(única forma correcta de ganarle a un inline no-`!important`) más `.row > .col { min-width: 0 }` (un
+`.col` de Bootstrap es un flex item, y `min-width: auto` por defecto dejaba que el contenido — el
+propio canvas oversized — empujara a la columna entera a crecer).
 
 ### 3c-quater. Marca "AfinIA", paleta de color, tipografía y cuestionario como wizard con gradiente de peso
 
@@ -181,7 +205,7 @@ dentro de cada bloque sin volver a un stepper lineal para las 36 preguntas compl
 
 Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` (SKILL.md
 + `references/design-tokens.md` con los valores exactos, el logo y la tabla de gradientes +
-`references/page-template.md` con el marcado de partida), para que la consistencia entre las 8 pantallas
+`references/page-template.md` con el marcado de partida), para que la consistencia entre las 12 pantallas
 no dependa de recordarlo manualmente en cada sesión de trabajo.
 
 ### 3d. Selección de cualidades como cards con mínimo y máximo de 5
@@ -366,6 +390,15 @@ El endpoint de envío final (`POST /users/me/questionnaire`, ya existente) sigue
 exige las 36 respuestas completas, marca `questionnaire_completed_at` y dispara el evento — el borrador
 y el envío final son operaciones distintas con validaciones distintas, no la misma operación con un
 parámetro opcional.
+
+**Posicionamiento del wizard al recargar (corregido tras un verify posterior)**: al reabrir el
+cuestionario, el frontend posiciona el wizard en el primer bloque con alguna respuesta pendiente
+(`positionAtFirstIncompleteBlock()`, `questionnaire.component.ts`) — y si las 36 ya están respondidas
+(no queda ningún bloque incompleto), aterriza en el **último bloque (6)**, no en el primero: así quien
+reabre un cuestionario ya terminado ve directamente el resumen/banner de cierre y el botón de envío,
+en vez de tener que volver a pasar por los 5 bloques anteriores para llegar ahí. La primera
+implementación (sección 14) aterrizaba en el bloque 1 en ese caso; se corrigió al detectar la
+divergencia con este mismo escenario durante un `openspec-verify-change` posterior.
 
 ### 5d. Las respuestas de otros usuarios nunca se exponen en el dashboard
 
@@ -597,6 +630,12 @@ un gateway WebSocket (`@nestjs/websockets`) — añadiría una dependencia de in
 (cold start); el sondeo es coherente con el resto de la app y suficiente para una demo de TFM, a costa de
 no ser mensajería instantánea (ver Risks).
 
+**Matiz explícito para la defensa del TFM**: `ShellComponent` (icono del menú) y la pantalla de
+conversación sondean de forma independiente, sin avisarse entre sí — abrir y leer una conversación no
+fuerza un refresco inmediato del badge del menú, que sigue su propio ciclo de ~20-30s. Es decir, tras
+leer un mensaje, el punto de "no leído" del menú puede tardar hasta ese margen en desaparecer si no se
+recarga la pantalla. Es una consecuencia aceptada del propio diseño por sondeo, no un bug.
+
 Fuera de alcance explícito de esta decisión (ver Non-Goals): tiempo real vía WebSockets, llamadas,
 chats grupales, indicador de "escribiendo…", edición/borrado de mensajes, notificaciones push y cifrado
 end-to-end.
@@ -700,7 +739,21 @@ con unitarios/e2e no depende de tener Docker levantado en cada guardado.
 
 - **Rate limits del free tier de Groq** → Mitigación: batching (6 llamadas/comparación), concurrencia
   limitada, backoff exponencial con reintentos acotados, y la regla de "cálculo único por usuario" del
-  punto 5.
+  punto 5. **Confirmado real durante la tarea 20.2** (verificación end-to-end con IA real, no
+  mockeada): con el modelo actual (`openai/gpt-oss-120b`, ver más abajo), el free tier de Groq
+  devuelve `429` con bastante facilidad en cuanto se disparan varias comparaciones/lotes seguidos
+  (p. ej. al reintentar 3 comparaciones `error` a la vez, o al completar el cuestionario justo
+  después de una prueba anterior reciente) — el backoff interno (50/150ms, calibrado para no
+  ralentizar los tests) es demasiado corto para un `429` real, que necesita más bien decenas de
+  segundos para despejarse. **Implicación práctica para una demo en vivo**: evitar completar más de
+  un cuestionario nuevo seguido en pocos minutos; si una comparación queda en `error` por esto,
+  esperar ~1 minuto y usar `POST /comparisons/:id/reanalyze` (no hace falta repetir el cuestionario).
+  **Gap real independiente encontrado en la misma tarea**: el modelo original de esta decisión,
+  `llama-3.3-70b-versatile`, dejó de existir en el catálogo de Groq (`GET /openai/v1/models`, `404`
+  en cualquier llamada) — sustituido por `openai/gpt-oss-120b` en `groq.provider.ts` (open-weight
+  también, mismo criterio de la decisión 4, solo cambia de familia de modelo). Si esto volviera a
+  pasar en el futuro (Groq retira modelos con cierta frecuencia), `GET /openai/v1/models` con la
+  misma API key confirma el catálogo vigente.
 - **Cold-start de Render (free tier)** → Mitigación: pantalla de carga explicativa en el frontend
   durante el polling inicial; documentar la limitación en la memoria del TFM.
 - **Salida no determinista del LLM** (mismo par de respuestas puede puntuar distinto entre ejecuciones)

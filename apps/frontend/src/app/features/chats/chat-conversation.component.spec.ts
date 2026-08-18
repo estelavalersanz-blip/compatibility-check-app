@@ -4,6 +4,7 @@ import { Conversation, Message } from '@compatibility-check-app/shared-types';
 import { of } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { ChatService } from '../../core/chat.service';
+import { expectNoHorizontalOverflow } from '../../core/testing/no-horizontal-overflow';
 import { ChatConversationComponent } from './chat-conversation.component';
 
 const MY_USER_ID = 'user-me';
@@ -162,5 +163,15 @@ describe('ChatConversationComponent — scroll automático (tarea 17b.3)', () =>
     expect(container).not.toBeNull();
     expect(container!.scrollHeight).toBeGreaterThan(container!.clientHeight);
     expect(container!.scrollTop).toBeGreaterThan(0);
+  });
+});
+
+describe('ChatConversationComponent — responsive (tarea 21.6b)', () => {
+  it('un mensaje largo sin espacios hace wrap en la burbuja en vez de desbordar la card en viewport móvil (~375px)', async () => {
+    const longWord = 'a'.repeat(400);
+    const { fixture } = setup({ messages: [fakeMessage({ body: longWord, senderId: MY_USER_ID })] });
+    await loaded(fixture);
+
+    await expectNoHorizontalOverflow(root(fixture), 375);
   });
 });

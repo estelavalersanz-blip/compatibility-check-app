@@ -5,7 +5,14 @@ import { AiCompletionRequest, AiProvider } from './ai-provider.interface';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // Modelo open-weight de Groq (docs/plan.md, "IA" en la tabla de stack) — configurable a futuro sin
 // tocar el contrato de AiProvider si se necesitara, no hay ninguna tarea que lo pida todavía.
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+//
+// Gap real encontrado en la tarea 20.2 (verificación end-to-end con IA real, no simulada): el
+// modelo original de esta constante, `llama-3.3-70b-versatile`, respondía 404 — Groq había
+// retirado ya ese modelo de su catálogo (`GET /openai/v1/models`, confirmado en el momento:
+// ninguna variante de Llama seguía disponible). `openai/gpt-oss-120b` es la alternativa open-weight
+// de mayor capacidad que sí aparece en el catálogo actual — mismo espíritu de la decisión 4 de
+// design.md (modelo abierto, no un proveedor cerrado), solo cambia de familia de modelo.
+const GROQ_MODEL = 'openai/gpt-oss-120b';
 
 interface GroqChatCompletionResponse {
   choices?: Array<{ message?: { content?: string } }>;

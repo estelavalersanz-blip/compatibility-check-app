@@ -1,14 +1,16 @@
 import { registerLocaleData } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import localeEs from '@angular/common/locales/es';
 import { Component, LOCALE_ID } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { OwnUserProfile, Quality } from '@compatibility-check-app/shared-types';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { MatchingService } from '../../core/matching.service';
 import { QualitiesService } from '../../core/qualities.service';
 import { UpdateProfilePayload, UsersService } from '../../core/users.service';
+import { expectNoHorizontalOverflow } from '../../core/testing/no-horizontal-overflow';
 import { SettingsComponent } from './settings.component';
 
 // Solo `app.config.ts` (nunca cargado por `TestBed`) registra el locale español — sin esto, el pipe
@@ -139,6 +141,18 @@ describe('SettingsComponent — perfil (tarea 17.1)', () => {
     expect(selected.length).toBe(5);
   });
 
+  it('prerellena también la foto de perfil desde profile.photoUrl', async () => {
+    const { fixture } = setup({
+      profile: ownProfile({ photoUrl: 'https://example.com/una-foto-real.jpg' }),
+    });
+    await loaded(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+
+    // Único <img> de toda la plantilla (vista previa dentro de `.profile-photo-picker`) — sin
+    // ambigüedad posible con `querySelector('img')` a secas.
+    expect(root.querySelector('img')?.getAttribute('src')).toBe('https://example.com/una-foto-real.jpg');
+  });
+
   it('al llegar a 5 marcadas, las no marcadas quedan deshabilitadas (misma regla que el registro)', async () => {
     const { fixture } = setup();
     await loaded(fixture);
@@ -196,6 +210,32 @@ describe('SettingsComponent — perfil (tarea 17.1)', () => {
     expect(payload.alias).toBe('ada');
     expect(payload.qualityIds.length).toBe(5);
     expect(payload.photo).toBeUndefined(); // no se tocó la foto
+  });
+
+  /**
+   * Ruta de error 409 (alias duplicado) al GUARDAR — a diferencia del test de arriba, que cubre la
+   * validación en vivo del campo contra GET /users/check-alias, este es el error que puede devolver
+   * el propio PATCH si dos guardados compiten por el mismo alias entre que se valida en vivo y se
+   * pulsa "Guardar cambios". `saveProfile()` (`settings.component.ts`) distingue este caso de un
+   * error genérico para mostrar un mensaje específico, y — a diferencia de un guardado con éxito —
+   * nunca debe limpiar lo que el usuario ya había escrito.
+   */
+  it('si el guardado devuelve 409 (alias duplicado), muestra el error y no limpia el formulario', async () => {
+    const updateProfileSpy = jasmine
+      .createSpy('updateProfile')
+      .and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    const { fixture } = setup({ updateProfile: updateProfileSpy });
+    await loaded(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+
+    setInputValue(fixture, 'settings-name', 'Ada L.');
+    await loaded(fixture);
+    findButton(root, 'Guardar cambios').click();
+    await loaded(fixture);
+
+    expect(root.querySelector('.alert-danger')?.textContent).toContain('ya está en uso');
+    // No se limpia: el nombre recién editado sigue en el formulario tras el error.
+    expect(root.querySelector<HTMLInputElement>('#settings-name')?.value).toBe('Ada L.');
   });
 });
 
@@ -320,5 +360,14 @@ describe('SettingsComponent — resumen del cuestionario (tarea 17.5)', () => {
     await loaded(fixture);
 
     expect(TestBed.inject(Router).url).toBe('/questionnaire?mode=edit');
+  });
+});
+
+describe('SettingsComponent — responsive (tarea 21.3)', () => {
+  it('el formulario de configuración no genera scroll horizontal en viewport móvil (~375px)', async () => {
+    const { fixture } = setup();
+    await loaded(fixture);
+
+    await expectNoHorizontalOverflow(fixture.nativeElement as HTMLElement, 375);
   });
 });

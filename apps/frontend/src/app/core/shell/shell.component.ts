@@ -44,13 +44,28 @@ export class ShellComponent {
   /** Tareas 11.2b/11.2c: indicador de no leídos, sondeado — nunca se muestra si `minimalNav()`. */
   readonly hasUnreadMessages = signal(false);
 
+  /**
+   * Tarea 21.1/21.2 (responsive) — bug real encontrado en la verificación manual de la tarea 21.7:
+   * Bootstrap no carga su bundle JS en este proyecto (design.md decisión 3c-bis, para evitar
+   * conflictos con la detección de cambios de Angular), así que `data-bs-toggle="collapse"` en la
+   * plantilla no tiene ningún efecto por sí solo — Bootstrap solo aporta el CSS de `.collapse`/
+   * `.collapse.show` (`display: none`/`block`), nunca el JS que añade esa clase al pulsar el
+   * toggler. Sin esta señal, el menú hamburguesa era, en la práctica, imposible de abrir en móvil.
+   */
+  readonly navCollapsed = signal(true);
+
   constructor() {
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(() => this.minimalNav.set(this.readMinimalNavFromRoute()));
+      .subscribe(() => {
+        this.minimalNav.set(this.readMinimalNavFromRoute());
+        // Una navegación real cierra el menú móvil — si no, quedaría abierto tapando la siguiente
+        // pantalla en viewport estrecho.
+        this.navCollapsed.set(true);
+      });
 
     // Primera carga inmediata y síncrona (sin pasar por ningún temporizador, ni siquiera de 0ms) —
     // separada del sondeo periódico para que el estado inicial no dependa de que se cumpla un
@@ -73,6 +88,11 @@ export class ShellComponent {
 
   private applyUnread(conversations: Conversation[]): void {
     this.hasUnreadMessages.set(conversations.some((conversation) => conversation.unreadCount > 0));
+  }
+
+  /** Ver el comentario de `navCollapsed` — el toggle real que Bootstrap dejaría de hacer solo. */
+  toggleNav(): void {
+    this.navCollapsed.update((collapsed) => !collapsed);
   }
 
   private readMinimalNavFromRoute(): boolean {

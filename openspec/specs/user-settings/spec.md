@@ -1,4 +1,12 @@
-## ADDED Requirements
+# User Settings
+
+## Purpose
+
+Permite a un usuario ya registrado editar su perfil (nombre, alias, foto, cualidades), su contraseña
+(con reautenticación) y sus respuestas del cuestionario desde una única pantalla de configuración
+accesible desde la cabecera, con recálculo de compatibilidad integrado en el guardado cuando aplica.
+
+## Requirements
 
 ### Requirement: Acceso a configuración desde la cabecera
 El sistema SHALL mostrar, en la esquina superior derecha de toda pantalla autenticada, un botón de
@@ -51,7 +59,10 @@ misma acción de guardado de esa edición, sin exigir un paso manual aparte.
 - **WHEN** un usuario guarda cambios válidos en sus 36 respuestas desde la pantalla del cuestionario en
   modo edición
 - **THEN** el sistema sustituye las respuestas almacenadas y recalcula su compatibilidad como parte de
-  esa misma acción, sin necesitar activar después un botón de recálculo por separado
+  esa misma acción, sin necesitar activar después un botón de recálculo por separado. Como en
+  `candidate-matching`: es una garantía de experiencia de usuario (un único clic), no de atomicidad de
+  backend — el cliente encadena `PATCH` + `POST /recalculate` como dos llamadas HTTP consecutivas (ver
+  `design.md` decisión 3h)
 
 ### Requirement: Cambio de contraseña con reautenticación
 El sistema SHALL exigir la contraseña actual, además de la nueva, para poder cambiar la contraseña desde

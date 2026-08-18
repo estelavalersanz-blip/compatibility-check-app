@@ -11,6 +11,7 @@ import { ComparisonsService } from '../../core/comparisons.service';
 import { MatchingService } from '../../core/matching.service';
 import { QuestionnaireService } from '../../core/questionnaire.service';
 import { fakeAuthService, fakeChatService, fakeUsersService } from '../../core/testing/fakes';
+import { expectNoHorizontalOverflow } from '../../core/testing/no-horizontal-overflow';
 import { UsersService } from '../../core/users.service';
 import { QuestionnaireComponent } from './questionnaire.component';
 
@@ -325,9 +326,9 @@ describe('QuestionnaireComponent — prerellenado y autoguardado (tarea 14.4)', 
     expect(segments(fixture)[0].disabled).toBe(false);
   });
 
-  it('con el cuestionario completo (modo edición), no hay bloque incompleto y aterriza en el bloque 1', () => {
+  it('con el cuestionario completo (modo edición), no hay bloque incompleto y aterriza en el bloque 6', () => {
     const { fixture } = setup({ mode: 'edit', existingAnswers: answersFor(idsUpTo(36)) });
-    expect(blockHeaderText(fixture)).toContain('Bloque 1');
+    expect(blockHeaderText(fixture)).toContain('Bloque 6');
   });
 
   it('autoguarda contra PUT .../draft al perder el foco y al cambiar de bloque', () => {
@@ -548,5 +549,15 @@ describe('QuestionnaireComponent — navegación contra la tabla de rutas real (
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/processing');
+  });
+});
+
+describe('QuestionnaireComponent — responsive (tarea 21.3)', () => {
+  it('el wizard (barra de progreso, pregunta activa y navegación de puntos) no genera scroll horizontal en viewport móvil (~375px)', async () => {
+    const { fixture } = setup();
+    start(fixture);
+    fillActiveBlockCompletely(fixture);
+
+    await expectNoHorizontalOverflow(root(fixture), 375);
   });
 });

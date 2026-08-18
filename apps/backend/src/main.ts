@@ -1,3 +1,12 @@
+// Primer import, antes de cualquier otro: `SupabaseService`/`AiModule`, etc. leen `process.env` en
+// su propio constructor (al construirse durante `NestFactory.create`), así que `.env` debe estar ya
+// cargado antes de que se evalúe ningún import posterior. Gap real encontrado en la tarea 20.2
+// (verificación end-to-end): nada cargaba `.env` hasta ahora — en Render no hace falta (las variables
+// ya están puestas como secretos de la plataforma, y `dotenv` nunca sobrescribe una variable que ya
+// exista en `process.env`), pero en local, sin exportar las variables a mano en el shell antes de
+// `npm run start:dev`, `SupabaseService` fallaba al arrancar. `README.md`/`apps/backend/README.md`
+// ya decían "copia `.env.example` a `.env`" dando por hecho que se cargaría solo.
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';

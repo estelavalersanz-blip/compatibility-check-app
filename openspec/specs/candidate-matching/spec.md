@@ -1,4 +1,14 @@
-## ADDED Requirements
+# Candidate Matching
+
+## Purpose
+
+Calcula, para cada usuario, sus hasta 3 candidatos más afines por cualidades personales compartidas
+— una única vez, en el momento en que el propio usuario completa su cuestionario, sin recálculo
+retroactivo para otros usuarios ya existentes — y admite una excepción explícita y acotada: el propio
+usuario puede recalcular sus propias comparaciones bajo demanda tras editar sus respuestas o
+cualidades, sin propagar ese efecto a nadie más.
+
+## Requirements
 
 ### Requirement: Selección de los 3 candidatos más afines por cualidades compartidas
 El sistema SHALL, al completar un usuario su cuestionario, seleccionar hasta 3 candidatos de entre los
@@ -68,7 +78,11 @@ comparaciones anteriores.
   `personal-questionnaire`/`user-settings`) y guarda los cambios
 - **THEN** el sistema encadena, como parte de esa misma acción del usuario, la sustitución de las
   respuestas y el recálculo descrito en el escenario "Ejecución del recálculo" — sin exigir que el
-  usuario active un control de recalcular por separado después de guardar
+  usuario active un control de recalcular por separado después de guardar. "Encadena" es una garantía
+  de **experiencia de usuario** (un único clic, sin volver a buscar un botón aparte), no de atomicidad
+  de backend: la implementación real es el cliente disparando dos llamadas HTTP consecutivas
+  (`PATCH` seguido de `POST /recalculate`), no una única operación transaccional — ver `design.md`
+  decisión 3h para el detalle exacto
 
 #### Scenario: Editar solo cualidades sigue exigiendo activar el recálculo por separado
 - **WHEN** un usuario cambia únicamente su selección de cualidades (sin tocar el cuestionario) desde

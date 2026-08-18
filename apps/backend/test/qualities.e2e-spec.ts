@@ -22,9 +22,9 @@ const FIFTEEN_QUALITIES: Quality[] = Array.from({ length: 15 }, (_, index) => ({
 
 /**
  * Sustituto en memoria de `SupabaseService` (patrón documentado en `test/setup/e2e-env.ts`): el
- * catálogo real se puebla con el seed (sección 18, todavía sin implementar), así que aquí se
- * modela una respuesta fija de 15 filas para verificar la forma/plumbing del endpoint, no el
- * contenido real del catálogo.
+ * catálogo real ya se puebla con el seed (`supabase/seed/seed.ts`, sección 18), pero este test
+ * sigue montando aquí su propia respuesta fija de 15 cualidades inventadas, a propósito desacoplada
+ * del seed real, para verificar la forma/plumbing del endpoint, no su contenido real.
  */
 function createFakeSupabaseService(qualities: Quality[]): Pick<SupabaseService, 'getClient'> {
   return {

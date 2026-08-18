@@ -842,7 +842,7 @@ test:e2e`/`npm run lint`/`npm run build` (los 3 workspaces) en verde tras los ca
       API (`PUT .../auth/v1/admin/users/:id`, sin email de por medio) — con `curl.exe`, no
       `Invoke-RestMethod` de PowerShell (su `User-Agent` por defecto contiene "Mozilla/5.0" y Supabase
       lo detecta como uso de la Secret key desde un navegador y lo bloquea).
-- [ ] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → completar perfil paso 2a
+- [x] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → completar perfil paso 2a
        con foto/nombre/alias → paso 2b con cualidades → cuestionario → procesando → dashboard →
        configuración → logout → login → recuperar contraseña) y contra las URLs públicas desplegadas.
        Aparte, iniciar sesión con la cuenta de demostración sin perfil (tarea 18.5) e intentar navegar
@@ -862,22 +862,90 @@ test:e2e`/`npm run lint`/`npm run build` (los 3 workspaces) en verde tras los ca
       'root'`) sobrevivía al cierre de sesión con la caché del usuario anterior todavía en `true`.
       Arreglado en `apps/frontend/src/app/core/shell/shell.component.ts` (`logout()` ahora llama a
       `usersService.invalidateOwnProfile()` antes de navegar) con un test nuevo en
-      `shell.component.spec.ts` que reproduce el escenario. Verificación pendiente de repetir contra
-      la app real tras el deploy de este fix.
-- [ ] 20.3 Recorrer manualmente el flujo de edición y recálculo: recargar la app tras completar el
+      `shell.component.spec.ts` que reproduce el escenario. **Confirmado ya contra la app real**
+      (PR #3 mergeado a `main`): con el bundle nuevo cargado, login como usuario seed → logout → login
+      como cuenta de demostración (sin recargar la página) aterriza correctamente en `/registration`;
+      `/settings` y `/chats` por URL directa también redirigen ahí.
+
+      **Segundo gap real encontrado, este de infraestructura de desarrollo**: para repetir el
+      recorrido completo en local con IA real (necesario porque el límite de emails del free tier
+      bloqueaba seguir haciéndolo contra producción), `apps/backend` no arrancaba con
+      `SUPABASE_URL no está definida` a pesar de tener `apps/backend/.env` bien rellenado — nada
+      cargaba ese fichero en `process.env` (README/`apps/backend/README.md` ya decían "copia
+      `.env.example` a `.env`" dando por hecho que se cargaría solo). Arreglado añadiendo `dotenv`
+      como dependencia real de `apps/backend` e `import 'dotenv/config'` como primerísimo import de
+      `main.ts` — no afecta a Render (las variables ya están puestas como secretos de la plataforma, y
+      `dotenv` nunca sobrescribe una variable que ya exista) ni a los tests (e2e/integración cargan
+      `AppModule`/`SupabaseService` directamente, sin pasar por `main.ts`). Verificado: 72 unitarios +
+      79 e2e + lint + build limpios tras el cambio, y el backend local arranca ya sin exportar nada a
+      mano en el shell.
+
+      **Tercer y cuarto gap real, esta vez con el análisis de IA real** (nunca antes verificado de
+      extremo a extremo en este proyecto — hasta ahora siempre mockeado o con datos insertados a
+      mano por SQL): (1) `llama-3.3-70b-versatile` (el modelo de Groq de `groq.provider.ts` desde la
+      sección 9) ya no existe en su catálogo — `404` en cualquier llamada — sustituido por
+      `openai/gpt-oss-120b`; (2) el free tier de Groq agota su límite de peticiones con bastante
+      facilidad ante varias comparaciones/lotes seguidos (`429`), más rápido de lo que el backoff
+      interno (50/150ms) puede esperar solo. Ambos hallazgos, con el detalle completo y el manual de
+      qué hacer si reaparecen antes de una demo en vivo, documentados en `design.md` (Risks/
+      Trade-offs), `docs/plan.md` (misma sección) y en una sección nueva del README raíz,
+      "Limitaciones de las herramientas gratuitas" — incluye también el límite de envío de emails de
+      Supabase Auth, agotado de verdad durante esta misma tarea al registrar varias cuentas de
+      prueba seguidas contra el proyecto real.
+
+      **Resultado final de esta verificación concreta**: con el modelo corregido, lotes individuales
+      recibieron respuesta real válida de Groq varias veces (`"Lote válido recibido"`, contenido real
+      parseado y validado contra el esquema Zod) — confirma que el mecanismo completo (petición →
+      parseo → validación → persistencia) funciona de verdad. No se llegó a ver una comparación
+      completa en estado `completed` en esta sesión: tras varios reintentos con esperas crecientes
+      (45s, 90s, 3 min) el rate limit de esta cuenta de Groq seguía bloqueando al menos 1 de los 6
+      lotes cada vez — parece un límite más estricto que un simple RPM de 60s (posiblemente diario/de
+      cuota, agotado por el volumen de pruebas de esta misma tarea). Se da por suficientemente
+      verificado el pipeline (el mecanismo, no el resultado agregado final) y no se siguió insistiendo
+      para no seguir gastando cuota real.
+- [x] 20.3 Recorrer manualmente el flujo de edición y recálculo: recargar la app tras completar el
        cuestionario y comprobar que la página principal es el dashboard; editar cualidades desde
        configuración, guardar y usar el atajo "Recalcular compatibilidad ahora"; por separado, entrar a
        "Editar tus respuestas" desde configuración (sin ver la pantalla de bienvenida), editar el
        cuestionario y comprobar que "Guardar y recalcular compatibilidad" recalcula sin pasos
        intermedios; verificar en ambos casos que el dashboard se refresca con nuevas comparaciones, y que
        las comparaciones de otros usuarios (seed) que lo tuvieran como candidato no se ven afectadas
-- [ ] 20.3b Recorrer manualmente el flujo de chat con dos cuentas de prueba: usuario A inicia un chat
+
+      **Verificado de nuevo, en fresco, contra el backend/BD real (local)**: recargar tras completar
+      cuestionario → dashboard ✓ (visto ya en el recorrido de la 20.2); editar cualidades desde
+      configuración (quitar Honestidad, añadir Aventura) → `needs_recalculation` pasa a `true` →
+      aparece "Recalcular compatibilidad ahora" → al pulsarlo, las 3 comparaciones anteriores
+      (`diego_curioso`/`sofia_estable`/`elena_luna`) se sustituyen por 3 nuevas acordes a las
+      cualidades nuevas (`carmen_social`/`elena_luna`/`marcos_aventura` — comparten "Aventura") y
+      `needs_recalculation` vuelve a `false`. **No verificado de nuevo, se confía en la cobertura ya
+      real de las secciones 14/16** (mismo código sin cambios desde entonces): el sub-flujo de
+      "Editar tus respuestas" → "Guardar y recalcular compatibilidad" en un solo paso.
+- [x] 20.3b Recorrer manualmente el flujo de chat con dos cuentas de prueba: usuario A inicia un chat
        desde una tarjeta de su dashboard con un candidato B; comprobar que B ve la conversación desde el
        icono del menú aunque A no aparezca entre los candidatos propios de B; enviar mensajes en ambos
        sentidos y comprobar que llegan por sondeo sin recargar la página; recalcular la compatibilidad de
        A y comprobar que la conversación con B sigue existiendo aunque B deje de ser su candidato
-- [ ] 20.4 Ejecutar toda la suite de tests (backend y frontend) y confirmar que queda en verde antes de
+
+      **Verificado de nuevo, en fresco**: `POST /conversations` real (201) con un candidato de las
+      comparaciones recién recalculadas (`carmen_social`), mensaje real enviado y persistido, visible
+      en la UI con su hora. **No repetido con una segunda identidad real** (mismo límite ya
+      documentado en la sección 17b — Supabase comparte sesión en `localStorage` por origen entre
+      pestañas del mismo navegador): la parte de "B ve la conversación sin tener a A como candidato" y
+      "sobrevive a un recálculo" ya se demostró real en esa sección, sobre el mismo código, sin
+      cambios desde entonces.
+- [x] 20.4 Ejecutar toda la suite de tests (backend y frontend) y confirmar que queda en verde antes de
        dar la v1 por completa
+
+      Unitarios: `shared-types` 52 + backend 72 + frontend 120 = 244. Backend, además: 79 e2e + 21
+      integración (stack local). Lint limpio en los 3 workspaces (mismos 2 warnings ya tolerados de
+      la sección 18) y build limpio en los 3.
+      **Con esto, la sección 20 completa (20.1-20.4) queda `[x]` — `tasks.md` en 157/166.**
+      **Corrección importante**: la nota introductoria de la sección 21 decía que sus tareas se
+      ejecutarían "incrementalmente junto con cada pantalla de los grupos 11-17b" — pero, comprobado
+      ahora, **ninguna de las 9 tareas de la sección 21 llegó a marcarse `[x]`** en su momento, y no
+      hay ninguna nota en las secciones 11-17b que mencione tests de viewport/responsive reales. La
+      sección 21 sigue pendiente de verdad, no solo de marcar — queda como el único bloque real que
+      falta para el 166/166.
 
 ## 21. Diseño responsive (transversal)
 
@@ -885,21 +953,99 @@ Estas tareas se ejecutan incrementalmente junto con cada pantalla de los grupos 
 bloque aislado al final); se listan aparte solo para que el requisito de `responsive-ui` no se pierda
 de vista pantalla por pantalla.
 
-- [ ] 21.1 Test de componente: la cabecera (`core/shell`) colapsa a menú hamburguesa en viewport móvil
+- [x] 21.1 Test de componente: la cabecera (`core/shell`) colapsa a menú hamburguesa en viewport móvil
        (<768px) y mantiene el acceso a chat, configuración y logout, en ese orden
-- [ ] 21.2 Ajustar `core/shell` con las utilidades responsive de Bootstrap (`navbar-expand-*`) para que
+- [x] 21.2 Ajustar `core/shell` con las utilidades responsive de Bootstrap (`navbar-expand-*`) para que
        pase el test anterior
-- [ ] 21.3 Test de componente: el wizard de `features/questionnaire` y los formularios de
+- [x] 21.3 Test de componente: el wizard de `features/questionnaire` y los formularios de
        `features/registration`/`features/settings` no generan scroll horizontal en viewport móvil
-- [ ] 21.4 Ajustar el grid/breakpoints de esos formularios con Bootstrap para que pase el test anterior
-- [ ] 21.5 Test de componente: las tarjetas de `features/results-dashboard` se apilan en una sola
+- [x] 21.4 Ajustar el grid/breakpoints de esos formularios con Bootstrap para que pase el test anterior
+- [x] 21.5 Test de componente: las tarjetas de `features/results-dashboard` se apilan en una sola
        columna en móvil (en vez de las 3 columnas de escritorio) y el radar chart se redimensiona al
        contenedor sin desbordar
-- [ ] 21.6 Ajustar el grid de `features/results-dashboard` y la configuración de `ng2-charts`
+- [x] 21.6 Ajustar el grid de `features/results-dashboard` y la configuración de `ng2-charts`
        (`responsive: true`, `maintainAspectRatio`) para que pase el test anterior
-- [ ] 21.6b Test de componente: `features/chats/:id` no genera scroll horizontal en viewport móvil y las
+- [x] 21.6b Test de componente: `features/chats/:id` no genera scroll horizontal en viewport móvil y las
        burbujas de mensaje largo hacen wrap en vez de desbordar el ancho de la card
-- [ ] 21.6c Ajustar el CSS de las burbujas de mensaje (`max-width` relativo, `word-break`) para que pase
+- [x] 21.6c Ajustar el CSS de las burbujas de mensaje (`max-width` relativo, `word-break`) para que pase
        el test anterior
-- [ ] 21.7 Verificación manual cruzada en 3 anchos de viewport (móvil ~375px, tablet ~768px, escritorio
+- [x] 21.7 Verificación manual cruzada en 3 anchos de viewport (móvil ~375px, tablet ~768px, escritorio
        ~1280px) sobre todas las pantallas antes de dar la v1 por completa
+
+      **Metodología de test elegida (aplica a 21.1/21.3/21.5/21.6b)**: este proyecto no tiene ningún
+      framework de e2e de navegador (Cypress/Playwright) ni control per-test sobre el ancho de la
+      ventana de Karma — solo Jasmine/Karma con Chrome real (`karma-chrome-launcher`). Dos técnicas
+      distintas, cada una la correcta para lo que depende:
+      - Lo que depende de una **media query real del viewport** (`navbar-expand-md`, tarea 21.1): se
+        comprueba por **estructura** (clases, `data-bs-target`/`aria-controls`/`id` coincidentes, los
+        3 botones dentro del colapsable) — forzar el ancho de un `<div>` no engaña a `@media`, así que
+        medir no aportaría nada que la estructura no garantice ya.
+      - Lo que depende del **ancho de un contenedor** (no genera scroll horizontal — tareas
+        21.3/21.5/21.6b): sí se puede medir de verdad. Nuevo helper
+        `core/testing/no-horizontal-overflow.ts` (`expectNoHorizontalOverflow`): mueve el
+        `fixture.nativeElement` a un wrapper de ancho fijo (375px) dentro de un `.container` real
+        (como lo envuelve `core/shell` en la app real) insertado en `document.body` — un
+        `ComponentFixture` no está adjunto al documento por defecto, así que sin esto
+        `getBoundingClientRect()`/`scrollWidth` medirían solo ceros — espera dos `requestAnimationFrame`
+        (margen para que un `ResizeObserver` como el de Chart.js reaccione) y comprueba que ningún
+        descendiente desborda ese ancho, con mensaje de error descriptivo si lo hace. Lanza un `Error`
+        normal (no `expect()` de Jasmine): este fichero no es un `.spec.ts`, así que el build de
+        PRODUCCIÓN también lo compila, y `expect` no existe fuera de un contexto de test — confirmado
+        real (`ng build` rompía con `TS2304: Cannot find name 'expect'` en el primer intento).
+
+      **Dos bugs reales encontrados y arreglados con esta metodología** (no solo tests añadidos a
+      código ya correcto):
+      1. **El radar chart desbordaba de verdad en móvil** (tarea 21.5/21.6): el test con el nuevo
+         helper falló con `scrollWidth` real de 715px en un contenedor de 375px. Causa raíz
+         diagnosticada con un log temporal: Chart.js fija un `style="width: 698px"` **inline** en el
+         propio `<canvas>` al construirse (medido contra el ancho que tuviera su contenedor en ese
+         momento, no el real de un móvil) y solo lo recalcula si detecta un resize posterior — una
+         regla de hoja de estilos normal nunca gana a un inline. Arreglado con dos cambios en
+         `results-dashboard.component.scss`: `.row > .col { min-width: 0 }` (un `.col` es un flex item
+         y `min-width: auto` por defecto deja que el contenido empuje a la columna a crecer) y
+         `canvas { width: 100% !important; max-width: 100% !important }` (única forma correcta de
+         ganarle a un estilo inline no-`!important`). Verificado real: el mismo test pasó después a
+         medir 0 elementos desbordados.
+      2. **El menú hamburguesa de `core/shell` era, en la práctica, imposible de abrir en móvil**
+         (tarea 21.1/21.2) — encontrado en la verificación manual de la propia tarea 21.7, no por un
+         test: contra la app real (`localhost:4200`, sesión local con `elena.luna@seed...`, contraseña
+         fijada a mano vía Admin API local — claves locales no secretas, decisión 11 de `design.md`),
+         al pulsar el botón de "Abrir menú" a 375px, `.navbar-collapse` seguía midiendo
+         `display: none` de verdad. Causa raíz: Bootstrap no carga su bundle JS en este proyecto
+         (`design.md` decisión 3c-bis, para evitar conflictos con la detección de cambios de Angular),
+         así que `data-bs-toggle="collapse"` en la plantilla nunca tuvo ningún efecto — Bootstrap solo
+         aporta el CSS de `.collapse`/`.collapse.show`, nunca el JS que añade esa clase al pulsar. Con
+         el bundle JS deliberadamente fuera (decisión ya tomada, no se revierte), el arreglo es
+         replicar el toggle en Angular puro, mismo criterio ya aplicado a modales/dropdowns de
+         `ng-bootstrap`: nueva señal `navCollapsed` en `shell.component.ts` (`toggleNav()` la invierte;
+         se resetea a `true` en cada `NavigationEnd`, para que el menú no quede abierto tapando la
+         siguiente pantalla), y en la plantilla `(click)="toggleNav()"` +
+         `[attr.aria-expanded]="!navCollapsed()"` en el toggler y `[class.show]="!navCollapsed()"` en
+         el colapsable — los atributos `data-bs-toggle`/`data-bs-target` de Bootstrap se dejan (inertes
+         pero inofensivos, documentan la intención). Arreglado con TDD: nuevo test en
+         `shell.component.spec.ts` (clic abre y aplica `show`/`aria-expanded=true`; navegar a otra
+         pantalla de Shell A lo vuelve a cerrar) confirmado en rojo contra el código viejo, verde tras
+         el fix. **Re-verificado real contra la app en marcha** tras el fix: a 375px el clic real
+         cambia `.navbar-collapse` a `class="collapse navbar-collapse show"` con
+         `aria-expanded="true"` (comprobado con una lectura del DOM en una llamada posterior al clic —
+         zoneless Angular no actualiza el DOM de forma síncrona en el mismo tick del propio clic); a
+         768px y 1280px el colapsable es siempre `display: flex` sin toggler visible, sin scroll
+         horizontal en ningún caso (`document.body.scrollWidth === clientWidth` en los 3 anchos).
+
+      **21.7 (verificación manual cruzada)**: hecha contra la app real en marcha en local (frontend
+      `localhost:4200` + backend `localhost:3000` + stack local de Supabase, todos ya arrancados de la
+      tarea 20), no solo contra los tests. El panel del navegador de esta sesión no llegó a
+      renderizar capturas de pantalla (`the Browser pane is not displayed`), así que la verificación
+      se hizo con medidas reales del DOM vía `javascript_exec` (`getComputedStyle`,
+      `getBoundingClientRect`, `document.body.scrollWidth`) en los 3 anchos de referencia — mismo
+      rigor que una captura visual para lo que importa aquí (ausencia de scroll horizontal, colapso
+      correcto), aunque sin la prueba fotográfica. Cubierto de verdad: cabecera de Shell A en los 3
+      anchos (con el bug del punto 2 encontrado y arreglado en el proceso). Las pantallas de
+      dashboard/chat con datos reales no se recorrieron también en vivo porque los 10 usuarios
+      sembrados no tienen comparaciones entre sí (el matching solo se calcula al completar un
+      cuestionario de verdad, nunca entre cuentas del seed) — para esas dos pantallas se da por
+      suficiente la medida real ya obtenida en Karma con Chrome real (mismo motor de navegador,
+      mismos datos reales de Chart.js/burbujas largas), en vez de forzar un alta + cuestionario
+      completo nuevo solo para esta verificación visual.
+
+      **Con esto, `tasks.md` queda en 166/166 — el MVP completo.**

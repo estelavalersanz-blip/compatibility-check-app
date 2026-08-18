@@ -136,14 +136,16 @@ export class QuestionnaireComponent {
     this.positionAtFirstIncompleteBlock();
   }
 
-  /** Tarea 14.4: al cargar, posiciona el wizard en el primer bloque incompleto (o el 1º si todo está
-   *  completo — caso normal de modo edición). Todo bloque con progreso (o el de aterrizaje) queda
-   *  marcado como alcanzado, para poder revisar libremente lo ya hecho sin tener que volver a pasar
-   *  bloque a bloque. */
+  /** Tarea 14.4: al cargar, posiciona el wizard en el primer bloque incompleto o, si las 36
+   *  preguntas ya están respondidas, en el ÚLTIMO bloque (spec `personal-questionnaire`,
+   *  "Guardado de respuestas parciales" → "Carga del borrador al iniciar sesión"): aterrizar en
+   *  el bloque 1 obligaría a recorrer los 6 bloques ya completos solo para llegar al resumen y al
+   *  botón de envío. Todo bloque con progreso (o el de aterrizaje) queda marcado como alcanzado,
+   *  para poder revisar libremente lo ya hecho sin tener que volver a pasar bloque a bloque. */
   private positionAtFirstIncompleteBlock(): void {
     const blocksSnapshot = this.blocks();
     const firstIncomplete = blocksSnapshot.findIndex((block) => block.answeredCount < 6);
-    const landingIndex = firstIncomplete === -1 ? 0 : firstIncomplete;
+    const landingIndex = firstIncomplete === -1 ? LAST_BLOCK_INDEX : firstIncomplete;
     const lastWithProgress = this.lastIndexMatching(blocksSnapshot, (block) => block.answeredCount > 0);
     this.maxReachedBlockIndex.set(Math.max(landingIndex, lastWithProgress));
     this.enterBlock(landingIndex);

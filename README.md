@@ -30,7 +30,9 @@ supabase/
   templates/     # Plantillas de email de Supabase Auth con marca AfinIA
   seed/          # Datos sintéticos de prueba
 openspec/
-  changes/build-compatibility-mvp/  # Fuente de verdad: proposal.md, design.md, specs/, tasks.md
+  specs/           # Fuente de verdad vigente: un spec.md por capability (10, ver más abajo)
+  changes/archive/2026-08-18-build-compatibility-mvp/  # Cambio original ya archivado (166/166
+                   # tareas) — proposal.md/design.md/tasks.md como registro histórico de decisiones
 docs/
   plan.md          # Narrativa completa de contexto y decisiones (complementa design.md)
   architecture.md  # Configuración resultante de infraestructura (Auth, Storage, CI/CD)
@@ -107,12 +109,53 @@ Contra el proyecto real (tras la tarea 19.1), exporta en su lugar `SUPABASE_URL`
 usarla en una presentación en vivo, resetea su contraseña a mano desde el Dashboard de Supabase
 (nunca se documenta en ningún fichero versionado, ver tarea 18.5).
 
+## Limitaciones de las herramientas gratuitas (importante antes de una demo en vivo)
+
+Todo el stack corre en planes gratuitos (design.md, decisión 10) — esto es lo que hay que tener en
+cuenta de cara a una presentación en vivo, con lo ya confirmado real durante la tarea 20.2 (verificación
+end-to-end) marcado explícitamente:
+
+- **Groq — límite de peticiones (confirmado real)**: completar más de un cuestionario nuevo seguido
+  en pocos minutos (o reintentar varias comparaciones a la vez) agota el límite del free tier y Groq
+  responde `429`; el reintento automático interno (backoff de 50/150ms, pensado para no ralentizar
+  los tests) no espera lo suficiente para recuperarse solo. Antes de la presentación, evita disparar
+  varios análisis reales seguidos; si una comparación queda en `error` por esto, espera ~1 minuto y
+  usa el botón de reintentar (`POST /comparisons/:id/reanalyze`) en vez de repetir el cuestionario
+  entero.
+- **Groq — catálogo de modelos (confirmado real)**: Groq retira modelos con cierta frecuencia — el
+  modelo original de este proyecto (`llama-3.3-70b-versatile`) dejó de existir y todas las llamadas
+  devolvían `404` hasta sustituirlo por `openai/gpt-oss-120b`
+  (`apps/backend/src/ai/groq.provider.ts`). Si el análisis empieza a fallar con `404` en vez de
+  `429`, comprueba el catálogo vigente con `GET https://api.groq.com/openai/v1/models` (cabecera
+  `Authorization: Bearer <GROQ_API_KEY>`) y actualiza `GROQ_MODEL` ahí.
+- **Supabase Auth — límite de envío de emails (confirmado real)**: el SMTP incluido en el free tier
+  tiene un límite bajo de emails transaccionales (registro, recuperación de contraseña) — se agotó
+  de verdad durante la tarea 20.2 tras varias altas/reintentos seguidos (`over_email_send_rate_limit`,
+  `429`), bloqueando tanto nuevos registros como el reset de contraseña por email. Para seguir
+  operando sin esperar a que se libere, se puede fijar una contraseña directamente por la Admin API
+  sin pasar por email (`PUT /auth/v1/admin/users/:id`, con `curl.exe` — no `Invoke-RestMethod` de
+  PowerShell, que Supabase bloquea como "uso de la Secret key desde un navegador" por su
+  `User-Agent` por defecto). Antes de la demo, evita registrar cuentas de prueba de más en el
+  proyecto real.
+- **Render — cold-start (documentado, no forzado a propósito durante la verificación)**: la primera
+  petición tras ~15 min de inactividad tarda 30-60s en responder (free tier) — la pantalla de
+  "procesando" ya lo tiene en cuenta, pero conviene "despertar" el backend con una petición de
+  prueba unos minutos antes de empezar la presentación.
+- **Vercel (sin incidencias, límites estándar del plan Hobby)**: ancho de banda y minutos de build
+  mensuales limitados — sin problema para el volumen de una demo de TFM, no se ha necesitado ajustar
+  nada.
+
 ## Documentación y flujo de trabajo
 
-Este proyecto sigue [OpenSpec](https://github.com/Fission-AI/OpenSpec): el detalle formal de
-requisitos, diseño y tareas vive en `openspec/changes/build-compatibility-mvp/`
-(`proposal.md`/`design.md`/`specs/`/`tasks.md`), que es la fuente de verdad si algo difiere de
-`docs/plan.md`. El progreso de implementación se marca con `[x]` directamente en `tasks.md`.
+Este proyecto sigue [OpenSpec](https://github.com/Fission-AI/OpenSpec). El cambio original
+(`build-compatibility-mvp`) llegó a 166/166 tareas y ya está archivado en
+`openspec/changes/archive/2026-08-18-build-compatibility-mvp/` — sus `proposal.md`/`design.md`/
+`tasks.md` quedan ahí como registro histórico de decisiones (útil para la memoria del TFM), pero ya
+no son la fuente de requisitos vigente. Esa fuente de verdad ahora es `openspec/specs/` (un
+`spec.md` por capability — `authentication`, `candidate-matching`, `internal-chat`,
+`personal-questionnaire`, `responsive-ui`, `results-dashboard`, `seed-data`, `user-registration`,
+`user-settings`, `ai-compatibility-analysis`), sincronizada desde las delta specs del cambio al
+archivarlo; consultar ahí si algo difiere de `docs/plan.md`.
 
 Antes de tocar cualquier pantalla de `apps/frontend`, consultar
 `.claude/skills/ui-design-consistency/` (estructura de página, sistema de botones/formularios,
