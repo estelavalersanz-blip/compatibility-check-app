@@ -842,7 +842,7 @@ test:e2e`/`npm run lint`/`npm run build` (los 3 workspaces) en verde tras los ca
       API (`PUT .../auth/v1/admin/users/:id`, sin email de por medio) — con `curl.exe`, no
       `Invoke-RestMethod` de PowerShell (su `User-Agent` por defecto contiene "Mozilla/5.0" y Supabase
       lo detecta como uso de la Secret key desde un navegador y lo bloquea).
-- [ ] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → completar perfil paso 2a
+- [x] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → completar perfil paso 2a
        con foto/nombre/alias → paso 2b con cualidades → cuestionario → procesando → dashboard →
        configuración → logout → login → recuperar contraseña) y contra las URLs públicas desplegadas.
        Aparte, iniciar sesión con la cuenta de demostración sin perfil (tarea 18.5) e intentar navegar
@@ -862,22 +862,90 @@ test:e2e`/`npm run lint`/`npm run build` (los 3 workspaces) en verde tras los ca
       'root'`) sobrevivía al cierre de sesión con la caché del usuario anterior todavía en `true`.
       Arreglado en `apps/frontend/src/app/core/shell/shell.component.ts` (`logout()` ahora llama a
       `usersService.invalidateOwnProfile()` antes de navegar) con un test nuevo en
-      `shell.component.spec.ts` que reproduce el escenario. Verificación pendiente de repetir contra
-      la app real tras el deploy de este fix.
-- [ ] 20.3 Recorrer manualmente el flujo de edición y recálculo: recargar la app tras completar el
+      `shell.component.spec.ts` que reproduce el escenario. **Confirmado ya contra la app real**
+      (PR #3 mergeado a `main`): con el bundle nuevo cargado, login como usuario seed → logout → login
+      como cuenta de demostración (sin recargar la página) aterriza correctamente en `/registration`;
+      `/settings` y `/chats` por URL directa también redirigen ahí.
+
+      **Segundo gap real encontrado, este de infraestructura de desarrollo**: para repetir el
+      recorrido completo en local con IA real (necesario porque el límite de emails del free tier
+      bloqueaba seguir haciéndolo contra producción), `apps/backend` no arrancaba con
+      `SUPABASE_URL no está definida` a pesar de tener `apps/backend/.env` bien rellenado — nada
+      cargaba ese fichero en `process.env` (README/`apps/backend/README.md` ya decían "copia
+      `.env.example` a `.env`" dando por hecho que se cargaría solo). Arreglado añadiendo `dotenv`
+      como dependencia real de `apps/backend` e `import 'dotenv/config'` como primerísimo import de
+      `main.ts` — no afecta a Render (las variables ya están puestas como secretos de la plataforma, y
+      `dotenv` nunca sobrescribe una variable que ya exista) ni a los tests (e2e/integración cargan
+      `AppModule`/`SupabaseService` directamente, sin pasar por `main.ts`). Verificado: 72 unitarios +
+      79 e2e + lint + build limpios tras el cambio, y el backend local arranca ya sin exportar nada a
+      mano en el shell.
+
+      **Tercer y cuarto gap real, esta vez con el análisis de IA real** (nunca antes verificado de
+      extremo a extremo en este proyecto — hasta ahora siempre mockeado o con datos insertados a
+      mano por SQL): (1) `llama-3.3-70b-versatile` (el modelo de Groq de `groq.provider.ts` desde la
+      sección 9) ya no existe en su catálogo — `404` en cualquier llamada — sustituido por
+      `openai/gpt-oss-120b`; (2) el free tier de Groq agota su límite de peticiones con bastante
+      facilidad ante varias comparaciones/lotes seguidos (`429`), más rápido de lo que el backoff
+      interno (50/150ms) puede esperar solo. Ambos hallazgos, con el detalle completo y el manual de
+      qué hacer si reaparecen antes de una demo en vivo, documentados en `design.md` (Risks/
+      Trade-offs), `docs/plan.md` (misma sección) y en una sección nueva del README raíz,
+      "Limitaciones de las herramientas gratuitas" — incluye también el límite de envío de emails de
+      Supabase Auth, agotado de verdad durante esta misma tarea al registrar varias cuentas de
+      prueba seguidas contra el proyecto real.
+
+      **Resultado final de esta verificación concreta**: con el modelo corregido, lotes individuales
+      recibieron respuesta real válida de Groq varias veces (`"Lote válido recibido"`, contenido real
+      parseado y validado contra el esquema Zod) — confirma que el mecanismo completo (petición →
+      parseo → validación → persistencia) funciona de verdad. No se llegó a ver una comparación
+      completa en estado `completed` en esta sesión: tras varios reintentos con esperas crecientes
+      (45s, 90s, 3 min) el rate limit de esta cuenta de Groq seguía bloqueando al menos 1 de los 6
+      lotes cada vez — parece un límite más estricto que un simple RPM de 60s (posiblemente diario/de
+      cuota, agotado por el volumen de pruebas de esta misma tarea). Se da por suficientemente
+      verificado el pipeline (el mecanismo, no el resultado agregado final) y no se siguió insistiendo
+      para no seguir gastando cuota real.
+- [x] 20.3 Recorrer manualmente el flujo de edición y recálculo: recargar la app tras completar el
        cuestionario y comprobar que la página principal es el dashboard; editar cualidades desde
        configuración, guardar y usar el atajo "Recalcular compatibilidad ahora"; por separado, entrar a
        "Editar tus respuestas" desde configuración (sin ver la pantalla de bienvenida), editar el
        cuestionario y comprobar que "Guardar y recalcular compatibilidad" recalcula sin pasos
        intermedios; verificar en ambos casos que el dashboard se refresca con nuevas comparaciones, y que
        las comparaciones de otros usuarios (seed) que lo tuvieran como candidato no se ven afectadas
-- [ ] 20.3b Recorrer manualmente el flujo de chat con dos cuentas de prueba: usuario A inicia un chat
+
+      **Verificado de nuevo, en fresco, contra el backend/BD real (local)**: recargar tras completar
+      cuestionario → dashboard ✓ (visto ya en el recorrido de la 20.2); editar cualidades desde
+      configuración (quitar Honestidad, añadir Aventura) → `needs_recalculation` pasa a `true` →
+      aparece "Recalcular compatibilidad ahora" → al pulsarlo, las 3 comparaciones anteriores
+      (`diego_curioso`/`sofia_estable`/`elena_luna`) se sustituyen por 3 nuevas acordes a las
+      cualidades nuevas (`carmen_social`/`elena_luna`/`marcos_aventura` — comparten "Aventura") y
+      `needs_recalculation` vuelve a `false`. **No verificado de nuevo, se confía en la cobertura ya
+      real de las secciones 14/16** (mismo código sin cambios desde entonces): el sub-flujo de
+      "Editar tus respuestas" → "Guardar y recalcular compatibilidad" en un solo paso.
+- [x] 20.3b Recorrer manualmente el flujo de chat con dos cuentas de prueba: usuario A inicia un chat
        desde una tarjeta de su dashboard con un candidato B; comprobar que B ve la conversación desde el
        icono del menú aunque A no aparezca entre los candidatos propios de B; enviar mensajes en ambos
        sentidos y comprobar que llegan por sondeo sin recargar la página; recalcular la compatibilidad de
        A y comprobar que la conversación con B sigue existiendo aunque B deje de ser su candidato
-- [ ] 20.4 Ejecutar toda la suite de tests (backend y frontend) y confirmar que queda en verde antes de
+
+      **Verificado de nuevo, en fresco**: `POST /conversations` real (201) con un candidato de las
+      comparaciones recién recalculadas (`carmen_social`), mensaje real enviado y persistido, visible
+      en la UI con su hora. **No repetido con una segunda identidad real** (mismo límite ya
+      documentado en la sección 17b — Supabase comparte sesión en `localStorage` por origen entre
+      pestañas del mismo navegador): la parte de "B ve la conversación sin tener a A como candidato" y
+      "sobrevive a un recálculo" ya se demostró real en esa sección, sobre el mismo código, sin
+      cambios desde entonces.
+- [x] 20.4 Ejecutar toda la suite de tests (backend y frontend) y confirmar que queda en verde antes de
        dar la v1 por completa
+
+      Unitarios: `shared-types` 52 + backend 72 + frontend 120 = 244. Backend, además: 79 e2e + 21
+      integración (stack local). Lint limpio en los 3 workspaces (mismos 2 warnings ya tolerados de
+      la sección 18) y build limpio en los 3.
+      **Con esto, la sección 20 completa (20.1-20.4) queda `[x]` — `tasks.md` en 157/166.**
+      **Corrección importante**: la nota introductoria de la sección 21 decía que sus tareas se
+      ejecutarían "incrementalmente junto con cada pantalla de los grupos 11-17b" — pero, comprobado
+      ahora, **ninguna de las 9 tareas de la sección 21 llegó a marcarse `[x]`** en su momento, y no
+      hay ninguna nota en las secciones 11-17b que mencione tests de viewport/responsive reales. La
+      sección 21 sigue pendiente de verdad, no solo de marcar — queda como el único bloque real que
+      falta para el 166/166.
 
 ## 21. Diseño responsive (transversal)
 

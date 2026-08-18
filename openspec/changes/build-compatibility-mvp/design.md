@@ -700,7 +700,21 @@ con unitarios/e2e no depende de tener Docker levantado en cada guardado.
 
 - **Rate limits del free tier de Groq** → Mitigación: batching (6 llamadas/comparación), concurrencia
   limitada, backoff exponencial con reintentos acotados, y la regla de "cálculo único por usuario" del
-  punto 5.
+  punto 5. **Confirmado real durante la tarea 20.2** (verificación end-to-end con IA real, no
+  mockeada): con el modelo actual (`openai/gpt-oss-120b`, ver más abajo), el free tier de Groq
+  devuelve `429` con bastante facilidad en cuanto se disparan varias comparaciones/lotes seguidos
+  (p. ej. al reintentar 3 comparaciones `error` a la vez, o al completar el cuestionario justo
+  después de una prueba anterior reciente) — el backoff interno (50/150ms, calibrado para no
+  ralentizar los tests) es demasiado corto para un `429` real, que necesita más bien decenas de
+  segundos para despejarse. **Implicación práctica para una demo en vivo**: evitar completar más de
+  un cuestionario nuevo seguido en pocos minutos; si una comparación queda en `error` por esto,
+  esperar ~1 minuto y usar `POST /comparisons/:id/reanalyze` (no hace falta repetir el cuestionario).
+  **Gap real independiente encontrado en la misma tarea**: el modelo original de esta decisión,
+  `llama-3.3-70b-versatile`, dejó de existir en el catálogo de Groq (`GET /openai/v1/models`, `404`
+  en cualquier llamada) — sustituido por `openai/gpt-oss-120b` en `groq.provider.ts` (open-weight
+  también, mismo criterio de la decisión 4, solo cambia de familia de modelo). Si esto volviera a
+  pasar en el futuro (Groq retira modelos con cierta frecuencia), `GET /openai/v1/models` con la
+  misma API key confirma el catálogo vigente.
 - **Cold-start de Render (free tier)** → Mitigación: pantalla de carga explicativa en el frontend
   durante el polling inicial; documentar la limitación en la memoria del TFM.
 - **Salida no determinista del LLM** (mismo par de respuestas puede puntuar distinto entre ejecuciones)
