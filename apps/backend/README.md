@@ -32,8 +32,9 @@ npm run test:integration    # tests de integración (*.integration-spec.ts) — 
 
 ## Piezas clave
 
-- **`src/logger/`**: logger estructurado único (`nestjs-pino`), con transport condicional a Better
-  Stack/Logtail vía `LOGTAIL_SOURCE_TOKEN`. Nunca usar `console.log`.
+- **`src/logger/`**: logger estructurado único (`nestjs-pino`), único destino stdout — sin transport a
+  ningún proveedor externo de persistencia (se evaluó Better Stack/Logtail, descartado en la tarea
+  19.1, ver `design.md` decisión 8b). Nunca usar `console.log`.
 - **`src/cqrs/`**: `CommandLoggingBootstrapper` — sustituye el método `execute` de la ÚNICA
   instancia real de `CommandBus` en `onApplicationBootstrap`, registrando automáticamente
   inicio/fin/error de cada Command con un id de correlación. No es un

@@ -8,7 +8,7 @@ Trabajo de Fin de Máster.
 ## Stack
 
 - **Backend**: [NestJS](https://nestjs.com/) 11 + `@nestjs/cqrs` (Commands/Events selectivos) +
-  `nestjs-pino` (logging estructurado, con transport opcional a Better Stack/Logtail).
+  `nestjs-pino` (logging estructurado a stdout; sin persistencia externa, ver `design.md` decisión 8b).
 - **Frontend**: [Angular](https://angular.dev/) 22 + Bootstrap 5 / Bootstrap Icons / ng-bootstrap
   (recompilado desde Sass con la paleta de marca AfinIA) + `@supabase/supabase-js`.
 - **Datos/Auth/Storage**: [Supabase](https://supabase.com/) (PostgreSQL + Auth + Storage).

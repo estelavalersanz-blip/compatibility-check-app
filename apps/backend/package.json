@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@compatibility-check-app/shared-types": "*",
-    "@logtail/pino": "^0.5.8",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/cqrs": "^11.0.3",

@@ -66,7 +66,7 @@ formen parte del alcance actual.
 | Autenticación | **Supabase Auth (email/contraseña)** | Mismo proyecto que la BD/Storage; hashea y guarda la contraseña en la misma Postgres, emite JWT de sesión y resuelve el email de recuperación de contraseña con su SMTP gratuito — sin implementar hashing, tokens ni envío de email a mano, y sin proveedor de email adicional que gestionar. El frontend Angular llama a Supabase Auth directamente (`@supabase/supabase-js`); el backend solo valida el JWT en un guard. |
 | IA | **Groq API** (modelos open-weight Llama 3.x) como proveedor principal; **OpenRouter** mencionado como alternativa/comparativa | Free tier rápido, buen soporte de salida JSON estructurada ("JSON mode"), modelos open source. |
 | Despliegue gratuito | **Frontend en Vercel + Backend en Render + BD/Auth en Supabase**, todo con su integración Git nativa (sin Terraform, sin YAML de despliegue propio) | Combinación 100% free tier sin tarjeta de crédito, estándar para proyectos académicos. CI (lint+test+build, unitarios e integración) vive en GitHub Actions como puerta de calidad antes de mergear — el despliegue en sí lo dispara cada plataforma por su cuenta, no un job de Actions (ver "CI/CD, sin Terraform" más abajo). |
-| Logs | **`nestjs-pino`** (backend) con stdout en Render + transport a **Better Stack (Logtail)** free tier para histórico buscable | Render no conserva histórico más allá de la sesión reciente en el free tier; Logtail cubre eso sin montar infraestructura propia. El transport solo se activa si `LOGTAIL_SOURCE_TOKEN` está definido (nunca en tests/local). |
+| Logs | **`nestjs-pino`** (backend), único destino stdout en Render (tail en vivo) | JSON estructurado de fábrica con contexto por módulo/`comparison_id`. Sin proveedor externo de persistencia: se evaluó Better Stack/Logtail y se descartó en la tarea 19.1 por la fricción de su alta (exigía una integración adicional ajena al proyecto sin poder omitirla) — limitación aceptada, sin histórico buscable más allá de la sesión reciente de Render (ver `design.md` decisión 8b). |
 
 No hay incompatibilidades entre estas piezas; el resto del documento detalla cómo encajan.
 
@@ -543,9 +543,12 @@ se pueden pintar 3 radares independientes (uno por tarjeta) para mantener la lec
   **Supabase Auth** de cada usuario sintético vía la Admin API (contraseña aleatoria, nunca comunicada,
   ya que estos usuarios no necesitan iniciar sesión), sube las fotos genéricas a Storage, e inserta
   `qualities`, `users` (perfil), `user_qualities`, `questionnaires` (`questionnaire_completed_at`
-  seteado), y opcionalmente precalcula también algunas filas de
-  `comparisons`/`comparison_question_results`/`comparison_aggregated_results` entre usuarios seed para
-  tener un dashboard de ejemplo sin depender de la IA en cada demo.
+  seteado). La opción mencionada aquí de precalcular también algunas filas de
+  `comparisons`/`comparison_question_results`/`comparison_aggregated_results` entre usuarios seed **no
+  se implementó** (no estaba en `tasks.md`, sección 18, que solo pide qualities+perfiles+cuestionarios):
+  cada usuario seed queda disponible como candidato para cualquier usuario real que complete su propio
+  cuestionario (`candidate-selector.service.ts` ya lo cubre desde la sección 8), pero no hay
+  comparaciones precalculadas entre los propios usuarios seed entre sí.
 - **Cuenta de demostración sin perfil**: además de los 10 usuarios sintéticos completos, una cuenta de
   `auth.users` adicional (email/contraseña conocidos) sin fila en `users`, para mostrar en vivo durante
   la presentación el aterrizaje forzado en completar perfil paso 1 (`ProfileGuard`). Su contraseña
@@ -569,19 +572,17 @@ equipo) — aprovisionamiento manual documentado paso a paso en `docs/architectu
 Pasos de aprovisionamiento manual:
 1. **Supabase**: proyecto nuevo → ejecutar `0001_init.sql` → copiar `SUPABASE_URL`,
    `SUPABASE_SERVICE_ROLE_KEY`. Habilitar Auth (SMTP integrado, sin proveedor de email adicional).
-2. **Better Stack (Logtail)**: cuenta free tier, crear la fuente/*source* del backend → copiar el
-   `LOGTAIL_SOURCE_TOKEN` (ver "Logging estructurado" más abajo).
-3. **Backend en Render** (free tier, integración Git nativa): root `apps/backend`, build
+2. **Backend en Render** (free tier, integración Git nativa): root `apps/backend`, build
    `npm install && npm run build`, start `node dist/main.js`. Variables de entorno (secretos de Render,
    nunca en el repo): `SUPABASE_*` (incluida `service_role`), `GROQ_API_KEY`, `OPENROUTER_API_KEY`
-   (opcional), `LOGTAIL_SOURCE_TOKEN`, `CORS_ORIGIN`.
-4. **Frontend en Vercel** (integración Git nativa, Root Directory = `apps/frontend` dentro del
+   (opcional), `CORS_ORIGIN`.
+3. **Frontend en Vercel** (integración Git nativa, Root Directory = `apps/frontend` dentro del
    monorepo): build `ng build`, output `dist/frontend/browser`, variables `SUPABASE_URL` +
    `SUPABASE_ANON_KEY` (no son secretas) y la URL pública del backend en Render.
-5. Documentar en `docs/architecture.md` el "cold start" del free tier de Render (~30–60s tras
+4. Documentar en `docs/architecture.md` el "cold start" del free tier de Render (~30–60s tras
    inactividad, mitigado con la pantalla de procesando/carga explicativa), la ausencia de Terraform y
-   por qué, y dónde vive cada credencial (política de secretos) y cada log (Render para tail en vivo,
-   Logtail para histórico).
+   por qué, y dónde vive cada credencial (política de secretos) y cada log (solo Render, tail en vivo —
+   ver "Logging estructurado" más abajo, se descartó un proveedor externo de persistencia).
 
 ## Riesgos y limitaciones (para la memoria del TFM)
 
@@ -612,9 +613,10 @@ Pasos de aprovisionamiento manual:
 - **Aprovisionamiento manual (sin Terraform)** puede perderse si no se documenta bien: mitigado
   escribiendo los pasos exactos en `docs/architecture.md`, no solo en la memoria del desarrollador; al
   ser un único entorno no hay una segunda instancia con la que desincronizarse.
-- **Free tier de Better Stack (Logtail)** tiene límites de volumen/retención: mitigado activando el
-  transport solo cuando hay `LOGTAIL_SOURCE_TOKEN` (nunca en tests/local), acotando el volumen real al
-  tráfico de la demo.
+- **Sin histórico de logs buscable más allá de la sesión reciente de Render**: se evaluó un proveedor
+  externo (Better Stack/Logtail) y se descartó en la tarea 19.1 por la fricción de su alta frente al
+  beneficio real para el alcance de una demo de TFM — limitación aceptada sin mitigación técnica; el
+  dashboard de Render sigue sirviendo para revisar un fallo reciente en vivo.
 - **Los tests de integración exigen Docker Desktop en local** (Supabase CLI): solo afecta al ciclo de
   integración, no al de unitarios (TDD rápido); en CI no hace falta instalar nada porque los runners de
   GitHub Actions ya traen Docker.
@@ -666,10 +668,11 @@ sistema, solo sustituir piezas concretas.
   datos personales sensibles; comercializar la app exigiría política de privacidad, base legal de
   tratamiento, acuerdo de encargado de tratamiento con el proveedor de IA elegido, y mecanismo de
   borrado de datos a petición del usuario.
-- **Observabilidad más allá de logs**: el logging estructurado con persistencia (Pino + Logtail) ya es
-  parte de la v1 (ver decisión 8b) — lo que queda como línea futura es monitorización de errores
-  dedicada (ej. Sentry) y de coste de IA (tokens consumidos por análisis) para poder facturar/controlar
-  el gasto en producción.
+- **Observabilidad más allá de logs**: el logging estructurado con Pino ya es parte de la v1 (ver
+  decisión 8b) — sin persistencia externa en v1 (descartada en la tarea 19.1, ver Riesgos); si se
+  retomara, un proveedor con transport de Pino (Axiom, Grafana Cloud, u otro) sería la vía natural. Lo
+  que queda como línea futura es monitorización de errores dedicada (ej. Sentry) y de coste de IA
+  (tokens consumidos por análisis) para poder facturar/controlar el gasto en producción.
 - **Login social/OAuth**: añadir Google/Apple/etc. sobre la autenticación por email/contraseña ya
   existente en v1, reduciendo fricción de alta si se comercializa.
 - **Verificación de email obligatoria**: activar la confirmación por email de Supabase Auth (desactivada
@@ -716,15 +719,15 @@ red, rate limits, JSON mal formado, timeouts).
 - Ciclo estricto rojo-verde-refactor por cada unidad de trabajo de `tasks.md`; no se marca una tarea
   como completada sin su test correspondiente en verde.
 
-**Logging estructurado y su persistencia (ver `design.md` decisión 8b):**
+**Logging estructurado (ver `design.md` decisión 8b):**
 - Logger único en el backend con **`nestjs-pino`** (JSON estructurado de fábrica, no un wrapper a mano)
   con niveles (`debug`/`log`/`warn`/`error`) y contexto por módulo (`AiOrchestratorService`,
   `CandidateSelectorService`, etc.), nunca `console.log` suelto.
-- **Dónde se almacenan**: stdout, visible en el dashboard de Render para tail en vivo (retención corta
-  en el free tier), y además un transport de Pino hacia **Better Stack (Logtail)** para histórico
-  buscable. El transport a Logtail solo se activa si `LOGTAIL_SOURCE_TOKEN` está definido — en
-  local/tests, sin esa variable, el logger sigue escribiendo solo a stdout, sin fallar ni ensuciar el
-  proyecto de Logtail con logs de cada test.
+- **Dónde se almacenan**: solo stdout, visible en el dashboard de Render para tail en vivo (retención
+  corta en el free tier) — sin persistencia externa en v1: se evaluó un transport de Pino hacia Better
+  Stack (Logtail) y se descartó al ejecutar la tarea 19.1 por la fricción de su alta (exigía elegir una
+  integración adicional ajena al proyecto, sin poder omitirla), priorizando no depender de un proveedor
+  externo más. Limitación aceptada, documentada en Riesgos.
 - Puntos de log obligatorios en el flujo crítico (orquestación IA): al enviar cada batch (comparisonId,
   questionIds del batch, proveedor, intento nº), al recibir respuesta (duración, tokens si el proveedor
   los expone), al fallar validación Zod (payload crudo recibido, motivo de fallo) y en cada
@@ -811,5 +814,5 @@ red, rate limits, JSON mal formado, timeouts).
    automáticamente al mergear (sin ningún paso manual ni job de Actions disparando el deploy).
 8. Desplegar en Render + Vercel + Supabase (free tier, incluyendo Auth, Storage y RLS) y repetir el flujo
    completo desde las URLs públicas para validar CORS, subida de fotos, variables de entorno, el
-   cold-start de Render y que los logs llegan tanto a Render (tail en vivo) como a Better Stack/Logtail
-   (histórico).
+   cold-start de Render y que los logs llegan a Render (tail en vivo — único destino en v1, ver
+   "Logging estructurado").
