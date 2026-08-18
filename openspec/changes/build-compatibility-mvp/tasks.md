@@ -953,21 +953,99 @@ Estas tareas se ejecutan incrementalmente junto con cada pantalla de los grupos 
 bloque aislado al final); se listan aparte solo para que el requisito de `responsive-ui` no se pierda
 de vista pantalla por pantalla.
 
-- [ ] 21.1 Test de componente: la cabecera (`core/shell`) colapsa a menú hamburguesa en viewport móvil
+- [x] 21.1 Test de componente: la cabecera (`core/shell`) colapsa a menú hamburguesa en viewport móvil
        (<768px) y mantiene el acceso a chat, configuración y logout, en ese orden
-- [ ] 21.2 Ajustar `core/shell` con las utilidades responsive de Bootstrap (`navbar-expand-*`) para que
+- [x] 21.2 Ajustar `core/shell` con las utilidades responsive de Bootstrap (`navbar-expand-*`) para que
        pase el test anterior
-- [ ] 21.3 Test de componente: el wizard de `features/questionnaire` y los formularios de
+- [x] 21.3 Test de componente: el wizard de `features/questionnaire` y los formularios de
        `features/registration`/`features/settings` no generan scroll horizontal en viewport móvil
-- [ ] 21.4 Ajustar el grid/breakpoints de esos formularios con Bootstrap para que pase el test anterior
-- [ ] 21.5 Test de componente: las tarjetas de `features/results-dashboard` se apilan en una sola
+- [x] 21.4 Ajustar el grid/breakpoints de esos formularios con Bootstrap para que pase el test anterior
+- [x] 21.5 Test de componente: las tarjetas de `features/results-dashboard` se apilan en una sola
        columna en móvil (en vez de las 3 columnas de escritorio) y el radar chart se redimensiona al
        contenedor sin desbordar
-- [ ] 21.6 Ajustar el grid de `features/results-dashboard` y la configuración de `ng2-charts`
+- [x] 21.6 Ajustar el grid de `features/results-dashboard` y la configuración de `ng2-charts`
        (`responsive: true`, `maintainAspectRatio`) para que pase el test anterior
-- [ ] 21.6b Test de componente: `features/chats/:id` no genera scroll horizontal en viewport móvil y las
+- [x] 21.6b Test de componente: `features/chats/:id` no genera scroll horizontal en viewport móvil y las
        burbujas de mensaje largo hacen wrap en vez de desbordar el ancho de la card
-- [ ] 21.6c Ajustar el CSS de las burbujas de mensaje (`max-width` relativo, `word-break`) para que pase
+- [x] 21.6c Ajustar el CSS de las burbujas de mensaje (`max-width` relativo, `word-break`) para que pase
        el test anterior
-- [ ] 21.7 Verificación manual cruzada en 3 anchos de viewport (móvil ~375px, tablet ~768px, escritorio
+- [x] 21.7 Verificación manual cruzada en 3 anchos de viewport (móvil ~375px, tablet ~768px, escritorio
        ~1280px) sobre todas las pantallas antes de dar la v1 por completa
+
+      **Metodología de test elegida (aplica a 21.1/21.3/21.5/21.6b)**: este proyecto no tiene ningún
+      framework de e2e de navegador (Cypress/Playwright) ni control per-test sobre el ancho de la
+      ventana de Karma — solo Jasmine/Karma con Chrome real (`karma-chrome-launcher`). Dos técnicas
+      distintas, cada una la correcta para lo que depende:
+      - Lo que depende de una **media query real del viewport** (`navbar-expand-md`, tarea 21.1): se
+        comprueba por **estructura** (clases, `data-bs-target`/`aria-controls`/`id` coincidentes, los
+        3 botones dentro del colapsable) — forzar el ancho de un `<div>` no engaña a `@media`, así que
+        medir no aportaría nada que la estructura no garantice ya.
+      - Lo que depende del **ancho de un contenedor** (no genera scroll horizontal — tareas
+        21.3/21.5/21.6b): sí se puede medir de verdad. Nuevo helper
+        `core/testing/no-horizontal-overflow.ts` (`expectNoHorizontalOverflow`): mueve el
+        `fixture.nativeElement` a un wrapper de ancho fijo (375px) dentro de un `.container` real
+        (como lo envuelve `core/shell` en la app real) insertado en `document.body` — un
+        `ComponentFixture` no está adjunto al documento por defecto, así que sin esto
+        `getBoundingClientRect()`/`scrollWidth` medirían solo ceros — espera dos `requestAnimationFrame`
+        (margen para que un `ResizeObserver` como el de Chart.js reaccione) y comprueba que ningún
+        descendiente desborda ese ancho, con mensaje de error descriptivo si lo hace. Lanza un `Error`
+        normal (no `expect()` de Jasmine): este fichero no es un `.spec.ts`, así que el build de
+        PRODUCCIÓN también lo compila, y `expect` no existe fuera de un contexto de test — confirmado
+        real (`ng build` rompía con `TS2304: Cannot find name 'expect'` en el primer intento).
+
+      **Dos bugs reales encontrados y arreglados con esta metodología** (no solo tests añadidos a
+      código ya correcto):
+      1. **El radar chart desbordaba de verdad en móvil** (tarea 21.5/21.6): el test con el nuevo
+         helper falló con `scrollWidth` real de 715px en un contenedor de 375px. Causa raíz
+         diagnosticada con un log temporal: Chart.js fija un `style="width: 698px"` **inline** en el
+         propio `<canvas>` al construirse (medido contra el ancho que tuviera su contenedor en ese
+         momento, no el real de un móvil) y solo lo recalcula si detecta un resize posterior — una
+         regla de hoja de estilos normal nunca gana a un inline. Arreglado con dos cambios en
+         `results-dashboard.component.scss`: `.row > .col { min-width: 0 }` (un `.col` es un flex item
+         y `min-width: auto` por defecto deja que el contenido empuje a la columna a crecer) y
+         `canvas { width: 100% !important; max-width: 100% !important }` (única forma correcta de
+         ganarle a un estilo inline no-`!important`). Verificado real: el mismo test pasó después a
+         medir 0 elementos desbordados.
+      2. **El menú hamburguesa de `core/shell` era, en la práctica, imposible de abrir en móvil**
+         (tarea 21.1/21.2) — encontrado en la verificación manual de la propia tarea 21.7, no por un
+         test: contra la app real (`localhost:4200`, sesión local con `elena.luna@seed...`, contraseña
+         fijada a mano vía Admin API local — claves locales no secretas, decisión 11 de `design.md`),
+         al pulsar el botón de "Abrir menú" a 375px, `.navbar-collapse` seguía midiendo
+         `display: none` de verdad. Causa raíz: Bootstrap no carga su bundle JS en este proyecto
+         (`design.md` decisión 3c-bis, para evitar conflictos con la detección de cambios de Angular),
+         así que `data-bs-toggle="collapse"` en la plantilla nunca tuvo ningún efecto — Bootstrap solo
+         aporta el CSS de `.collapse`/`.collapse.show`, nunca el JS que añade esa clase al pulsar. Con
+         el bundle JS deliberadamente fuera (decisión ya tomada, no se revierte), el arreglo es
+         replicar el toggle en Angular puro, mismo criterio ya aplicado a modales/dropdowns de
+         `ng-bootstrap`: nueva señal `navCollapsed` en `shell.component.ts` (`toggleNav()` la invierte;
+         se resetea a `true` en cada `NavigationEnd`, para que el menú no quede abierto tapando la
+         siguiente pantalla), y en la plantilla `(click)="toggleNav()"` +
+         `[attr.aria-expanded]="!navCollapsed()"` en el toggler y `[class.show]="!navCollapsed()"` en
+         el colapsable — los atributos `data-bs-toggle`/`data-bs-target` de Bootstrap se dejan (inertes
+         pero inofensivos, documentan la intención). Arreglado con TDD: nuevo test en
+         `shell.component.spec.ts` (clic abre y aplica `show`/`aria-expanded=true`; navegar a otra
+         pantalla de Shell A lo vuelve a cerrar) confirmado en rojo contra el código viejo, verde tras
+         el fix. **Re-verificado real contra la app en marcha** tras el fix: a 375px el clic real
+         cambia `.navbar-collapse` a `class="collapse navbar-collapse show"` con
+         `aria-expanded="true"` (comprobado con una lectura del DOM en una llamada posterior al clic —
+         zoneless Angular no actualiza el DOM de forma síncrona en el mismo tick del propio clic); a
+         768px y 1280px el colapsable es siempre `display: flex` sin toggler visible, sin scroll
+         horizontal en ningún caso (`document.body.scrollWidth === clientWidth` en los 3 anchos).
+
+      **21.7 (verificación manual cruzada)**: hecha contra la app real en marcha en local (frontend
+      `localhost:4200` + backend `localhost:3000` + stack local de Supabase, todos ya arrancados de la
+      tarea 20), no solo contra los tests. El panel del navegador de esta sesión no llegó a
+      renderizar capturas de pantalla (`the Browser pane is not displayed`), así que la verificación
+      se hizo con medidas reales del DOM vía `javascript_exec` (`getComputedStyle`,
+      `getBoundingClientRect`, `document.body.scrollWidth`) en los 3 anchos de referencia — mismo
+      rigor que una captura visual para lo que importa aquí (ausencia de scroll horizontal, colapso
+      correcto), aunque sin la prueba fotográfica. Cubierto de verdad: cabecera de Shell A en los 3
+      anchos (con el bug del punto 2 encontrado y arreglado en el proceso). Las pantallas de
+      dashboard/chat con datos reales no se recorrieron también en vivo porque los 10 usuarios
+      sembrados no tienen comparaciones entre sí (el matching solo se calcula al completar un
+      cuestionario de verdad, nunca entre cuentas del seed) — para esas dos pantallas se da por
+      suficiente la medida real ya obtenida en Karma con Chrome real (mismo motor de navegador,
+      mismos datos reales de Chart.js/burbujas largas), en vez de forzar un alta + cuestionario
+      completo nuevo solo para esta verificación visual.
+
+      **Con esto, `tasks.md` queda en 166/166 — el MVP completo.**

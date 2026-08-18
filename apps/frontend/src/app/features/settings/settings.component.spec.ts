@@ -9,6 +9,7 @@ import { AuthService } from '../../core/auth.service';
 import { MatchingService } from '../../core/matching.service';
 import { QualitiesService } from '../../core/qualities.service';
 import { UpdateProfilePayload, UsersService } from '../../core/users.service';
+import { expectNoHorizontalOverflow } from '../../core/testing/no-horizontal-overflow';
 import { SettingsComponent } from './settings.component';
 
 // Solo `app.config.ts` (nunca cargado por `TestBed`) registra el locale español — sin esto, el pipe
@@ -320,5 +321,14 @@ describe('SettingsComponent — resumen del cuestionario (tarea 17.5)', () => {
     await loaded(fixture);
 
     expect(TestBed.inject(Router).url).toBe('/questionnaire?mode=edit');
+  });
+});
+
+describe('SettingsComponent — responsive (tarea 21.3)', () => {
+  it('el formulario de configuración no genera scroll horizontal en viewport móvil (~375px)', async () => {
+    const { fixture } = setup();
+    await loaded(fixture);
+
+    await expectNoHorizontalOverflow(fixture.nativeElement as HTMLElement, 375);
   });
 });

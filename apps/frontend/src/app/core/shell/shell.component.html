@@ -11,10 +11,12 @@
       data-bs-target="#navShell"
       aria-controls="navShell"
       aria-label="Abrir menú"
+      [attr.aria-expanded]="!navCollapsed()"
+      (click)="toggleNav()"
     >
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navShell">
+    <div class="collapse navbar-collapse" [class.show]="!navCollapsed()" id="navShell">
       @if (hasSession()) {
         <ul class="navbar-nav ms-auto align-items-md-center gap-2">
           @if (!minimalNav()) {

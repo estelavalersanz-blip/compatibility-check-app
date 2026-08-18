@@ -115,6 +115,19 @@ La skill de Claude Code `.claude/skills/ui-design-consistency/` traduce esta dec
 3d) en un checklist concreto y una plantilla de partida para cada pantalla, de forma que la consistencia
 entre las 8 pantallas del frontend no dependa de recordarlo manualmente en cada sesión de trabajo.
 
+**Consecuencia real encontrada en la tarea 21.7 (verificación manual responsive)**: al no cargar el
+bundle JS de Bootstrap, cualquier componente que dependa de él para su INTERACCIÓN (no solo su CSS)
+queda inerte, no solo modales/dropdowns como se previó originalmente aquí — el menú hamburguesa de
+`core/shell` (`navbar-toggler` con `data-bs-toggle="collapse"`) era, en la práctica, imposible de
+abrir en móvil: Bootstrap solo aporta el CSS de `.collapse`/`.collapse.show`
+(`display: none`/`block`), nunca el JS que añade esa clase al pulsar el toggler. Confirmado real
+contra la app en marcha (no solo sospechado): a 375px, `.navbar-collapse` seguía midiendo
+`display: none` después del clic. Arreglado con el mismo criterio ya adoptado aquí para modales/
+dropdowns — reimplementado en Angular puro (una señal `navCollapsed` en `shell.component.ts`, sin
+ninguna dependencia del JS de Bootstrap) — en vez de reconsiderar la decisión de no cargarlo.
+Cualquier otro uso futuro de un componente interactivo "de solo-CSS" de Bootstrap (`data-bs-*` sin
+`ngb*`) debe darse por no funcional hasta reimplementarlo así.
+
 ### 3c-ter. Diseño completamente responsive (mobile-first, solo acceso web)
 
 No se plantea una app nativa/APK en esta v1 — todo el acceso es web, incluido desde móvil. La interfaz
@@ -125,6 +138,17 @@ colapsa a menú hamburguesa en móvil; el stepper del cuestionario y los formula
 disponible sin scroll horizontal; las tarjetas del dashboard pasan de 3 columnas en escritorio a 1
 columna apilada en móvil; los gráficos radar (`ng2-charts`) se redimensionan al contenedor en vez de
 tener un tamaño fijo en píxeles.
+
+**Gap real encontrado y arreglado en la tarea 21.5/21.6**: "se redimensionan al contenedor" no se
+cumplía solo con `chartOptions: { responsive: true, maintainAspectRatio: false }` — Chart.js fija
+además un `width`/`height` en píxeles como estilo **inline** sobre el propio `<canvas>` al
+construirse (medido contra el ancho de su contenedor en ese momento), y una regla de hoja de estilos
+normal nunca gana a un inline. Confirmado real con un test que mide `scrollWidth` dentro de un
+contenedor de 375px (no solo comprobando `chartOptions`): el canvas desbordaba 340px. Arreglado en
+`results-dashboard.component.scss` con `canvas { width: 100% !important; max-width: 100% !important }`
+(única forma correcta de ganarle a un inline no-`!important`) más `.row > .col { min-width: 0 }` (un
+`.col` de Bootstrap es un flex item, y `min-width: auto` por defecto dejaba que el contenido — el
+propio canvas oversized — empujara a la columna entera a crecer).
 
 ### 3c-quater. Marca "AfinIA", paleta de color, tipografía y cuestionario como wizard con gradiente de peso
 

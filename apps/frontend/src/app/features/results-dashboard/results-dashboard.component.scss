@@ -1,3 +1,27 @@
 // Grid, cards y estados usan solo utilidades de Bootstrap ya recompiladas con los tokens de marca
 // (apps/frontend/src/styles.scss). El único color que no puede ir por CSS es el del radar chart
 // (Chart.js pinta en un <canvas>, no en el DOM) — se fija en TypeScript (chartDataFor), no aquí.
+
+// Tarea 21.5/21.6 (responsive): sin esto, un <canvas> de Chart.js que todavía no se ha
+// redimensionado a su contenedor puede forzar que la columna entera crezca más allá de su ancho
+// asignado por `row-cols-*` — un `.col` de Bootstrap es un flex item, y `min-width: auto` (el valor
+// por defecto en flexbox) deja que el tamaño intrínseco del contenido (el canvas) empuje a la
+// columna a ensancharse en vez de encoger, generando scroll horizontal real en móvil.
+.row > .col {
+  min-width: 0;
+}
+
+// Causa real confirmada con un test que mide el `scrollWidth` dentro de un contenedor de 375px (no
+// solo las clases `row-cols-*`): Chart.js fija un `width`/`height` en PÍXELES como estilo INLINE
+// sobre el propio `<canvas>` al construirse (`style="width: 698px"`, medido contra el ancho que
+// tuviera su contenedor en ese momento) y solo lo recalcula si detecta un resize posterior — un
+// `<canvas>` recién montado dentro de un contenedor que ya nace estrecho (p. ej. la primera carga en
+// un móvil, sin ningún resize de por medio) se queda con ese ancho fijo. Una regla de hoja de
+// estilos normal nunca gana a un estilo inline; `!important` es la única forma correcta de que el
+// contrato de `chartOptions.responsive`/`maintainAspectRatio` (results-dashboard.component.ts) se
+// cumpla también visualmente: el lienzo se ajusta a su contenedor real, la nitidez del dibujo interno
+// (que sí depende de los atributos `width`/`height`, no del CSS) no se ve afectada.
+canvas {
+  max-width: 100% !important;
+  width: 100% !important;
+}
