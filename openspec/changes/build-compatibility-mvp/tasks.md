@@ -827,14 +827,43 @@ test:e2e`/`npm run lint`/`npm run build` (los 3 workspaces) en verde tras los ca
 
 ## 20. Verificación end-to-end
 
-- [ ] 20.1 Ejecutar el seed contra Supabase y confirmar en el SQL Editor que las tablas quedan pobladas
+- [x] 20.1 Ejecutar el seed contra Supabase y confirmar en el SQL Editor que las tablas quedan pobladas
        según lo esperado, incluyendo las cuentas de `auth.users` de los perfiles sintéticos
+
+      `npm run seed` ejecutado contra el proyecto real: 15 cualidades, 10 usuarios nuevos, cuenta de
+      demostración creada. Confirmado por SQL Editor: `qualities=15`, `users=10`,
+      `user_qualities=50`, `questionnaires=10`, `auth.users` con el dominio del seed`=11` (10 + demo),
+      y la cuenta de demostración sin fila en `public.users`. **Hallazgo real, ya conocido pero ahora
+      confirmado en la práctica**: el propio seed + los primeros intentos de registro real (tarea
+      20.2) agotaron el límite de envío de emails del free tier de Supabase Auth
+      (`over_email_send_rate_limit`, 429) — riesgo ya documentado en `design.md`/`docs/plan.md`, ahora
+      con evidencia real de lo fácil que es alcanzarlo. Solución encontrada para seguir verificando
+      sin depender de emails: fijar la contraseña de una cuenta ya existente directamente vía la Admin
+      API (`PUT .../auth/v1/admin/users/:id`, sin email de por medio) — con `curl.exe`, no
+      `Invoke-RestMethod` de PowerShell (su `User-Agent` por defecto contiene "Mozilla/5.0" y Supabase
+      lo detecta como uso de la Secret key desde un navegador y lo bloquea).
 - [ ] 20.2 Recorrer manualmente el flujo completo en local (registro paso 1 → completar perfil paso 2a
        con foto/nombre/alias → paso 2b con cualidades → cuestionario → procesando → dashboard →
        configuración → logout → login → recuperar contraseña) y contra las URLs públicas desplegadas.
        Aparte, iniciar sesión con la cuenta de demostración sin perfil (tarea 18.5) e intentar navegar
        directamente a `/dashboard`/`/settings`/`/chats` por URL, comprobando que siempre redirige a
        completar perfil paso 1
+
+      **Bug real encontrado y arreglado (con TDD) verificando contra la app real**: inicié sesión con
+      un usuario seed (`elena_luna`, contraseña fijada por Admin API igual que arriba) y comprobé
+      dashboard/configuración (nombre/alias/las 5 cualidades correctas, botón "Recalcular" bien
+      deshabilitado) — todo correcto. Al cerrar esa sesión e iniciar sesión con la cuenta de
+      demostración (sin perfil, sin recargar la página) para probar el redirect esperado, **la cuenta
+      de demostración llegó a `/dashboard` en vez de a completar perfil**, aunque `GET /users/me` del
+      backend real seguía devolviendo `404` correctamente. Causa: `UsersService.getOwnProfile()`
+      cachea con `shareReplay(1)` "pensada para durar la sesión de navegación" (comentario ya
+      existente en el propio fichero), pero `ShellComponent.logout()` nunca la invalidaba, y como
+      `logout()` navega dentro de la SPA sin recargar, el singleton `UsersService` (`providedIn:
+      'root'`) sobrevivía al cierre de sesión con la caché del usuario anterior todavía en `true`.
+      Arreglado en `apps/frontend/src/app/core/shell/shell.component.ts` (`logout()` ahora llama a
+      `usersService.invalidateOwnProfile()` antes de navegar) con un test nuevo en
+      `shell.component.spec.ts` que reproduce el escenario. Verificación pendiente de repetir contra
+      la app real tras el deploy de este fix.
 - [ ] 20.3 Recorrer manualmente el flujo de edición y recálculo: recargar la app tras completar el
        cuestionario y comprobar que la página principal es el dashboard; editar cualidades desde
        configuración, guardar y usar el atajo "Recalcular compatibilidad ahora"; por separado, entrar a

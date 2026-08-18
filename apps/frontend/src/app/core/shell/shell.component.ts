@@ -6,6 +6,7 @@ import { Observable, catchError, filter, interval, of, switchMap } from 'rxjs';
 import { BrandMarkComponent } from '../../shared/brand-mark/brand-mark.component';
 import { AuthService } from '../auth.service';
 import { ChatService } from '../chat.service';
+import { UsersService } from '../users.service';
 
 /** Sondeo del contador de no leídos (tarea 11.2c) — dentro del rango de 20-30s pedido. */
 const UNREAD_POLL_INTERVAL_MS = 25_000;
@@ -25,6 +26,7 @@ const UNREAD_POLL_INTERVAL_MS = 25_000;
 export class ShellComponent {
   private readonly auth = inject(AuthService);
   private readonly chatService = inject(ChatService);
+  private readonly usersService = inject(UsersService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -81,8 +83,16 @@ export class ShellComponent {
     return Boolean(node?.data['minimalNav']);
   }
 
+  /**
+   * `invalidateOwnProfile()` antes de navegar (tarea 20.2, bug real): `logout()` nunca recarga la
+   * página (navegación dentro de la SPA), así que la caché de `UsersService.getOwnProfile()`
+   * (pensada para durar toda la sesión de navegación, no toda la vida de la app) sobreviviría al
+   * cierre de sesión y se filtraría al siguiente usuario que inicie sesión en la misma pestaña —
+   * viendo el guard de ruta principal si "hay perfil" según el usuario ANTERIOR, no el actual.
+   */
   async logout(): Promise<void> {
     await this.auth.signOut();
+    this.usersService.invalidateOwnProfile();
     await this.router.navigate(['/auth/login']);
   }
 }
