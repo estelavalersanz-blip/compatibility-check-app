@@ -1,0 +1,41 @@
+<h1 class="h3 mb-1">Analizando tu compatibilidad</h1>
+<p class="text-body-secondary mb-4">Esto puede tardar unos segundos por candidato.</p>
+
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex justify-content-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Analizando…</span>
+      </div>
+    </div>
+    <ul class="list-group list-group-flush">
+      @for (comparison of comparisons(); track comparison.id) {
+        <li class="list-group-item d-flex align-items-center gap-3">
+          <img
+            [src]="comparison.candidate.photoUrl"
+            class="rounded-circle"
+            width="32"
+            height="32"
+            alt=""
+          />
+          <span class="flex-grow-1">{{ comparison.candidate.alias }}</span>
+          @switch (comparison.status) {
+            @case ('completed') {
+              <i class="bi bi-check-circle-fill text-primary" aria-hidden="true"></i>
+              <span class="visually-hidden">Completado</span>
+            }
+            @case ('error') {
+              <i class="bi bi-exclamation-triangle text-danger" aria-hidden="true"></i>
+              <span class="visually-hidden">Error</span>
+            }
+            @default {
+              <span class="spinner-border spinner-border-sm text-body-secondary" role="status">
+                <span class="visually-hidden">Analizando…</span>
+              </span>
+            }
+          }
+        </li>
+      }
+    </ul>
+  </div>
+</div>

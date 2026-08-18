@@ -1,0 +1,167 @@
+// Valores literales, no variables Sass — el Sass de un componente Angular se compila aislado, sin
+// ver los overrides de styles.scss (mismo criterio que quality-pill.component.scss/registration).
+
+// Bienvenida del cuestionario (decisión 3h): mismo degradado de marca que Shell B/landing, pero
+// acotado al área de contenido de Shell A (esta pantalla vive DENTRO de core/shell, con navbar) en
+// vez de a pantalla completa — a diferencia de Shell B/landing, que son rutas de nivel superior sin
+// navbar ni <main class="container"> alrededor.
+.questionnaire-intro {
+  min-height: 60vh;
+  border-radius: 0.75rem;
+  background: linear-gradient(160deg, #fb8500 0%, #be1e2d 100%);
+}
+
+// Barra de progreso ponderada (6 segmentos, ancho proporcional al peso del bloque).
+.quest-progress {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+}
+.quest-progress__segment {
+  position: relative;
+  background: var(--bs-border-color);
+  border-radius: 4px;
+  overflow: hidden;
+  border: none; // es un <button>, no un <div> — resetea el estilo nativo
+  padding: 0;
+  cursor: pointer;
+}
+.quest-progress__segment:disabled {
+  cursor: default; // bloques aún no alcanzados: no clicables, sin look "deshabilitado" gris
+}
+.quest-progress__segment:not(:disabled):hover {
+  filter: brightness(0.92);
+}
+.quest-progress__segment:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}
+.quest-progress__segment--weight-05 {
+  flex: 5;
+}
+.quest-progress__segment--weight-15 {
+  flex: 15;
+}
+.quest-progress__segment--weight-20 {
+  flex: 20;
+}
+.quest-progress__segment--weight-25 {
+  flex: 25;
+}
+.quest-progress__segment--weight-30 {
+  flex: 30;
+}
+
+.quest-progress__fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  transition: width 260ms ease-out;
+}
+.quest-progress__segment--weight-05 .quest-progress__fill {
+  background: linear-gradient(90deg, #ffffff, #fdf0d5);
+}
+.quest-progress__segment--weight-15 .quest-progress__fill {
+  background: linear-gradient(90deg, #fdf0d5, #fcd9a0);
+}
+.quest-progress__segment--weight-20 .quest-progress__fill {
+  background: linear-gradient(90deg, #fcd9a0, #fb8500);
+}
+.quest-progress__segment--weight-25 .quest-progress__fill {
+  background: linear-gradient(90deg, #fb8500, #dd5217);
+}
+.quest-progress__segment--weight-30 .quest-progress__fill {
+  background: linear-gradient(90deg, #be1e2d, #000000);
+}
+
+.quest-progress__check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-progress__fill {
+    transition: none;
+  }
+}
+
+// Gradiente del card-header según el peso del bloque activo (misma tabla que la barra, un nivel
+// más arriba).
+.question-block--weight-05 {
+  background: linear-gradient(135deg, #ffffff, #fdf0d5);
+  color: #000000;
+}
+.question-block--weight-15 {
+  background: linear-gradient(135deg, #fdf0d5, #fcd9a0);
+  color: #000000;
+}
+.question-block--weight-20 {
+  background: linear-gradient(135deg, #fcd9a0, #fb8500);
+  color: #000000;
+}
+.question-block--weight-25 {
+  background: linear-gradient(135deg, #fb8500, #dd5217);
+  color: #000000;
+}
+.question-block--weight-30 {
+  background: linear-gradient(135deg, #be1e2d, #000000);
+  color: #ffffff;
+}
+
+.block-badge {
+  color: #fb8500;
+  animation: block-badge-in 250ms ease-out;
+}
+
+@keyframes block-badge-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-badge {
+    animation: none;
+  }
+}
+
+// Banner de cierre al llegar a 36/36 — reutiliza el gradiente del bloque de mayor peso (30%).
+.completion-banner {
+  background: linear-gradient(135deg, #be1e2d, #000000);
+}
+
+// Transición al cambiar de pregunta activa (fade + desplazamiento horizontal corto).
+@keyframes question-pane-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.question-pane {
+  animation: question-pane-in 200ms ease-out;
+}
+
+.question-pane--reduced-motion {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question-pane {
+    animation: none;
+  }
+}

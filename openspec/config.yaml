@@ -1,0 +1,67 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+context: |
+  Proyecto: TFM — app de simulación de citas que compara respuestas a un cuestionario de 36 preguntas
+  de compatibilidad entre un usuario y los 3 candidatos más afines de un pool de usuarios (seed +
+  reales), puntuando la compatibilidad vía LLM en 6 dimensiones ponderadas. El objetivo es medir
+  afinidad entre personas, no dictaminar si podrían enamorarse.
+
+  Stack:
+  - Monorepo con npm workspaces: apps/backend (NestJS + TypeScript), apps/frontend (Angular +
+    TypeScript), packages/shared-types (interfaces compartidas del contrato JSON).
+  - Base de datos: PostgreSQL vía Supabase (free tier), columnas JSONB para las respuestas y los
+    resultados de comparación. Fotos de usuario en Supabase Storage (bucket "user-photos").
+  - IA: Groq API (modelos open-weight Llama 3.x) como proveedor principal vía una interfaz
+    AiProvider desacoplada (Dependency Inversion); OpenRouter como proveedor alternativo detrás de
+    la misma interfaz.
+  - Despliegue gratuito objetivo: frontend en Vercel (integración Git nativa, sin YAML de deploy
+    propio), backend en Render, BD/Storage/Auth en Supabase. CI en GitHub Actions como puerta de
+    calidad (lint + test + build); sin Terraform (aprovisionamiento manual documentado). Tests de
+    integración contra el stack local de Supabase (CLI + Docker). Logs: `nestjs-pino` + Better Stack
+    (Logtail) para histórico buscable.
+  - Perfil de la desarrolladora: experiencia previa en .NET, AngularJS y SQL Server — se prioriza
+    NestJS por su similitud arquitectónica con ASP.NET Core (decoradores, módulos, DI).
+
+  Dominio (glosario):
+  - "Cualidades": catálogo fijo de 15 rasgos personales; cada usuario elige 5 en el registro.
+  - "Pre-compatibilidad": nº de cualidades coincidentes entre un usuario y un candidato; se usa
+    solo para SELECCIONAR los 3 candidatos, nunca para el cálculo ponderado final.
+  - "Comparación": análisis completo de las 36 preguntas entre el usuario y UN candidato concreto.
+  - Pesos del cálculo ponderado final: emocional 20%, valores 25%, estilo comunicativo 10%,
+    intereses 25%, madurez 10%, apertura/extroversión 10%.
+  - Regla fija: los candidatos y sus comparaciones se calculan UNA sola vez, en el momento en que el
+    propio usuario completa su cuestionario. Nunca se recalcula retroactivamente para usuarios ya
+    existentes cuando se une gente nueva (evita una explosión O(N) de llamadas al LLM que agotaría
+    el free tier de Groq).
+
+  Plan técnico completo de referencia (arquitectura, modelo de datos, endpoints, orquestación de
+  IA, despliegue, riesgos): ver el documento de plan aprobado del proyecto si está disponible en el
+  contexto de la sesión.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+rules:
+  proposal:
+    - Dejar explícito que el alcance es la v1 del TFM (acotada), con las líneas de ampliación futura
+      y de migración a producción/comercialización mencionadas solo como fuera de alcance.
+  design:
+    - Justificar las decisiones de arquitectura en términos de Clean Code / Clean Architecture
+      (responsabilidad única, inversión de dependencias, independencia de infraestructura, DRY del
+      contrato compartido) cuando aplique.
+    - Documentar explícitamente la metodología TDD (rojo-verde-refactor por unidad de trabajo) y la
+      estrategia de logging estructurado con IDs correlacionados (comparison_id, user_id) en el flujo
+      de orquestación de IA, ya que es la parte con más superficie de fallo (red, rate limits, JSON
+      mal formado).
+    - No loguear nunca el contenido íntegro de las respuestas de los usuarios en texto plano.
+  tasks:
+    - Cada tarea de implementación de lógica no trivial (servicios, endpoints, componentes con
+      lógica) debe incluir explícitamente su tarea de test previa (metodología TDD, es decir, test
+      antes que implementación), no como tarea separada al final.
+    - Las tareas sobre la orquestación de IA y sobre servicios con dependencias externas deben
+      incluir explícitamente la instrumentación de logging (qué se loguea y con qué IDs) como parte
+      de la propia tarea, no como tarea aparte.
+    - Romper el trabajo en tareas pequeñas y verificables (idealmente ejecutables y comprobables de
+      forma aislada), agrupadas por módulo/capa siguiendo la estructura de carpetas del plan técnico.

@@ -1,0 +1,128 @@
+<h1 class="h3 mb-1">Completa tu perfil</h1>
+<p class="text-body-secondary mb-4">
+  Necesitamos algunos datos básicos para poder calcular tus compatibilidades.
+</p>
+
+<div class="card">
+  <div class="card-body">
+    @if (currentStep() === 0) {
+      <form class="text-start" [formGroup]="step1Form">
+        <div class="text-center mb-3">
+          <button
+            type="button"
+            class="profile-photo-picker rounded-circle"
+            aria-label="Elegir foto de perfil"
+            (click)="pickPhoto()"
+          >
+            @if (photoPreviewUrl()) {
+              <img
+                [src]="photoPreviewUrl()"
+                class="rounded-circle"
+                width="96"
+                height="96"
+                alt="Vista previa de tu foto de perfil"
+              />
+            } @else {
+              <span class="profile-photo-picker__placeholder">
+                <i class="bi bi-person-fill" aria-hidden="true"></i>
+              </span>
+            }
+          </button>
+          <div class="small mt-2">
+            <button type="button" class="btn btn-link p-0" (click)="pickPhoto()">Subir foto</button>
+          </div>
+          <input
+            #fileInput
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            hidden
+            (change)="onPhotoSelected($event)"
+          />
+          @if (photoError()) {
+            <div class="text-danger small mt-1">{{ photoError() }}</div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="name">Nombre completo</label>
+          <input
+            id="name"
+            class="form-control"
+            formControlName="name"
+            [class.is-invalid]="step1Form.controls.name.invalid && step1Form.controls.name.touched"
+          />
+          <div class="invalid-feedback">Introduce tu nombre completo.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="alias">Un alias único</label>
+          <input
+            id="alias"
+            class="form-control"
+            formControlName="alias"
+            [class.is-invalid]="step1Form.controls.alias.dirty && step1Form.controls.alias.hasError('aliasTaken')"
+            [class.is-valid]="step1Form.controls.alias.dirty && aliasAvailable()"
+          />
+          @if (step1Form.controls.alias.pending && step1Form.controls.alias.dirty) {
+            <div class="form-text">Comprobando disponibilidad…</div>
+          }
+          @if (step1Form.controls.alias.dirty && step1Form.controls.alias.hasError('aliasTaken')) {
+            <div class="invalid-feedback">Ese alias ya está en uso.</div>
+          }
+          @if (step1Form.controls.alias.dirty && aliasAvailable()) {
+            <div class="valid-feedback">Alias disponible.</div>
+          }
+        </div>
+      </form>
+    } @else {
+      <div class="text-start">
+        <h2 class="h5 text-center mb-3">Elige 5 cualidades que te describen</h2>
+
+        @if (qualitiesLoading()) {
+          <div class="d-flex justify-content-center py-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando…</span>
+            </div>
+          </div>
+        } @else {
+          <div class="d-flex flex-wrap gap-2 justify-content-center mb-2">
+            @for (quality of qualityOptions(); track quality.id) {
+              <app-quality-pill
+                [label]="quality.name"
+                [selected]="quality.selected"
+                [selectedCount]="selectedQualityIds().length"
+                (toggled)="onToggleQuality(quality.id)"
+              />
+            }
+          </div>
+        }
+
+        @if (submitError()) {
+          <div class="alert alert-danger py-2 mt-3" role="alert">{{ submitError() }}</div>
+        }
+      </div>
+    }
+  </div>
+  <div class="card-footer bg-white d-flex justify-content-end">
+    @if (currentStep() === 0) {
+      <button type="button" class="btn btn-dark" [disabled]="step1Invalid()" (click)="goToStep(1)">
+        Siguiente
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="btn btn-dark"
+        [disabled]="selectedQualityIds().length !== 5 || submitting()"
+        (click)="submit()"
+      >
+        Finalizar
+      </button>
+    }
+  </div>
+</div>
+
+<div class="d-flex justify-content-center gap-2 mt-3">
+  @for (step of [0, 1]; track step) {
+    <span class="registration-dot" [class.registration-dot--active]="currentStep() === step" aria-hidden="true"></span>
+  }
+</div>

@@ -1,0 +1,24 @@
+// Valores literales (no variables Sass `$primary`/`$dark`): el Sass de un componente Angular se
+// compila de forma aislada, sin ver los overrides de `styles.scss` (mismo criterio ya aplicado en
+// `landing.component.scss`/`auth-shell.component.scss`, que tampoco usan `$primary`/`$dark`).
+// `var(--bs-secondary-bg)` sí funciona aquí: es una custom property CSS en tiempo de ejecución,
+// inyectada globalmente por el Bootstrap ya recompilado, no una variable Sass en tiempo de compilación.
+.quality-pill {
+  background: var(--bs-secondary-bg); // gris claro, no seleccionada
+  color: #000000;
+  border: none;
+  padding: 0.4rem 1rem;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.quality-pill--selected {
+  background: #fb8500;
+  color: #ffffff;
+}
+
+.quality-pill:disabled {
+  opacity: 0.5; // no seleccionada + tope de 5 alcanzado
+  cursor: default;
+}

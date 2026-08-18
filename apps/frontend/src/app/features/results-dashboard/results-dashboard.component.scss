@@ -1,0 +1,3 @@
+// Grid, cards y estados usan solo utilidades de Bootstrap ya recompiladas con los tokens de marca
+// (apps/frontend/src/styles.scss). El único color que no puede ir por CSS es el del radar chart
+// (Chart.js pinta en un <canvas>, no en el DOM) — se fija en TypeScript (chartDataFor), no aquí.

@@ -1,28 +1,41 @@
-# Angular specific
-/dist/
-/out-tsc/
+# Node modules and dependency files (monorepo-wide)
+# package-lock.json SÍ se commitea (raíz del monorepo, npm workspaces) — CI usa `npm ci`, que lo
+# necesita para instalaciones reproducibles.
+node_modules/
+yarn.lock
+
+# Build output (monorepo-wide)
+dist/
+out-tsc/
 /tmp/
-/coverage/
-/e2e/test-output/
-/.angular/
+coverage/
+e2e/test-output/
+*.tsbuildinfo
+
+# Angular
 .angular/
-
-# Node modules and dependency files
-/node_modules/
-/package-lock.json
-/yarn.lock
-
-# Environment files
-/.env
-
-# Angular CLI and build artefacts
 /.angular-cli.json
 /.ng/
 
-# TypeScript cache
-*.tsbuildinfo
+# Environment files (monorepo-wide, never commit real secrets)
+.env
+.env.local
+!.env.example
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# Pool de cuentas de test generado por test/setup/global-setup.ts (credenciales del stack local)
+apps/backend/test/setup/.test-account-pool.json
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Claude Code local settings (per-session permissions, not shared config)
+.claude/settings.local.json
+
+# Project documentation is always tracked, even if a future rule ignores docs/*
+!docs/plan.md

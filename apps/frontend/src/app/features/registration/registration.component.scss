@@ -1,0 +1,35 @@
+// Valores literales, no variables Sass (mismo criterio que `quality-pill.component.scss`: el Sass de
+// un componente Angular se compila aislado, sin ver los overrides de `styles.scss`).
+.profile-photo-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border: none;
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fb8500, #be1e2d); // mismo degradado de marca que Shell B
+  color: #ffffff;
+}
+
+.profile-photo-picker__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 2rem;
+}
+
+.registration-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bs-border-color);
+}
+
+.registration-dot--active {
+  background: #000000;
+}
