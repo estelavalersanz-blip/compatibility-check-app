@@ -21,6 +21,16 @@
       logger solo escribe a stdout, sin fallar ni intentar conectar a Logtail
 - [x] 1.5c Implementar el transport condicional de la tarea anterior, y documentar
       `LOGTAIL_SOURCE_TOKEN` (solo el nombre, nunca el valor) en `apps/backend/.env.example`
+
+      **Revisado en la tarea 19.1** (sección 19): el alta en Better Stack exigía elegir una integración
+      adicional ajena al proyecto (AWS/GCP/Azure/Slack/Teams/PagerDuty) sin poder omitirla — fricción
+      desproporcionada frente al beneficio, así que se descartó el proveedor externo (ver `design.md`
+      decisión 8b, revisada). El transport condicional a Logtail de 1.5b/1.5c se retiró:
+      `pino-transport.config.ts` y su test se eliminaron, `logger.module.ts` configura ahora un único
+      target fijo a stdout, `@logtail/pino` se quitó de `apps/backend/package.json` y
+      `LOGTAIL_SOURCE_TOKEN` de `.env.example`. Estas dos tareas quedan `[x]` como registro histórico de
+      lo que se implementó y probó en su momento (funcionaba correctamente), no como descripción del
+      estado actual.
 - [x] 1.7 Instalar `@nestjs/cqrs` en `apps/backend` para el uso selectivo de Commands/Events descrito
       en el diseño (no para las lecturas simples)
 - [x] 1.8 Test unitario: el interceptor de logging enganchado al `CommandBus` registra inicio, fin y
@@ -751,24 +761,69 @@ test:e2e`/`npm run lint`/`npm run build` (los 3 workspaces) en verde tras los ca
 
 ## 19. Despliegue gratuito (ver `design.md` decisión 10 — sin Terraform, sin YAML de deploy propio)
 
-- [ ] 19.1 Crear a mano el proyecto de Supabase (BD, Auth, Storage) y una cuenta gratuita de Better
-       Stack (Logtail, decisión 8b) con su fuente/*source* para el backend; documentar en
+- [x] 19.1 Crear a mano el proyecto de Supabase (BD, Auth, Storage); documentar en
        `docs/architecture.md` los pasos exactos seguidos (no solo el resultado) — es el aprovisionamiento
        manual que sustituye a Terraform. Documentar en `apps/backend/.env.example` los **nombres** de las
        variables de entorno necesarias (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GROQ_API_KEY`,
-       `OPENROUTER_API_KEY`, `LOGTAIL_SOURCE_TOKEN`, etc.), nunca sus valores reales
-- [ ] 19.2 Crear a mano el servicio web de `apps/backend` en Render (free tier), conectado por su
+       `OPENROUTER_API_KEY`, etc.), nunca sus valores reales
+
+      **Decisión tomada durante esta tarea, no prevista al escribirla**: se descartó crear la cuenta de
+      Better Stack (Logtail) que el enunciado original de esta tarea sí pedía — el alta exigía elegir,
+      sin poder omitirlo, una integración adicional ajena al proyecto (AWS/GCP/Azure/Slack/Teams/
+      PagerDuty); fricción desproporcionada frente al beneficio de tener histórico buscable para una
+      demo de TFM cuando el propio Render ya sirve tail en vivo. Ver `design.md` decisión 8b (revisada)
+      para el razonamiento completo, y la nota tras la tarea 1.5c para el detalle de qué código se
+      retiró (`pino-transport.config.ts`, `@logtail/pino`, `LOGTAIL_SOURCE_TOKEN`).
+
+      **Proyecto Supabase real creado** (`compatibility-check-app`, West EU Ireland, project ref
+      `ajqhpwikzjygdycptcfp`): migraciones `0001_init.sql`/`0002_rls_policies.sql` aplicadas vía
+      `supabase link`+`supabase db push` (gotcha real encontrado y arreglado — comandos ejecutados la
+      primera vez fuera de la raíz del repo, migración fantasma reparada con `supabase migration
+      repair --status reverted`, detalle completo en `docs/architecture.md`); bucket `user-photos`
+      creado a mano con la misma configuración que `supabase/config.toml`; plantilla de email de
+      recuperación de contraseña **no personalizada** en el proyecto real (el dashboard alojado exige
+      SMTP propio para editarla, y `design.md` decisión 3b descarta añadir un proveedor de email) — se
+      queda con la plantilla genérica de Supabase, diferencia conocida frente a local.
+- [x] 19.2 Crear a mano el servicio web de `apps/backend` en Render (free tier), conectado por su
        integración Git nativa a la rama `main` (deploy automático al mergear, sin workflow de GitHub
-       Actions que lo dispare), con las variables de entorno de la tarea anterior (incluida
-       `LOGTAIL_SOURCE_TOKEN`) configuradas como secretos de Render (nunca committeadas)
-- [ ] 19.3 Crear a mano el proyecto de `apps/frontend` en Vercel (Root Directory = `apps/frontend` dentro
+       Actions que lo dispare), con las variables de entorno de la tarea anterior configuradas como
+       secretos de Render (nunca committeadas)
+
+      Detalle completo (nombre/región/root directory/build-start command exactos, y una nota real de
+      seguridad — una captura de pantalla mostró sin querer dos claves en claro; se ofreció regenerarlas
+      y se decidió explícitamente conservarlas) en `docs/architecture.md`, sección "Render — servicio
+      del backend". Primer deploy fallido — esperado, mismo motivo que las migraciones de Supabase en
+      19.1: `main` seguía vacío (PR #1 sin mergear). **Tras mergear el PR #1 a `main` (ver nota de la
+      tarea 19.3), el redeploy automático de Render sí funcionó**: logs en vivo confirman `Nest
+      application successfully started`/`Your service is live` en
+      `https://compatibility-check-app.onrender.com`.
+- [x] 19.3 Crear a mano el proyecto de `apps/frontend` en Vercel (Root Directory = `apps/frontend` dentro
        del monorepo), conectado por su integración Git nativa (preview deployment por PR, producción al
        mergear a `main`), apuntando a la URL pública del backend y al proyecto de Supabase (URL + anon
        key — no son secretas, pueden ir como variables de entorno normales de Vercel)
-- [ ] 19.4 Verificar CORS entre frontend y backend desplegados, y documentar en `docs/architecture.md` el
+
+      **El selector de Root Directory de Vercel exigió mergear el PR #1 a `main` para funcionar** (a
+      diferencia de Supabase, aquí no había un rodeo tipo CLI): con `main` vacío, el modal solo ofrecía
+      la raíz del repo, sin poder navegar a `apps/frontend` — confirmado y arreglado mergeando el PR
+      #1 (CI en verde en los dos checks obligatorios) tras petición explícita. **Sin variables de
+      entorno en Vercel**: se creó `apps/frontend/src/environments/environment.production.ts` (nuevo)
+      con los valores reales de Supabase/Render committeados directamente (no son secretos) y
+      `fileReplacements` en `angular.json` (configuración `production`) para activarlo en el build —
+      verificado con un build real que el bundle final contiene las URLs de producción, no las de
+      desarrollo local. Deploy correcto a la primera tras el merge:
+      `https://compatibility-check-app.vercel.app`, landing verificada visualmente. Detalle completo en
+      `docs/architecture.md`, sección "Vercel — proyecto del frontend".
+- [x] 19.4 Verificar CORS entre frontend y backend desplegados, y documentar en `docs/architecture.md` el
        cold-start de Render, la ausencia de Terraform (y por qué, ver decisión 10), dónde vive cada
-       credencial (política de secretos) y dónde consultar los logs (Render para tail en vivo, Better
-       Stack/Logtail para histórico buscable, decisión 8b)
+       credencial (política de secretos) y dónde consultar los logs (solo Render, tail en vivo — sin
+       proveedor externo de persistencia, decisión 8b revisada en esta misma sección)
+
+      **CORS verificado de verdad, no solo por inspección de código**: `fetch(...)` ejecutado en el
+      navegador contra `https://compatibility-check-app.onrender.com/qualities` con origen real
+      `https://compatibility-check-app.vercel.app` respondió `200` sin error de CORS. Resto de la
+      tarea (cold-start, Terraform, credenciales, logs) documentado en `docs/architecture.md`, sección
+      "Despliegue completo — verificación (tarea 19.4)". **Con esto, la sección 19 completa (19.1-19.4)
+      queda `[x]`.**
 
 ## 20. Verificación end-to-end
 

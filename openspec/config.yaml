@@ -20,8 +20,9 @@ context: |
   - Despliegue gratuito objetivo: frontend en Vercel (integración Git nativa, sin YAML de deploy
     propio), backend en Render, BD/Storage/Auth en Supabase. CI en GitHub Actions como puerta de
     calidad (lint + test + build); sin Terraform (aprovisionamiento manual documentado). Tests de
-    integración contra el stack local de Supabase (CLI + Docker). Logs: `nestjs-pino` + Better Stack
-    (Logtail) para histórico buscable.
+    integración contra el stack local de Supabase (CLI + Docker). Logs: `nestjs-pino` a stdout (Render
+    tail en vivo); sin proveedor externo de persistencia (evaluado Better Stack/Logtail, descartado en
+    la tarea 19.1 por la fricción de su alta).
   - Perfil de la desarrolladora: experiencia previa en .NET, AngularJS y SQL Server — se prioriza
     NestJS por su similitud arquitectónica con ASP.NET Core (decoradores, módulos, DI).
 

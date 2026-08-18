@@ -515,32 +515,40 @@ sin conocerla.
   cruzar logs a ciegas. **Nunca se loguea el contenido íntegro de las 36 respuestas de un usuario** en
   texto plano (dato sensible) — solo longitudes, IDs y metadatos.
 
-### 8b. Persistencia de logs fuera de Render, vía Pino + Better Stack (Logtail)
+### 8b. Persistencia de logs: se descarta un proveedor externo, solo stdout de Render (revisada en la tarea 19.1)
 
-El stdout/stderr del backend sigue siendo visible en el dashboard de Render en tiempo real, pero el free
-tier de Render **no conserva histórico** más allá de la sesión reciente — insuficiente para poder
-revisar un fallo ocurrido, por ejemplo, durante la defensa del TFM o unos días antes. Para tener
-histórico buscable sin montar infraestructura propia:
+El stdout/stderr del backend es visible en el dashboard de Render en tiempo real, pero el free tier de
+Render **no conserva histórico** más allá de la sesión reciente — insuficiente, en teoría, para poder
+revisar un fallo ocurrido, por ejemplo, unos días antes de la defensa del TFM. La v1 previó por eso un
+segundo destino de log (transport de Pino hacia Better Stack/Logtail) para tener histórico buscable sin
+montar infraestructura propia.
 
-- **Librería de logging: `nestjs-pino`** (Pino), sustituyendo al planteamiento inicial de "wrapper a
-  mano sobre `@nestjs/common Logger`" (decisión 8) — Pino ya da salida JSON estructurada de fábrica (los
-  campos de contexto/`comparison_id`/`user_id` quedan en el propio objeto del log, no concatenados en un
-  string) y tiene soporte de transports de primera clase, evitando reinventar ese formateo a mano.
-- **Transport a Better Stack (Logtail)**: free tier suficiente para el volumen de una demo de TFM. El
-  transport de Pino manda cada log también a Logtail además de a stdout — Render sigue sirviendo para
-  tail en vivo durante el desarrollo, Logtail para consultar histórico después.
-- **Credencial (`LOGTAIL_SOURCE_TOKEN`)**: sigue exactamente el mismo tratamiento ya definido en la
-  decisión 10 para `GROQ_API_KEY`/`SUPABASE_SERVICE_ROLE_KEY` — variable de entorno solo en Render,
-  nunca en el repositorio, documentada por nombre (no valor) en `apps/backend/.env.example`.
-- **Nunca activo en tests ni en local por defecto**: el transport a Logtail solo se añade si
-  `LOGTAIL_SOURCE_TOKEN` está definido (típicamente solo en Render); en local y en CI, sin esa variable,
-  Pino sigue escribiendo solo a stdout — evita ensuciar el proyecto de Logtail con logs de cada test o
-  de cada máquina de desarrollador, y evita que CI necesite esa credencial para nada (coherente con la
-  decisión 10: CI no toca credenciales reales).
+**Esta parte de la decisión se revisó y se descartó al ejecutar la tarea 19.1**: el alta en Better
+Stack exigía elegir, sin opción de omitirlo, una integración adicional de una lista ajena a este
+proyecto (AWS/Google Cloud/Microsoft Azure/Slack/Teams/PagerDuty) — fricción de aprovisionamiento
+desproporcionada frente al beneficio real (histórico buscable de una demo de TFM de duración acotada,
+cuando el propio Render ya sirve para revisar un fallo reciente en vivo). Se prioriza no depender de un
+proveedor externo más: **el único destino de logs en v1 es stdout**, consultable en el dashboard de
+Render mientras dure la sesión — limitación aceptada, ver Risks/Trade-offs.
+
+- **Librería de logging: `nestjs-pino`** (Pino) — se mantiene sin cambios, sustituyendo al
+  planteamiento inicial de "wrapper a mano sobre `@nestjs/common Logger`" (decisión 8): Pino da salida
+  JSON estructurada de fábrica (los campos de contexto/`comparison_id`/`user_id` quedan en el propio
+  objeto del log, no concatenados en un string), independientemente de a cuántos destinos se envíe.
+- **Sin transport condicional a un proveedor externo**: `logger.module.ts` configura un único target
+  fijo (`pino/file` → stdout), sin ninguna variable de entorno que active/desactive un segundo destino.
+  `LOGTAIL_SOURCE_TOKEN` y el paquete `@logtail/pino` (que sí llegaron a implementarse en la sección 1,
+  tarea 1.5b/1.5c) se retiraron del proyecto al tomar esta decisión —
+  `apps/backend/src/logger/pino-transport.config.ts` y su test se eliminaron; `logger.module.ts`
+  construye el target directamente.
 - Sigue aplicando sin cambios el resto de la decisión 8: nunca se loguea el contenido íntegro de las 36
   respuestas, y el `comparison_id`/`user_id` se propaga en todos los logs de una operación — con Pino
   esto se hace con un *child logger* por request/operación en vez de concatenar el ID a mano en cada
   mensaje.
+- **Si en el futuro conviniera retomar histórico buscable**: cualquier proveedor con transport de Pino
+  (Axiom, Grafana Cloud, Papertrail, u otro) se añadiría de la misma forma prevista originalmente aquí
+  — un target más en la lista de `logger.module.ts`, activado por una variable de entorno opcional, sin
+  tocar el resto del logging.
 
 ### 9. Chat interno entre usuarios con compatibilidad, elegibilidad asimétrica y sin WebSockets
 
@@ -640,8 +648,7 @@ credencial en absoluto), y nunca como secret de GitHub Actions: los tests de CI 
 `ai-orchestrator.service.ts`/`groq.provider.ts` contra un cliente HTTP mockeado (decisión 8), así que CI
 nunca llama al proveedor real ni necesita la clave verdadera — evita tanto el riesgo de fuga como
 consumir cuota de la API en cada push. `apps/backend/.env.example` documenta los **nombres** de las
-variables (`GROQ_API_KEY`, `OPENROUTER_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `LOGTAIL_SOURCE_TOKEN` —
-ver decisión 8b, etc.), nunca sus valores.
+variables (`GROQ_API_KEY`, `OPENROUTER_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, etc.), nunca sus valores.
 
 ### 11. Tests de integración contra Supabase local (CLI + Docker), con fixtures por factory y limpieza automática
 
@@ -718,10 +725,11 @@ con unitarios/e2e no depende de tener Docker levantado en cada guardado.
 - **Los tests de integración exigen Docker Desktop en local** (Supabase CLI, decisión 11) → Mitigación:
   solo afecta al ciclo de integración, no al de unitarios (TDD rápido); en CI no hace falta instalar
   nada porque los runners de GitHub Actions ya traen Docker.
-- **Free tier de Better Stack (Logtail) tiene límites de volumen/retención** (decisión 8b) → Mitigación:
-  el transport solo se activa con `LOGTAIL_SOURCE_TOKEN` definido (solo en Render, nunca en tests/local),
-  así que el volumen real queda acotado al tráfico de la demo, no al de cada ejecución de test; Render
-  sigue disponible como respaldo para tail en vivo si se agotase la cuota.
+- **Sin histórico de logs buscable más allá de la sesión reciente de Render** (decisión 8b, revisada en
+  la tarea 19.1: se descartó un proveedor externo de persistencia por la fricción de su alta) →
+  Mitigación: ninguna técnica — limitación aceptada explícitamente; el dashboard de Render sigue
+  sirviendo para revisar un fallo reciente en vivo (tail en tiempo real), suficiente para el alcance de
+  una demo de TFM. Documentar como línea futura si se quisiera retomar histórico buscable.
 - **RLS mal configurada expondría perfiles de otros usuarios** → Mitigación: escribir tests de
   integración específicos que verifiquen que un usuario autenticado no puede leer/editar la fila de
   `users`/`questionnaires` de otro usuario vía el cliente directo de Supabase.
@@ -741,7 +749,8 @@ con unitarios/e2e no depende de tener Docker levantado en cada guardado.
 
 No aplica migración de datos (proyecto nuevo). Pasos de puesta en marcha:
 1. Crear proyecto Supabase, ejecutar `supabase/migrations/0001_init.sql`, crear bucket `user-photos`.
-2. Ejecutar `supabase/seed/seed.ts` para poblar `qualities` y los 10 usuarios sintéticos.
+2. Ejecutar `supabase/seed/seed.ts` (`npm run seed`, sección 18 de `tasks.md`) para poblar `qualities`,
+   los 10 usuarios sintéticos y la cuenta de demostración sin perfil.
 3. Desplegar backend en Render y frontend en Vercel/Netlify apuntando al backend.
 4. Verificar el flujo completo end-to-end contra las URLs públicas (ver `tasks.md` para el detalle).
 
