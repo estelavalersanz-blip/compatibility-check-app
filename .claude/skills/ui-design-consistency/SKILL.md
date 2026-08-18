@@ -17,7 +17,8 @@ riesgo real no es que una pantalla individual quede fea, sino que cada
 una se resuelva con un criterio distinto — un formulario con Bootstrap y el siguiente con CSS a medida,
 una tarjeta con sombra y la siguiente sin ella, un botón de "guardar" que a veces es azul y a veces
 verde — y que el conjunto no se sienta como una sola aplicación. Esta skill existe para que, pantalla a
-pantalla, se reutilicen las mismas decisiones ya tomadas en `openspec/changes/build-compatibility-mvp/design.md`
+pantalla, se reutilicen las mismas decisiones ya tomadas en `design.md` del cambio original, ya
+archivado en `openspec/changes/archive/2026-08-18-build-compatibility-mvp/design.md`
 (decisiones 3c-bis, 3c-ter, 3c-quater, 3d, 3d-bis, 3e, 3f, 3g y 9) en vez de que cada componente nuevo
 las reinvente.
 
@@ -580,14 +581,15 @@ voz alta (coméntala al usuario o en el PR) en vez de dejar la desviación sin e
 
 ## Ver también
 
-- `openspec/changes/build-compatibility-mvp/design.md` — decisiones 3c-bis (Bootstrap como sistema de
-  diseño), 3c-ter (responsive), 3c-quater (paleta, tipografía, botón oscuro, Shell B degradado y wizard
-  del cuestionario), 3d/3d-bis (píldoras de cualidades), 3e (completar perfil en 2 pasos), 3f (pantalla
-  de procesamiento), 3g (landing pública), 3h (bienvenida del cuestionario y recálculo integrado) y 9
-  (chat interno) son la fuente de verdad de la que sale esta skill; si esas decisiones cambian, esta
-  skill debe actualizarse a la vez.
-- `openspec/changes/build-compatibility-mvp/specs/internal-chat/spec.md` — requisitos formales del chat
-  (elegibilidad, acceso desde el menú, no leídos) que la UI descrita aquí debe cumplir.
+- `openspec/changes/archive/2026-08-18-build-compatibility-mvp/design.md` — decisiones 3c-bis
+  (Bootstrap como sistema de diseño), 3c-ter (responsive), 3c-quater (paleta, tipografía, botón
+  oscuro, Shell B degradado y wizard del cuestionario), 3d/3d-bis (píldoras de cualidades), 3e
+  (completar perfil en 2 pasos), 3f (pantalla de procesamiento), 3g (landing pública), 3h (bienvenida
+  del cuestionario y recálculo integrado) y 9 (chat interno) son la fuente de la que sale esta skill;
+  el cambio ya está archivado (166/166 tareas), pero el fichero sigue documentando el porqué de cada
+  decisión — si algo de esto cambiara, esta skill debe actualizarse a la vez.
+- `openspec/specs/internal-chat/spec.md` — requisitos formales vigentes del chat (elegibilidad, acceso
+  desde el menú, no leídos) que la UI descrita aquí debe cumplir.
 - `references/page-template.md` — plantilla de partida copy-paste para arrancar un componente de
   pantalla nuevo ya con la estructura correcta.
 - `references/design-tokens.md` — valores exactos de color/tipografía, el snippet de Sass para

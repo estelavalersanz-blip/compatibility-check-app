@@ -2,6 +2,9 @@
   <div>
     <h1 class="h3 mb-1">Tus compatibilidades</h1>
     <p class="text-body-secondary mb-0">Ordenadas de mayor a menor compatibilidad.</p>
+    @if (progressLabel(); as progress) {
+      <span class="badge text-bg-light mt-2">{{ progress }}</span>
+    }
   </div>
   <button
     type="button"

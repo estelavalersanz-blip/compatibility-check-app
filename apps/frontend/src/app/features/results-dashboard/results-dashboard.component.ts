@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   ComparisonQuestionDetail,
@@ -61,6 +61,17 @@ export class ResultsDashboardComponent {
   readonly needsRecalculation = signal(false);
   readonly recalculating = signal(false);
   readonly chatError = signal<string | null>(null);
+
+  /** Spec `results-dashboard`, escenario "Estado de procesamiento antes de completarse": mientras
+   *  quede alguna comparación en `pending`/`analyzing`, el dashboard debe mostrar cuántas ya han
+   *  terminado en vez de dejar solo los spinners individuales de cada tarjeta sin ningún conteo
+   *  agregado. Se calcula aquí (no en la plantilla) para no repetir el filtro dos veces; `null`
+   *  cuando ya no queda ninguna pendiente, así el `@if` de la plantilla decide con un solo valor. */
+  readonly progressLabel = computed<string | null>(() => {
+    const all = this.comparisons();
+    const finished = all.filter((card) => card.status === 'completed' || card.status === 'error').length;
+    return finished === all.length ? null : `${finished} de ${all.length} analizadas`;
+  });
 
   readonly chartOptions: ChartConfiguration<'radar'>['options'] = {
     responsive: true,

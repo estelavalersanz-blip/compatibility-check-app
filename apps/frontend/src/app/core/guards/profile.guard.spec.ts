@@ -26,11 +26,18 @@ function ownProfile(overrides: Partial<OwnUserProfile> = {}): OwnUserProfile {
   };
 }
 
-async function navigateTo(url: string, profile: OwnUserProfile | null): Promise<string> {
+// `hasValidSession` con valor por defecto `true`: todos los tests de abajo ya asumían sesión válida
+// y solo variaban el perfil — el tercer parámetro opcional evita tocar esas llamadas existentes al
+// añadir el caso "sin sesión válida" (hueco encontrado en verificación, spec `authentication`).
+async function navigateTo(
+  url: string,
+  profile: OwnUserProfile | null,
+  hasValidSession = true,
+): Promise<string> {
   TestBed.configureTestingModule({
     providers: [
       provideRouter(routes),
-      { provide: AuthService, useValue: fakeAuthService(true) },
+      { provide: AuthService, useValue: fakeAuthService(hasValidSession) },
       { provide: UsersService, useValue: fakeUsersService(profile) },
       { provide: ChatService, useValue: fakeChatService() },
       // Este test navega de verdad por `app.routes` con perfil ya completado, así que puede acabar
@@ -65,5 +72,13 @@ describe('profileGuard (tareas 11.5/11.6)', () => {
 
   it('no aplica a /registration: sin perfil, esa ruta se puede visitar igualmente', async () => {
     expect(await navigateTo('/registration', null)).toBe('/registration');
+  });
+
+  // Hueco encontrado en verificación (spec `authentication`): ningún test de arriba ejercitaba la
+  // rama "sin sesión válida" (líneas 20-22 de `profileGuard`) — todos usaban sesión válida y solo
+  // variaban el perfil. Con sesión inválida el guard corta antes de consultar el perfil, así que el
+  // perfil pasado aquí es indiferente (se usa `null`).
+  it('sin sesión válida, navegar a /questionnaire redirige a /auth/login', async () => {
+    expect(await navigateTo('/questionnaire', null, false)).toBe('/auth/login');
   });
 });

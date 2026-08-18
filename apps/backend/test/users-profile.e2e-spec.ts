@@ -25,6 +25,14 @@ interface FakeAuthUser {
   email: string;
 }
 
+interface FakeComparisonRow {
+  id: string;
+  requester_user_id: string;
+  candidate_user_id: string;
+  shared_qualities_count: number;
+  status: string;
+}
+
 type Row = Record<string, unknown>;
 
 /**
@@ -32,10 +40,17 @@ type Row = Record<string, unknown>;
  * mismo recurso `/users/me...`) — evita repetir el mismo fake de Supabase tres veces. Solo modela
  * exactamente las llamadas que hacen `UsersService`/`CreateUserProfileHandler`/`PhotoUploadService`,
  * no un emulador genérico de PostgREST.
+ *
+ * `comparisons` es una excepción deliberada: se puebla para el test de "no propaga a otros usuarios"
+ * de abajo, pero a propósito NO tiene una tabla asociada en `createFakeSupabaseService` — si
+ * `PATCH /users/me` alguna vez intentara leer o escribir `comparisons` (no debería, ver
+ * `specs/candidate-matching/spec.md`), `from('comparisons')` lanzaría "Tabla inesperada" y ese test
+ * fallaría de inmediato, en vez de fallar en silencio con un fake que lo tolerase sin más.
  */
 class FakeDatabase {
   users: FakeUserRow[] = [];
   userQualities: Array<{ user_id: string; quality_id: string }> = [];
+  comparisons: FakeComparisonRow[] = [];
 }
 
 const UNIQUE_VIOLATION = {
@@ -266,6 +281,25 @@ describe('/users/me profile (e2e)', () => {
         .field('alias', 'ada')
         .field('qualityIds', 'q1')
         .field('qualityIds', 'q2');
+      await attachValidPhoto(req).expect(400);
+    });
+
+    // Cubre el lado ">5" de `qualityIds.length !== 5` (el test anterior ya cubre "<5"):
+    // sin este caso, enviar de más quedaba sin verificar en todo el repo.
+    it('rechaza con 400 si se envían más de 5 cualidades', async () => {
+      app = await buildApp(createFakeSupabaseService(db, AUTH_TOKENS));
+
+      const req = request(app.getHttpServer())
+        .post('/users/me/profile')
+        .set('Authorization', 'Bearer jwt-a')
+        .field('name', 'Ada Lovelace')
+        .field('alias', 'ada')
+        .field('qualityIds', 'q1')
+        .field('qualityIds', 'q2')
+        .field('qualityIds', 'q3')
+        .field('qualityIds', 'q4')
+        .field('qualityIds', 'q5')
+        .field('qualityIds', 'q6');
       await attachValidPhoto(req).expect(400);
     });
 
@@ -502,6 +536,46 @@ describe('/users/me profile (e2e)', () => {
         req = req.field('qualityIds', id);
       });
       await req.expect(401);
+    });
+
+    /**
+     * Cierra el segundo escenario, todavía sin test, del Requirement "Cálculo único automático, sin
+     * recálculo retroactivo para otros usuarios" (`specs/candidate-matching/spec.md`): "La edición de
+     * un usuario no afecta a quienes lo eligieron como candidato". El hueco hermano ("alta de un
+     * usuario nuevo no afecta a comparaciones existentes") ya lo cierra
+     * `matching-no-propagation.e2e-spec.ts`, pero ese test edita/da de alta al usuario que INICIA la
+     * comparación, nunca a uno que sea CANDIDATO de otro — dirección distinta, sin cubrir todavía.
+     */
+    it('editar las cualidades de A no toca la comparación de otro usuario que ya lo tenía como candidato', async () => {
+      // "requester-x" nunca se autentica en este test — solo existe como fila, con A ya calculado
+      // como uno de sus 3 candidatos.
+      db.comparisons.push({
+        id: 'existing-cmp-requester-x-a',
+        requester_user_id: 'requester-x',
+        candidate_user_id: USER_A.id,
+        shared_qualities_count: 4,
+        status: 'completed',
+      });
+      const comparisonsBefore = db.comparisons.map((row) => ({ ...row }));
+
+      app = await buildApp(createFakeSupabaseService(db, AUTH_TOKENS));
+      let req = request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', 'Bearer jwt-a')
+        .field('name', 'Ada Lovelace')
+        .field('alias', 'ada');
+      ['q1', 'q2', 'q3', 'q4', 'q6'].forEach((id) => {
+        req = req.field('qualityIds', id);
+      });
+      const response = await req.expect(200);
+
+      // A queda marcado como pendiente de recalcular SUS PROPIAS comparaciones (comportamiento ya
+      // cubierto arriba) — lo nuevo aquí es que la comparación de requester-x, donde A es el
+      // candidato, no el que edita, queda exactamente igual: PATCH /users/me nunca lee ni escribe
+      // `comparisons` (comprobado con una instantánea completa, no solo con el conteo — y con el
+      // propio fake, que lanzaría "Tabla inesperada" si el código intentara tocarla).
+      expect(response.body).toMatchObject({ needsRecalculation: true });
+      expect(db.comparisons).toEqual(comparisonsBefore);
     });
   });
 });

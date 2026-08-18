@@ -267,6 +267,33 @@ describe('ResultsDashboardComponent — estados de carga y vacío', () => {
   });
 });
 
+describe('ResultsDashboardComponent — indicador de progreso agregado (spec results-dashboard, escenario "Estado de procesamiento antes de completarse")', () => {
+  it('muestra "X de Y analizadas" mientras alguna comparación sigue en pending/analyzing', () => {
+    const { fixture } = setup({
+      comparisons: [
+        fakeComparison({ id: 'cmp-1', status: 'completed' }),
+        fakeComparison({ id: 'cmp-2', status: 'analyzing', result: null }),
+        fakeComparison({ id: 'cmp-3', status: 'pending', result: null }),
+      ],
+    });
+
+    const badge = root(fixture).querySelector('.badge');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent?.trim()).toBe('1 de 3 analizadas');
+  });
+
+  it('no muestra el indicador cuando todas las comparaciones ya han terminado (completed/error)', () => {
+    const { fixture } = setup({
+      comparisons: [
+        fakeComparison({ id: 'cmp-1', status: 'completed' }),
+        fakeComparison({ id: 'cmp-2', status: 'error', result: null }),
+      ],
+    });
+
+    expect(root(fixture).querySelector('.badge')).toBeNull();
+  });
+});
+
 describe('ResultsDashboardComponent — responsive (tarea 21.5)', () => {
   it('el grid usa columnas responsive (1 en móvil, hasta 3 en escritorio) y el radar chart se configura para adaptarse a su contenedor', () => {
     const { fixture } = setup();

@@ -1,0 +1,54 @@
+# Seed Data
+
+## Purpose
+
+Provee un conjunto de datos sintéticos reproducible — catálogo de 15 cualidades, 10 usuarios completos
+con cuestionario ya respondido, y una cuenta de demostración sin perfil — para poder desarrollar,
+probar y hacer demostraciones en vivo del flujo de comparación sin depender de usuarios reales ni
+gastar cuota del proveedor de IA.
+
+## Requirements
+
+### Requirement: Catálogo inicial de cualidades
+El sistema SHALL disponer de un catálogo fijo de 15 cualidades personales precargado antes de que
+cualquier usuario pueda registrarse.
+
+#### Scenario: Ejecución del seed de cualidades
+- **WHEN** se ejecuta el script de seed sobre una base de datos vacía
+- **THEN** la tabla de cualidades queda poblada con exactamente 15 registros, disponibles para el
+  formulario de registro
+
+### Requirement: Pool de usuarios sintéticos precargados
+El sistema SHALL disponer de 10 usuarios sintéticos (definidos en `supabase/seed/seed-users.json`),
+cada uno con su propia cuenta de autenticación, alias único, nombre, foto genérica, 5 cualidades
+elegidas y cuestionario de 36 preguntas ya completado, con variedad deliberada de arquetipos de
+personalidad y de solapamiento de cualidades entre sí, para permitir probar el flujo de comparación de
+forma realista sin depender de usuarios reales.
+
+#### Scenario: Ejecución del seed de usuarios
+- **WHEN** se ejecuta el script de seed
+- **THEN** se crea, para cada uno de los 10 perfiles de `seed-users.json`, una cuenta de autenticación
+  (con contraseña aleatoria no comunicada) y su perfil asociado con alias único, foto genérica (avatar
+  ilustrado generado de forma determinista, no un rostro real) ya subida a almacenamiento, sus 5
+  cualidades y su cuestionario completo, quedando disponibles como candidatos para nuevos usuarios
+
+#### Scenario: Reproducibilidad sin gasto de cuota de IA
+- **WHEN** se ejecuta el seed repetidamente durante el desarrollo (p. ej. tras resetear la base de
+  datos)
+- **THEN** los datos insertados son siempre los mismos (cuestionarios y cualidades congelados en un
+  fichero de datos), sin realizar llamadas al proveedor de IA durante la ejecución del seed
+
+### Requirement: Cuenta de demostración sin perfil
+El sistema SHALL disponer, además de los 10 usuarios sintéticos completos, de una cuenta de
+autenticación adicional dedicada a demostraciones en vivo (presentación/defensa), con email y
+contraseña conocidos pero **sin** fila de perfil asociada.
+
+#### Scenario: La cuenta de demostración aterriza en completar perfil
+- **WHEN** se inicia sesión con la cuenta de demostración
+- **THEN** el sistema la trata igual que cualquier cuenta autenticada sin perfil (ver
+  `user-registration`, "Sin perfil, cualquier ruta redirige...") y aterriza en completar perfil paso 1
+
+#### Scenario: La contraseña no se documenta en el repositorio
+- **WHEN** se crea o se consulta la cuenta de demostración
+- **THEN** su contraseña no queda escrita en ningún fichero versionado del repositorio (specs, tasks,
+  código o configuración) — solo su email es documentable si hace falta identificarla

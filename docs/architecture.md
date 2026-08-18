@@ -1,6 +1,7 @@
 # Arquitectura — notas de infraestructura
 
-Complementa `design.md` (`openspec/changes/build-compatibility-mvp/`) con el detalle concreto de
+Complementa `design.md` (`openspec/changes/archive/2026-08-18-build-compatibility-mvp/`, cambio ya
+archivado — 166/166 tareas) con el detalle concreto de
 cómo queda configurada cada pieza de infraestructura a medida que se implementa. `design.md` es la
 fuente de las *decisiones*; este documento recoge la *configuración resultante*.
 

@@ -1,9 +1,11 @@
 > **Nota de procedencia**: este documento es una copia versionada en el repo del plan técnico
 > gestionado por el modo de planificación de Claude Code (originalmente en
 > `~/.claude/plans/quiero-desarrollar-la-siguiente-effervescent-lovelace.md`). Para el detalle
-> formal por capacidad (requisitos, escenarios, tareas) usa
-> `openspec/changes/build-compatibility-mvp/`; este plan es la narrativa completa de contexto y
-> decisiones. Si se actualiza uno, hay que mantener el otro sincronizado.
+> formal por capacidad (requisitos y escenarios vigentes) usa `openspec/specs/`; el cambio original
+> que los generó (`proposal.md`/`design.md`/`tasks.md`, con las tareas y decisiones que llevaron
+> hasta ahí) queda archivado en
+> `openspec/changes/archive/2026-08-18-build-compatibility-mvp/`. Este plan es la narrativa completa
+> de contexto y decisiones — si se actualiza uno, hay que mantener el otro sincronizado.
 
 # Propuesta técnica — App de simulación de cita basada en un cuestionario de 36 preguntas de compatibilidad (TFM)
 

@@ -30,7 +30,9 @@ supabase/
   templates/     # Plantillas de email de Supabase Auth con marca AfinIA
   seed/          # Datos sintéticos de prueba
 openspec/
-  changes/build-compatibility-mvp/  # Fuente de verdad: proposal.md, design.md, specs/, tasks.md
+  specs/           # Fuente de verdad vigente: un spec.md por capability (10, ver más abajo)
+  changes/archive/2026-08-18-build-compatibility-mvp/  # Cambio original ya archivado (166/166
+                   # tareas) — proposal.md/design.md/tasks.md como registro histórico de decisiones
 docs/
   plan.md          # Narrativa completa de contexto y decisiones (complementa design.md)
   architecture.md  # Configuración resultante de infraestructura (Auth, Storage, CI/CD)
@@ -145,10 +147,15 @@ end-to-end) marcado explícitamente:
 
 ## Documentación y flujo de trabajo
 
-Este proyecto sigue [OpenSpec](https://github.com/Fission-AI/OpenSpec): el detalle formal de
-requisitos, diseño y tareas vive en `openspec/changes/build-compatibility-mvp/`
-(`proposal.md`/`design.md`/`specs/`/`tasks.md`), que es la fuente de verdad si algo difiere de
-`docs/plan.md`. El progreso de implementación se marca con `[x]` directamente en `tasks.md`.
+Este proyecto sigue [OpenSpec](https://github.com/Fission-AI/OpenSpec). El cambio original
+(`build-compatibility-mvp`) llegó a 166/166 tareas y ya está archivado en
+`openspec/changes/archive/2026-08-18-build-compatibility-mvp/` — sus `proposal.md`/`design.md`/
+`tasks.md` quedan ahí como registro histórico de decisiones (útil para la memoria del TFM), pero ya
+no son la fuente de requisitos vigente. Esa fuente de verdad ahora es `openspec/specs/` (un
+`spec.md` por capability — `authentication`, `candidate-matching`, `internal-chat`,
+`personal-questionnaire`, `responsive-ui`, `results-dashboard`, `seed-data`, `user-registration`,
+`user-settings`, `ai-compatibility-analysis`), sincronizada desde las delta specs del cambio al
+archivarlo; consultar ahí si algo difiere de `docs/plan.md`.
 
 Antes de tocar cualquier pantalla de `apps/frontend`, consultar
 `.claude/skills/ui-design-consistency/` (estructura de página, sistema de botones/formularios,

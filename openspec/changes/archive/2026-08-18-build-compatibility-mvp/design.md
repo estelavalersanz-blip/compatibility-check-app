@@ -113,7 +113,7 @@ se integra visualmente dentro de tarjetas Bootstrap.
 
 La skill de Claude Code `.claude/skills/ui-design-consistency/` traduce esta decisión (y las 3c-ter y
 3d) en un checklist concreto y una plantilla de partida para cada pantalla, de forma que la consistencia
-entre las 8 pantallas del frontend no dependa de recordarlo manualmente en cada sesión de trabajo.
+entre las 12 pantallas del frontend no dependa de recordarlo manualmente en cada sesión de trabajo.
 
 **Consecuencia real encontrada en la tarea 21.7 (verificación manual responsive)**: al no cargar el
 bundle JS de Bootstrap, cualquier componente que dependa de él para su INTERACCIÓN (no solo su CSS)
@@ -205,7 +205,7 @@ dentro de cada bloque sin volver a un stepper lineal para las 36 preguntas compl
 
 Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` (SKILL.md
 + `references/design-tokens.md` con los valores exactos, el logo y la tabla de gradientes +
-`references/page-template.md` con el marcado de partida), para que la consistencia entre las 8 pantallas
+`references/page-template.md` con el marcado de partida), para que la consistencia entre las 12 pantallas
 no dependa de recordarlo manualmente en cada sesión de trabajo.
 
 ### 3d. Selección de cualidades como cards con mínimo y máximo de 5
@@ -390,6 +390,15 @@ El endpoint de envío final (`POST /users/me/questionnaire`, ya existente) sigue
 exige las 36 respuestas completas, marca `questionnaire_completed_at` y dispara el evento — el borrador
 y el envío final son operaciones distintas con validaciones distintas, no la misma operación con un
 parámetro opcional.
+
+**Posicionamiento del wizard al recargar (corregido tras un verify posterior)**: al reabrir el
+cuestionario, el frontend posiciona el wizard en el primer bloque con alguna respuesta pendiente
+(`positionAtFirstIncompleteBlock()`, `questionnaire.component.ts`) — y si las 36 ya están respondidas
+(no queda ningún bloque incompleto), aterriza en el **último bloque (6)**, no en el primero: así quien
+reabre un cuestionario ya terminado ve directamente el resumen/banner de cierre y el botón de envío,
+en vez de tener que volver a pasar por los 5 bloques anteriores para llegar ahí. La primera
+implementación (sección 14) aterrizaba en el bloque 1 en ese caso; se corrigió al detectar la
+divergencia con este mismo escenario durante un `openspec-verify-change` posterior.
 
 ### 5d. Las respuestas de otros usuarios nunca se exponen en el dashboard
 
@@ -620,6 +629,12 @@ un gateway WebSocket (`@nestjs/websockets`) — añadiría una dependencia de in
 (conexiones persistentes) sobre un despliegue de Render en el free tier, que ya duerme por inactividad
 (cold start); el sondeo es coherente con el resto de la app y suficiente para una demo de TFM, a costa de
 no ser mensajería instantánea (ver Risks).
+
+**Matiz explícito para la defensa del TFM**: `ShellComponent` (icono del menú) y la pantalla de
+conversación sondean de forma independiente, sin avisarse entre sí — abrir y leer una conversación no
+fuerza un refresco inmediato del badge del menú, que sigue su propio ciclo de ~20-30s. Es decir, tras
+leer un mensaje, el punto de "no leído" del menú puede tardar hasta ese margen en desaparecer si no se
+recarga la pantalla. Es una consecuencia aceptada del propio diseño por sondeo, no un bug.
 
 Fuera de alcance explícito de esta decisión (ver Non-Goals): tiempo real vía WebSockets, llamadas,
 chats grupales, indicador de "escribiendo…", edición/borrado de mensajes, notificaciones push y cifrado

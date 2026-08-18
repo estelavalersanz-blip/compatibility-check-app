@@ -164,6 +164,26 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
     expect(items[0].textContent).toContain('Cerrar sesión');
   });
 
+  /**
+   * A diferencia de "Cerrar sesión" (test de abajo), ningún test comprobaba que el botón de
+   * Configuración navegase de verdad a `/settings` — solo que apareciera en el orden esperado (test
+   * de arriba). Mismo patrón: clic real + esperar estabilidad + comprobar la URL final del `Router`.
+   */
+  it('el botón de configuración navega a /settings', async () => {
+    const { harness } = await setup(true);
+    const settingsButton = Array.from(
+      rootElement(harness).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent?.includes('Configuración'));
+    if (!settingsButton) {
+      throw new Error('No se encontró el botón de configuración');
+    }
+
+    settingsButton.click();
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/settings');
+  });
+
   it('cerrar sesión limpia la sesión y redirige a la pantalla de autenticación', async () => {
     const { harness, signOutSpy } = await setup(true);
     const logoutButton = Array.from(

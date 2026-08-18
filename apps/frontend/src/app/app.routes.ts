@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { mainRouteGuard } from './core/guards/main-route.guard';
 import { profileGuard } from './core/guards/profile.guard';
 import { questionnaireCompletedGuard } from './core/guards/questionnaire-completed.guard';
+import { sessionGuard } from './core/guards/session.guard';
 import { ShellComponent } from './core/shell/shell.component';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password.component';
 import { LoginComponent } from './features/auth/login/login.component';
@@ -43,10 +44,15 @@ export const routes: Routes = [
     component: ShellComponent,
     children: [
       // Completar perfil: única ruta autenticada SIN ProfileGuard (tarea 11.6) — es precisamente
-      // adonde ProfileGuard redirige. `minimalNav` oculta chat/configuración en la cabecera.
+      // adonde ProfileGuard redirige, y su rama "sin perfil" crearía aquí un redirect a sí misma.
+      // `minimalNav` oculta chat/configuración en la cabecera. Bug encontrado en verificación (spec
+      // `authentication`): esto dejó la ruta sin NINGÚN `canActivate`, así que un visitante sin
+      // sesión podía cargar el formulario completo — `sessionGuard` cubre solo esa comprobación de
+      // sesión, sin la de perfil que causaría el bucle.
       {
         path: 'registration',
         component: RegistrationComponent,
+        canActivate: [sessionGuard],
         data: { title: 'Completar perfil', minimalNav: true },
       },
       // `?mode=edit` (tarea 14.9, desde "Editar tus respuestas" de features/settings) reutiliza esta

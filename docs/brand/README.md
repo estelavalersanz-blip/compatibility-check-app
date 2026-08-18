@@ -2,7 +2,8 @@
 
 Fuente original: carpeta de descargas de Estela (SVG exportados de Illustrator). Se guardan aquí como
 archivos sueltos, pendientes de copiarse a `apps/frontend` (que ya existe, scaffold completo en la
-sección 1 de `openspec/changes/build-compatibility-mvp/tasks.md`): el favicon irá en
+sección 1 de `tasks.md`, cambio ya archivado en
+`openspec/changes/archive/2026-08-18-build-compatibility-mvp/`): el favicon irá en
 `apps/frontend/public/` (sustituyendo al `favicon.ico` por defecto de Angular CLI) referenciado desde
 `index.html`, y el logo se implementará como el componente `shared/brand-mark` documentado en
 `.claude/skills/ui-design-consistency/references/design-tokens.md` (`fill: currentColor`, no un color

@@ -3,7 +3,9 @@
 API [NestJS](https://nestjs.com/) del proyecto AfinIA (TFM): perfiles, cuestionario de
 compatibilidad, selección de candidatos, orquestación de IA y chat interno. Ver el
 [README de la raíz](../../README.md) para el contexto general del monorepo, y
-`openspec/changes/build-compatibility-mvp/design.md` para las decisiones de arquitectura.
+`openspec/changes/archive/2026-08-18-build-compatibility-mvp/design.md` para las decisiones de
+arquitectura (cambio original ya archivado, 166/166 tareas) y `openspec/specs/` para los requisitos
+vigentes por capability.
 
 ## Configuración
 

@@ -326,9 +326,9 @@ describe('QuestionnaireComponent — prerellenado y autoguardado (tarea 14.4)', 
     expect(segments(fixture)[0].disabled).toBe(false);
   });
 
-  it('con el cuestionario completo (modo edición), no hay bloque incompleto y aterriza en el bloque 1', () => {
+  it('con el cuestionario completo (modo edición), no hay bloque incompleto y aterriza en el bloque 6', () => {
     const { fixture } = setup({ mode: 'edit', existingAnswers: answersFor(idsUpTo(36)) });
-    expect(blockHeaderText(fixture)).toContain('Bloque 1');
+    expect(blockHeaderText(fixture)).toContain('Bloque 6');
   });
 
   it('autoguarda contra PUT .../draft al perder el foco y al cambiar de bloque', () => {

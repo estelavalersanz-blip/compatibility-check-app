@@ -171,6 +171,20 @@ function buildAnswers(): FakeAnswer[] {
   });
 }
 
+/** Texto reconocible usado como respuesta real de los usuarios en el test de no-fuga de logging —
+ *  si este texto apareciera en cualquier llamada al logger del orquestador, demostraría que se está
+ *  registrando el CONTENIDO de las respuestas y no solo metadatos técnicos. */
+const USER_ANSWER_MARKER = 'RESPUESTA_DE_PRUEBA_XYZ';
+
+/** Igual que buildAnswers(), pero sustituye el texto de cada respuesta por el marcador de arriba.
+ *  Mantiene los BLOCK_MARKERS en la pregunta (los necesita el mock de `complete` para identificar a
+ *  qué lote pertenece cada llamada) y así aísla la única variable que el test quiere comprobar: el
+ *  contenido de la RESPUESTA, que sí viaja dentro de `buildUserPrompt`/`buildCorrectionPrompt` (ver
+ *  `prompts/compatibility-prompt.ts`) pero nunca debería viajar a un log. */
+function buildAnswersWithMarkerText(): FakeAnswer[] {
+  return buildAnswers().map((answer) => ({ ...answer, answer: USER_ANSWER_MARKER }));
+}
+
 function seedComparisonWithBothUsers(db: FakeDb): void {
   db.comparisons.push({
     id: 'cmp-1',
@@ -312,5 +326,88 @@ describe('AiOrchestratorService', () => {
       ),
     ).toBe(true);
     expect(db.aggregatedResults).toHaveLength(1);
+  });
+
+  describe('logging estructurado del flujo de análisis (spec ai-compatibility-analysis)', () => {
+    it('propaga el mismo comparisonId en los logs de envío y recepción de cada lote (caso feliz, 6 lotes)', async () => {
+      const db = new FakeDb();
+      seedComparisonWithBothUsers(db);
+      const complete = jest.fn().mockResolvedValue(buildValidBatchResponse());
+      const logger = buildLogger();
+      const service = new AiOrchestratorService(
+        { complete },
+        buildSupabaseService(db),
+        logger as unknown as PinoLogger,
+      );
+      const comparisonId = 'cmp-1';
+
+      await service.analyzeComparison(comparisonId);
+
+      // Caso feliz: de los 4 puntos de log por lote (envío, recepción válida, warn en reintento,
+      // error tras agotar intentos) solo se disparan los 2 primeros, uno por cada uno de los 6
+      // lotes -- ningún lote falla ni se reintenta aquí.
+      const sendAndReceiveMessages = ['Enviando lote al proveedor de IA', 'Lote válido recibido'];
+      const batchLogCalls = logger.info.mock.calls.filter(([, message]) =>
+        sendAndReceiveMessages.includes(message as string),
+      );
+      expect(batchLogCalls).toHaveLength(12); // 6 lotes × (envío + recepción válida)
+      batchLogCalls.forEach(([fields]) => {
+        expect((fields as { comparisonId?: string }).comparisonId).toBe(comparisonId);
+      });
+
+      // Sin fallos en el camino feliz no debería haberse registrado ningún warn/error de lote.
+      expect(logger.warn).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('nunca registra el texto real de las respuestas de los usuarios, solo metadatos técnicos', async () => {
+      const db = new FakeDb();
+      db.comparisons.push({
+        id: 'cmp-1',
+        requester_user_id: 'user-1',
+        candidate_user_id: 'user-2',
+        status: 'pending',
+      });
+      db.questionnaires.push({ user_id: 'user-1', answers: buildAnswersWithMarkerText() });
+      db.questionnaires.push({ user_id: 'user-2', answers: buildAnswersWithMarkerText() });
+      // Mismo escenario que "marca la comparación como error tras 3 intentos fallidos": el bloque
+      // MARK_0 nunca es válido y el resto sí -- así se ejercitan los 4 puntos de log de un lote
+      // (envío, recepción válida, warn en reintento y error tras agotar intentos), no solo el
+      // camino feliz, que es donde de verdad importa que no haya fuga de datos de usuario.
+      const complete = jest
+        .fn()
+        .mockImplementation((request: { userPrompt: string }) =>
+          Promise.resolve(
+            request.userPrompt.includes('MARK_0') ? 'siempre inválido' : buildValidBatchResponse(),
+          ),
+        );
+      const logger = buildLogger();
+      const service = new AiOrchestratorService(
+        { complete },
+        buildSupabaseService(db),
+        logger as unknown as PinoLogger,
+      );
+
+      await service.analyzeComparison('cmp-1');
+
+      // Confirma que el escenario ejercitó de verdad los 4 puntos de log -- si alguno no se
+      // disparase, la comprobación de no-fuga de abajo estaría comprobando de menos sin avisar.
+      expect(logger.info).toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalled();
+
+      // El contenido real de las respuestas (lo que compone buildUserPrompt/buildCorrectionPrompt)
+      // no debe llegar nunca a un log del orquestador -- solo metadatos (comparisonId, questionIds,
+      // attempt, reason técnico del fallo de parseo/validación).
+      const allLoggerCalls: unknown[][] = [
+        ...(logger.info.mock.calls as unknown[][]),
+        ...(logger.warn.mock.calls as unknown[][]),
+        ...(logger.error.mock.calls as unknown[][]),
+      ];
+      const leaked = allLoggerCalls.some((call) =>
+        JSON.stringify(call).includes(USER_ANSWER_MARKER),
+      );
+      expect(leaked).toBe(false);
+    });
   });
 });
