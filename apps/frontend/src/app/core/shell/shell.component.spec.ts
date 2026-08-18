@@ -5,7 +5,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { Conversation } from '@compatibility-check-app/shared-types';
 import { AuthService } from '../auth.service';
 import { ChatService } from '../chat.service';
-import { fakeAuthService, fakeChatService } from '../testing/fakes';
+import { UsersService } from '../users.service';
+import { fakeAuthService, fakeChatService, fakeUsersService } from '../testing/fakes';
 import { ShellComponent } from './shell.component';
 
 @Component({ standalone: true, template: 'contenido de la pantalla' })
@@ -31,6 +32,7 @@ async function setup(
   options: { minimalNav?: boolean; conversations?: Conversation[] } = {},
 ) {
   const signOutSpy = jasmine.createSpy('signOut').and.resolveTo(undefined);
+  const invalidateOwnProfileSpy = jasmine.createSpy('invalidateOwnProfile');
 
   TestBed.configureTestingModule({
     providers: [
@@ -52,6 +54,10 @@ async function setup(
       ]),
       { provide: AuthService, useValue: { ...fakeAuthService(hasSession), signOut: signOutSpy } },
       { provide: ChatService, useValue: fakeChatService(options.conversations ?? []) },
+      {
+        provide: UsersService,
+        useValue: { ...fakeUsersService(null), invalidateOwnProfile: invalidateOwnProfileSpy },
+      },
     ],
   });
 
@@ -60,7 +66,7 @@ async function setup(
   await harness.fixture.whenStable();
   harness.detectChanges();
 
-  return { harness, signOutSpy };
+  return { harness, signOutSpy, invalidateOwnProfileSpy };
 }
 
 type Harness = Awaited<ReturnType<typeof setup>>['harness'];
@@ -113,6 +119,32 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
 
     expect(signOutSpy).toHaveBeenCalled();
     expect(TestBed.inject(Router).url).toBe('/auth/login');
+  });
+
+  /**
+   * Bug real encontrado en producción durante la tarea 20.2 (verificación end-to-end): tras cerrar
+   * sesión, `logout()` navega dentro de la SPA (`router.navigate`), sin recargar la página — así que
+   * la instancia de `UsersService` (`providedIn: 'root'`, un único singleton para toda la vida de la
+   * app) sobrevive. Su caché `getOwnProfile()` (`shareReplay(1)`, pensada para durar la sesión de
+   * navegación) nunca se invalidaba al cerrar sesión, así que si un segundo usuario iniciaba sesión
+   * en la misma pestaña sin recargar, los guards de ruta seguían viendo el perfil cacheado del
+   * usuario anterior — verificado real contra el proyecto real de Supabase: la cuenta de
+   * demostración (sin fila de perfil) llegó a `/dashboard` en vez de a completar perfil, porque la
+   * sesión anterior (un usuario con perfil completo) había dejado la caché en `true`.
+   */
+  it('cerrar sesión invalida el caché de perfil de UsersService, para que el siguiente inicio de sesión en la misma pestaña no herede el del usuario anterior', async () => {
+    const { harness, invalidateOwnProfileSpy } = await setup(true);
+    const logoutButton = Array.from(
+      rootElement(harness).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent?.includes('Cerrar sesión'));
+    if (!logoutButton) {
+      throw new Error('No se encontró el botón de cerrar sesión');
+    }
+
+    logoutButton.click();
+    await harness.fixture.whenStable();
+
+    expect(invalidateOwnProfileSpy).toHaveBeenCalled();
   });
 
   it('con al menos un mensaje sin leer, el icono de chat muestra el indicador', async () => {
