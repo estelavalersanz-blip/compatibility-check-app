@@ -1,10 +1,7 @@
 <!--
   Plantilla real, configurada en el Dashboard de Supabase (Authentication → Email Templates →
-  Reset Password) — asunto: "Restablece tu contraseña de AfinIA". Este fichero es la copia de
-  referencia versionada en el repo, no algo que Supabase lea directamente de aquí: si se edita el
-  contenido en el Dashboard, hay que volver a copiarlo aquí para que no queden desincronizados
-  (encontrado real: la versión anterior de este fichero no coincidía con la que estaba configurada
-  de verdad).
+  Confirm signup) — asunto: "Confirma tu cuenta de AfinIA". Copia de referencia versionada en el
+  repo (ver nota en recovery.html sobre mantenerla sincronizada a mano con el Dashboard).
 -->
 <div style="background-color:#FDF0D5;padding:32px 16px;font-family:'Poppins','DM Sans',Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;">
@@ -15,15 +12,15 @@
     </tr>
     <tr>
       <td style="padding:32px 28px;">
-        <h1 style="margin:0 0 12px;font-family:'Poppins','DM Sans',Arial,sans-serif;font-size:20px;font-weight:700;color:#000000;">Restablece tu contraseña</h1>
+        <h1 style="margin:0 0 12px;font-family:'Poppins','DM Sans',Arial,sans-serif;font-size:20px;font-weight:700;color:#000000;">Confirma tu email</h1>
         <p style="margin:0 0 24px;font-family:'Poppins','DM Sans',Arial,sans-serif;font-size:14px;line-height:1.6;color:#000000;">
-          Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en AfinIA. Toca el botón para elegir una nueva.
+          Gracias por registrarte en AfinIA. Confirma tu dirección de email para terminar de crear tu cuenta.
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
           <tr>
             <td style="border-radius:8px;background-color:#000000;">
               <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:12px 28px;font-family:'Poppins','DM Sans',Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">
-                Restablecer contraseña
+                Confirmar mi cuenta
               </a>
             </td>
           </tr>
@@ -35,7 +32,7 @@
           <a href="{{ .ConfirmationURL }}" style="color:#BE1E2D;">{{ .ConfirmationURL }}</a>
         </p>
         <p style="margin:0;font-family:'Poppins','DM Sans',Arial,sans-serif;font-size:12px;line-height:1.5;color:#6c6c6c;">
-          Si no has sido tú, puedes ignorar este email — tu contraseña no cambiará.
+          Si no has sido tú, puedes ignorar este email — no se creará ninguna cuenta.
         </p>
       </td>
     </tr>

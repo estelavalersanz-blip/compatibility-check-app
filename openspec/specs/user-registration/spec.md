@@ -10,7 +10,9 @@ sin ese perfil, ninguna otra pantalla de la aplicación es accesible.
 
 ### Requirement: Completar perfil tras autenticarse (paso 2 del alta)
 El sistema SHALL permitir a un usuario ya autenticado (ver `authentication`) completar su perfil una
-única vez, indicando nombre, alias único, una foto y exactamente 5 cualidades personales.
+única vez, indicando nombre, alias único, una foto y exactamente 5 cualidades personales. El sistema
+SHALL indicar visualmente, antes de intentar enviar el formulario, cuáles de esos campos son
+obligatorios.
 
 #### Scenario: Registro de perfil exitoso
 - **WHEN** un usuario autenticado sin perfil aún envía nombre, un alias no usado por nadie más, una
@@ -42,6 +44,12 @@ El sistema SHALL permitir a un usuario ya autenticado (ver `authentication`) com
 #### Scenario: Intento de completar el perfil sin sesión autenticada
 - **WHEN** se intenta enviar el formulario de perfil sin un token de sesión válido
 - **THEN** el sistema rechaza la petición y no crea ningún perfil
+
+#### Scenario: Campos obligatorios indicados visualmente antes de enviar
+- **WHEN** un usuario ve el paso 1 del formulario de completar perfil
+- **THEN** los campos de nombre y alias muestran un indicador visual de que son obligatorios, y esa
+  misma condición es perceptible por tecnología de asistencia (atributo nativo de campo obligatorio),
+  no solo por color
 
 ### Requirement: Sin perfil, cualquier ruta redirige a completar perfil paso 1
 El sistema SHALL redirigir a la pantalla de completar perfil (paso 1) a cualquier usuario autenticado
