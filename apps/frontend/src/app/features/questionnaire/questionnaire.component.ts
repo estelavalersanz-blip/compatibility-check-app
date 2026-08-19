@@ -5,6 +5,7 @@ import { Answer, QUESTIONS } from '@compatibility-check-app/shared-types';
 import { firstValueFrom } from 'rxjs';
 import { MatchingService } from '../../core/matching.service';
 import { QuestionnaireService } from '../../core/questionnaire.service';
+import { UsersService } from '../../core/users.service';
 import { QuestionNavComponent } from './question-nav.component';
 
 /** 6 bloques de 6 preguntas (design.md decisión 6c) — mismo agrupamiento que `weighting.util.ts` en
@@ -60,6 +61,7 @@ interface BlockView {
 export class QuestionnaireComponent {
   private readonly questionnaireService = inject(QuestionnaireService);
   private readonly matchingService = inject(MatchingService);
+  private readonly usersService = inject(UsersService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -306,7 +308,17 @@ export class QuestionnaireComponent {
   }
 
   /** Tarea 14.5b: modo edición encadena `PATCH` + recálculo en una sola acción y navega al
-   *  dashboard; modo creación llama solo al envío final y navega a `features/processing`. */
+   *  dashboard; modo creación llama solo al envío final y navega a `features/processing`.
+   *
+   *  `invalidateOwnProfile()` tras la mutación, siempre antes de navegar (bug real: sin esto, el
+   *  perfil cacheado —`shareReplay(1)`— seguía con `questionnaireCompletedAt: null` tras completar
+   *  el cuestionario. `/processing` y `/dashboard` solo exigen `profileGuard`, que no mira esa
+   *  fecha, así que el usuario llegaba sin problema — pero al pulsar Configuración/Chats/Chatear
+   *  desde ahí, `questionnaireCompletedGuard` leía ese mismo perfil obsoleto y redirigía a `/`, y
+   *  `mainRouteGuard` repetía la misma lectura obsoleta y aterrizaba de vuelta en `/questionnaire`,
+   *  como si nunca se hubiera completado). Mismo patrón que `shell.component.ts` (logout) y
+   *  `registration.component.ts` (alta de perfil). En modo edición además deja `needsRecalculation`
+   *  obsoleto para `results-dashboard.component.ts`. */
   private async submitLastBlock(): Promise<void> {
     if (!this.allAnswered()) {
       return;
@@ -319,9 +331,11 @@ export class QuestionnaireComponent {
       if (this.mode === 'edit') {
         await firstValueFrom(this.questionnaireService.update(payload));
         await firstValueFrom(this.matchingService.recalculate());
+        this.usersService.invalidateOwnProfile();
         await this.router.navigate(['/dashboard']);
       } else {
         await firstValueFrom(this.questionnaireService.complete(payload));
+        this.usersService.invalidateOwnProfile();
         await this.router.navigate(['/processing']);
       }
     } catch {

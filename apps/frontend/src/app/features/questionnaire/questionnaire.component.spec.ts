@@ -65,6 +65,7 @@ function setup(
   const completeSpy = options.completeSpy ?? jasmine.createSpy('complete').and.returnValue(of([]));
   const updateSpy = options.updateSpy ?? jasmine.createSpy('update').and.returnValue(of([]));
   const recalculateSpy = options.recalculateSpy ?? jasmine.createSpy('recalculate').and.returnValue(of({}));
+  const invalidateOwnProfileSpy = jasmine.createSpy('invalidateOwnProfile');
 
   TestBed.configureTestingModule({
     imports: [QuestionnaireComponent],
@@ -92,12 +93,21 @@ function setup(
         },
       },
       { provide: MatchingService, useValue: { recalculate: recalculateSpy } },
+      { provide: UsersService, useValue: { invalidateOwnProfile: invalidateOwnProfileSpy } },
     ],
   });
 
   const fixture = TestBed.createComponent(QuestionnaireComponent);
   fixture.detectChanges();
-  return { fixture, getAnswersSpy, saveDraftSpy, completeSpy, updateSpy, recalculateSpy };
+  return {
+    fixture,
+    getAnswersSpy,
+    saveDraftSpy,
+    completeSpy,
+    updateSpy,
+    recalculateSpy,
+    invalidateOwnProfileSpy,
+  };
 }
 
 function root(fixture: ComponentFixture<QuestionnaireComponent>): HTMLElement {
@@ -516,6 +526,44 @@ describe('QuestionnaireComponent — envío final según el modo (tarea 14.5b)',
     expect(calls).toEqual(['update', 'recalculate']);
     expect(completeSpy).not.toHaveBeenCalled();
     expect(TestBed.inject(Router).url).toBe('/dashboard');
+  });
+
+  /**
+   * Bug real reportado en producción: tras completar el cuestionario, "Configuración" y "Chats" de
+   * la cabecera y "Chatear" del dashboard redirigían de vuelta a `/questionnaire`, como si nunca se
+   * hubiera completado. Causa: `UsersService.getOwnProfile()` (`shareReplay(1)`) seguía devolviendo
+   * el perfil cacheado de ANTES de completar (`questionnaireCompletedAt: null`) — ni `/processing`
+   * ni `/dashboard` lo notaban (solo exigen `profileGuard`, que no mira esa fecha), pero
+   * `questionnaireCompletedGuard` (settings/chats/chats/:id) sí, y redirigía a `/`, donde
+   * `mainRouteGuard` repetía la misma lectura obsoleta y volvía a mandar a `/questionnaire`. Mismo
+   * patrón que `shell.component.ts` (logout) y `registration.component.ts` (alta de perfil).
+   */
+  it('modo creación: invalida la caché del perfil tras completar, para que Configuración/Chats no redirijan de vuelta al cuestionario', async () => {
+    const { fixture, invalidateOwnProfileSpy } = setup({
+      mode: 'create',
+      existingAnswers: answersFor(idsUpTo(35)),
+    });
+    start(fixture);
+    typeActiveAnswer(fixture, 'la última respuesta');
+
+    footerButton(fixture)!.click();
+    await fixture.whenStable();
+
+    expect(invalidateOwnProfileSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('modo edición: invalida también la caché del perfil (si no, needsRecalculation quedaría obsoleto para el dashboard)', async () => {
+    const { fixture, invalidateOwnProfileSpy } = setup({
+      mode: 'edit',
+      existingAnswers: answersFor(idsUpTo(36)),
+    });
+    segments(fixture)[5].click();
+    fixture.detectChanges();
+
+    footerButton(fixture)!.click();
+    await fixture.whenStable();
+
+    expect(invalidateOwnProfileSpy).toHaveBeenCalledTimes(1);
   });
 });
 
