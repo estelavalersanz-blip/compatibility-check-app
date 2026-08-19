@@ -260,23 +260,40 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
     expect(invalidateOwnProfileSpy).toHaveBeenCalled();
   });
 
-  it('con al menos un mensaje sin leer, el icono de chat muestra el indicador', async () => {
-    const { harness } = await setup(true, { conversations: [fakeConversation(2)] });
-    const badge = rootElement(harness).querySelector('.bg-secondary.rounded-circle');
+  /**
+   * Bug real reportado por la usuaria (captura de pantalla): el indicador era un punto vacío
+   * `bg-secondary` (rojo Carmine) — contra el degradado naranja→rojo de la propia cabecera, casi
+   * invisible, y tampoco decía cuántos mensajes había. Ahora muestra el número real (suma de
+   * `unreadCount` de todas las conversaciones, no solo "hay alguno") en `bg-white`/`text-dark`, que
+   * sí contrasta en cualquier punto del degradado.
+   */
+  it('con mensajes sin leer en varias conversaciones, el icono de chat muestra la suma total como número', async () => {
+    const { harness } = await setup(true, {
+      conversations: [fakeConversation(2), fakeConversation(3)],
+    });
+    const badge = rootElement(harness).querySelector('.badge');
     expect(badge).not.toBeNull();
+    expect(badge?.textContent?.trim()).toBe('5');
+  });
+
+  it('el indicador ya no es un punto de color sin número (bug real: bg-secondary sobre el degradado era casi invisible)', async () => {
+    const { harness } = await setup(true, { conversations: [fakeConversation(4)] });
+    const badge = rootElement(harness).querySelector('.badge');
+    expect(badge?.classList.contains('bg-secondary')).toBe(false);
+    expect(badge?.classList.contains('bg-white')).toBe(true);
   });
 
   it('sin mensajes sin leer en ninguna conversación, no muestra el indicador', async () => {
     const { harness } = await setup(true, {
       conversations: [fakeConversation(0), fakeConversation(0)],
     });
-    const badge = rootElement(harness).querySelector('.bg-secondary.rounded-circle');
+    const badge = rootElement(harness).querySelector('.badge');
     expect(badge).toBeNull();
   });
 
   it('sin ninguna conversación, tampoco muestra el indicador', async () => {
     const { harness } = await setup(true, { conversations: [] });
-    const badge = rootElement(harness).querySelector('.bg-secondary.rounded-circle');
+    const badge = rootElement(harness).querySelector('.badge');
     expect(badge).toBeNull();
   });
 });

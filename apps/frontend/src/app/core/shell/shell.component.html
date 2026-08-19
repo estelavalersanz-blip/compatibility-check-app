@@ -27,11 +27,12 @@
             <li class="nav-item">
               <button type="button" class="btn btn-link nav-link position-relative" routerLink="/chats">
                 <i class="bi bi-chat-dots"></i> Chats
-                @if (hasUnreadMessages()) {
+                @if (unreadMessageCount() > 0) {
                   <span
-                    class="position-absolute top-0 start-100 translate-middle p-1 bg-secondary border border-light rounded-circle"
+                    class="badge rounded-pill bg-white text-dark position-absolute top-0 start-100 translate-middle"
+                    [attr.aria-label]="unreadMessageCount() + ' mensajes sin leer'"
                   >
-                    <span class="visually-hidden">Mensajes sin leer</span>
+                    {{ unreadMessageCount() }}
                   </span>
                 }
               </button>
