@@ -278,23 +278,28 @@ Reglas concretas:
   4 líneas de texto** (`rows="4"` como mínimo) — no un campo de una sola línea. Respuestas más largas
   siguen siendo editables con scroll/resize dentro del propio `textarea`, pero el tamaño de partida debe
   invitar a escribir una respuesta con cierto desarrollo, no dar la sensación de un campo corto.
-- **Navegar entre bloques es libre, no exige haber terminado el actual**: la persona puede avanzar a
-  "Siguiente bloque" con preguntas sin responder y volver más tarde — el envío final
-  (`POST /users/me/questionnaire`, ver spec `personal-questionnaire`) sigue siendo el único punto que
-  exige las 36 respuestas completas; el wizard es solo la forma de navegar la entrada de datos, no cambia
-  esa regla de validación. El borrador se sigue guardando en BD, no en `localStorage` (decisión 5c).
+- **Navegar entre bloques es libre, no exige haber terminado el actual**: la persona puede pulsar el
+  botón de bloque siguiente (icono de doble chevron junto a los puntos de pregunta, sección 21b —
+  tooltip/aria-label "Bloque siguiente") con preguntas sin responder y volver más tarde — el envío
+  final (`POST /users/me/questionnaire`, ver spec `personal-questionnaire`) sigue siendo el único
+  punto que exige las 36 respuestas completas; el wizard es solo la forma de navegar la entrada de
+  datos, no cambia esa regla de validación. El borrador se sigue guardando en BD, no en
+  `localStorage` (decisión 5c).
 - **Revisar un bloque anterior no te "atasca" ahí**: el estado distingue el bloque que se está viendo
-  (`currentBlockIndex`) del bloque más avanzado al que ya llegaste (`maxReachedBlockIndex`). Si entraste a
-  revisar un bloque anterior (por la flecha o haciendo clic en su segmento), el botón del `card-footer`
-  cambia de "Siguiente bloque" a **"Volver a donde estabas"** y te devuelve directamente a
-  `maxReachedBlockIndex` en vez de obligarte a pasar de nuevo por cada bloque intermedio uno a uno.
+  (`currentBlockIndex`) del bloque más avanzado al que ya llegaste (`maxReachedBlockIndex`). Si
+  entraste a revisar un bloque anterior (por la flecha de cabecera o haciendo clic en su segmento),
+  el botón de bloque siguiente junto a los puntos cambia su tooltip/aria-label de "Bloque siguiente"
+  a **"Volver a donde estabas"** y te devuelve directamente a `maxReachedBlockIndex` en vez de
+  obligarte a pasar de nuevo por cada bloque intermedio uno a uno.
 - El paso del bloque activo sigue el patrón container+card normal (ver más abajo): la card lleva un
   `card-header` con el gradiente de ese bloque (título del bloque, sin el peso como texto, más la
   insignia si ya está completo) y un `card-body` con la pregunta activa + `textarea` + navegación de
-  puntos, en fondo claro/blanco para que el texto siga siendo legible. El `card-footer` lleva un único
-  botón, cuyo texto depende de si
-  estás avanzando o revisando (ver punto anterior) — la flecha de volver de la cabecera ya cubre "un paso
-  atrás", así que el footer nunca necesita un botón secundario.
+  puntos flanqueada por los dos botones de bloque anterior/siguiente (mismo punto visual, icono
+  visualmente distinto — doble chevron en vez de uno simple), en fondo claro/blanco para que el texto
+  siga siendo legible. El `card-footer` **solo se muestra en el último bloque** (sección 21b — antes
+  hacía doble función de "Siguiente bloque" Y envío final, confuso porque cambiaba de golpe al llegar
+  al bloque 6): ahora es únicamente la acción de envío/guardado, cuyo texto depende solo del modo
+  (creación/edición), nunca de si se avanza o se revisa — eso ya no vive aquí.
 - Ya no uses `NgbAccordion` para los 6 bloques — implicaría tenerlos todos montados (aunque colapsados) a
   la vez, justo lo que este patrón evita. Usa un estado simple (`currentBlockIndex` +
   `maxReachedBlockIndex`) y renderiza solo la card del bloque activo. Dentro del bloque, tampoco uses
@@ -551,8 +556,9 @@ pantalla por pantalla de forma aislada:
       misma pantalla), con la barra de progreso ponderada usando el gradiente por peso de
       `design-tokens.md` y los bloques de igual peso (1 y 2) visualmente idénticos?
 - [ ] Si la pantalla es el cuestionario: ¿se puede volver a revisar y editar cualquier bloque anterior ya
-      visitado (flecha de volver o clic en su segmento de la barra), y el botón del `card-footer` cambia
-      a "Volver a donde estabas" cuando estás revisando en vez de avanzando?
+      visitado (flecha de volver o clic en su segmento de la barra), y el botón de bloque siguiente junto
+      a los puntos de pregunta cambia su tooltip/aria-label a "Volver a donde estabas" cuando estás
+      revisando en vez de avanzando?
 - [ ] Si la pantalla es el cuestionario: ¿los refuerzos de gamificación (racha, insignia de bloque,
       banner final) usan solo colores de la paleta ya definida y no cambian la regla de que hacen falta
       las 36 respuestas para enviar?

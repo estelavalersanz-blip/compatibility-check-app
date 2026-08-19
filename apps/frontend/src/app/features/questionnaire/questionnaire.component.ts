@@ -112,6 +112,7 @@ export class QuestionnaireComponent {
     () => Object.values(this.answers()).filter((value) => value.trim().length > 0).length,
   );
   readonly allAnswered = computed(() => this.totalAnsweredCount() === TOTAL_QUESTIONS);
+  readonly isLastBlock = computed(() => this.currentBlockIndex() === LAST_BLOCK_INDEX);
 
   readonly reducedMotion = signal(
     typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -211,10 +212,29 @@ export class QuestionnaireComponent {
     this.enterBlock(this.currentBlockIndex() - 1);
   }
 
-  /** Botón "Siguiente bloque" (bloques 1-5): avanza de verdad la primera vez (mueve
-   *  `maxReachedBlockIndex`), o vuelve a `maxReachedBlockIndex` si se estaba revisando uno anterior
-   *  ("Volver a donde estabas") — nunca retrocede el máximo alcanzado. */
-  private nextBlock(): void {
+  /** Botón de bloque anterior junto a los puntos de pregunta (sección 21b) — a diferencia de la
+   *  flecha de cabecera (`previousBlock()`), este NUNCA sale del cuestionario: en el bloque 1
+   *  queda deshabilitado en la plantilla (`currentBlockIndex() === 0`), sin efecto secundario de
+   *  "salir" que aquí no correspondería (esa semántica es solo de la flecha de cabecera). */
+  previousBlockNav(): void {
+    if (this.currentBlockIndex() === 0) {
+      return;
+    }
+    this.saveDraft();
+    this.enterBlock(this.currentBlockIndex() - 1);
+  }
+
+  /** Botón de bloque siguiente junto a los puntos de pregunta (sección 21b) — antes vivía en el
+   *  footer compartiendo sitio con la acción de envío final, lo que confundía porque su función
+   *  cambiaba de golpe al llegar al último bloque (encontrado en verificación manual). Misma lógica
+   *  de siempre: avanza de verdad la primera vez (mueve `maxReachedBlockIndex`), o vuelve a
+   *  `maxReachedBlockIndex` si se estaba revisando uno anterior ("Volver a donde estabas") — nunca
+   *  retrocede el máximo alcanzado. Deshabilitado en el último bloque (plantilla, `isLastBlock()`).
+   */
+  nextBlockNav(): void {
+    if (this.isLastBlock()) {
+      return;
+    }
     this.saveDraft();
     if (this.currentBlockIndex() < this.maxReachedBlockIndex()) {
       this.enterBlock(this.maxReachedBlockIndex());
@@ -223,6 +243,13 @@ export class QuestionnaireComponent {
     const next = this.currentBlockIndex() + 1;
     this.maxReachedBlockIndex.set(next);
     this.enterBlock(next);
+  }
+
+  /** Aria-label/title del botón de bloque siguiente — mismo criterio que antes tenía el texto del
+   *  footer, ahora expuesto como nombre accesible/tooltip de un botón de icono en vez de texto de
+   *  botón completo. */
+  nextBlockNavLabel(): string {
+    return this.currentBlockIndex() < this.maxReachedBlockIndex() ? 'Volver a donde estabas' : 'Bloque siguiente';
   }
 
   /** Tramos de la barra de progreso ya visitados (tarea 14.3b): salta directo a revisar/editar. */
@@ -234,34 +261,25 @@ export class QuestionnaireComponent {
     this.enterBlock(index);
   }
 
+  /** El footer ya no hace de "Siguiente bloque" (sección 21b, ver `nextBlockNav()`) — solo es la
+   *  acción final de envío/guardado, y la plantilla solo lo muestra en el último bloque
+   *  (`isLastBlock()`), así que aquí no hace falta distinguir por bloque. */
   footerButtonLabel(): string {
-    if (this.currentBlockIndex() < this.maxReachedBlockIndex()) {
-      return 'Volver a donde estabas';
-    }
-    if (this.currentBlockIndex() < LAST_BLOCK_INDEX) {
-      return 'Siguiente bloque';
-    }
     return this.mode === 'edit' ? 'Guardar y recalcular compatibilidad' : 'Enviar cuestionario';
   }
 
-  /** Tarea 14.5: en los bloques 1-5 nunca se deshabilita por respuestas pendientes — solo el botón
-   *  de envío/guardado final del bloque 6 exige las 36 completas. */
+  /** Exige las 36 respuestas completas, no solo las del bloque activo (tarea 14.5) — la plantilla ya
+   *  garantiza que este botón solo es visible en el último bloque. */
   footerButtonDisabled(): boolean {
-    return this.currentBlockIndex() === LAST_BLOCK_INDEX && !this.allAnswered();
+    return !this.allAnswered();
   }
 
-  /** `async` a propósito, no `void this.submitLastBlock()` fire-and-forget: la plantilla la llama
-   *  directamente ((click)="onFooterButtonClick()"), y Angular solo rastrea para `ApplicationRef`/
-   *  `whenStable()` la promesa que devuelve DE VERDAD el propio manejador del evento de plantilla —
-   *  un `void` intermedio la desconecta y las peticiones fetch/navegación quedan invisibles para los
-   *  tests (visto de verdad: sin esto, `fixture.whenStable()` no esperaba a que terminase el envío
-   *  final, mismo patrón que ya usa `RegistrationComponent.submit()`). */
+  /** `async` a propósito, no `void this.submitLastBlock()` fire-and-forget: ver el comentario
+   *  detallado que tenía este método antes de la sección 21b — mismo motivo, solo que ahora el
+   *  footer es SIEMPRE la acción final (nunca "Siguiente bloque"), así que ya no hace falta
+   *  distinguir por bloque aquí tampoco. */
   async onFooterButtonClick(): Promise<void> {
-    if (this.currentBlockIndex() === LAST_BLOCK_INDEX) {
-      await this.submitLastBlock();
-      return;
-    }
-    this.nextBlock();
+    await this.submitLastBlock();
   }
 
   progressCopy(): string {

@@ -128,15 +128,20 @@ end-to-end) marcado explícitamente:
   (`apps/backend/src/ai/groq.provider.ts`). Si el análisis empieza a fallar con `404` en vez de
   `429`, comprueba el catálogo vigente con `GET https://api.groq.com/openai/v1/models` (cabecera
   `Authorization: Bearer <GROQ_API_KEY>`) y actualiza `GROQ_MODEL` ahí.
-- **Supabase Auth — límite de envío de emails (confirmado real)**: el SMTP incluido en el free tier
-  tiene un límite bajo de emails transaccionales (registro, recuperación de contraseña) — se agotó
-  de verdad durante la tarea 20.2 tras varias altas/reintentos seguidos (`over_email_send_rate_limit`,
-  `429`), bloqueando tanto nuevos registros como el reset de contraseña por email. Para seguir
-  operando sin esperar a que se libere, se puede fijar una contraseña directamente por la Admin API
-  sin pasar por email (`PUT /auth/v1/admin/users/:id`, con `curl.exe` — no `Invoke-RestMethod` de
-  PowerShell, que Supabase bloquea como "uso de la Secret key desde un navegador" por su
-  `User-Agent` por defecto). Antes de la demo, evita registrar cuentas de prueba de más en el
-  proyecto real.
+- **Supabase Auth — límite de envío de emails (confirmado real, resuelto)**: el SMTP incluido en el
+  free tier tiene un límite bajo de emails transaccionales (registro, recuperación de contraseña) —
+  se agotó de verdad durante la tarea 20.2 tras varias altas/reintentos seguidos
+  (`over_email_send_rate_limit`, `429`), bloqueando tanto nuevos registros como el reset de
+  contraseña por email. Ese mismo SMTP por defecto además solo entrega a direcciones del equipo del
+  proyecto en Supabase — bloqueaba el registro a cualquier usuario real, no solo cuando se agotaba
+  el límite. **Resuelto configurando un SMTP propio de Gmail** en el Dashboard (Authentication →
+  Emails → SMTP Settings; cuenta ad hoc dedicada a esto, no una personal), con plantillas propias con
+  marca AfinIA (ver `supabase/templates/`): sube el límite a 30/hora y quita la restricción de
+  destinatario. Sigue habiendo un respaldo si hiciera falta operar sin esperar a que se libere ese
+  límite: fijar una contraseña directamente por la Admin API sin pasar por email
+  (`PUT /auth/v1/admin/users/:id`, con `curl.exe` — no `Invoke-RestMethod` de PowerShell, que
+  Supabase bloquea como "uso de la Secret key desde un navegador" por su `User-Agent` por defecto).
+  Antes de la demo, evita registrar cuentas de prueba de más en el proyecto real.
 - **Render — cold-start (documentado, no forzado a propósito durante la verificación)**: la primera
   petición tras ~15 min de inactividad tarda 30-60s en responder (free tier) — la pantalla de
   "procesando" ya lo tiene en cuenta, pero conviene "despertar" el backend con una petición de

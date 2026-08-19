@@ -153,16 +153,37 @@ function dots(fixture: ComponentFixture<QuestionnaireComponent>): HTMLButtonElem
   return Array.from(root(fixture).querySelectorAll<HTMLButtonElement>('.question-nav__dot'));
 }
 
-function footerButton(fixture: ComponentFixture<QuestionnaireComponent>): HTMLButtonElement {
-  const button = root(fixture).querySelector<HTMLButtonElement>('.card-footer button');
+function footerButton(fixture: ComponentFixture<QuestionnaireComponent>): HTMLButtonElement | null {
+  return root(fixture).querySelector<HTMLButtonElement>('.card-footer button');
+}
+
+/** Botones de bloque anterior/siguiente junto a los puntos de pregunta (distintos de la flecha de
+ *  cabecera, que comparte el mismo aria-label "Bloque anterior" pero además sale del cuestionario
+ *  en el bloque 1) — seleccionados por clase, no por aria-label, porque el de "siguiente" cambia de
+ *  texto según se esté revisando o no. */
+function blockNavPreviousButton(fixture: ComponentFixture<QuestionnaireComponent>): HTMLButtonElement {
+  const button = root(fixture).querySelector<HTMLButtonElement>('.block-nav-previous');
   if (!button) {
-    throw new Error('No se encontró el botón del card-footer');
+    throw new Error('No se encontró el botón de bloque anterior junto a los puntos');
   }
   return button;
 }
 
-function clickFooterButton(fixture: ComponentFixture<QuestionnaireComponent>): void {
-  footerButton(fixture).click();
+function blockNavNextButton(fixture: ComponentFixture<QuestionnaireComponent>): HTMLButtonElement {
+  const button = root(fixture).querySelector<HTMLButtonElement>('.block-nav-next');
+  if (!button) {
+    throw new Error('No se encontró el botón de bloque siguiente junto a los puntos');
+  }
+  return button;
+}
+
+function clickBlockNavNext(fixture: ComponentFixture<QuestionnaireComponent>): void {
+  blockNavNextButton(fixture).click();
+  fixture.detectChanges();
+}
+
+function clickBlockNavPrevious(fixture: ComponentFixture<QuestionnaireComponent>): void {
+  blockNavPreviousButton(fixture).click();
   fixture.detectChanges();
 }
 
@@ -213,7 +234,7 @@ describe('QuestionnaireComponent — wizard de 6 bloques (tarea 14.1)', () => {
   it('la flecha de volver, a partir del bloque 2, retrocede un bloque sin exigir que esté completo', () => {
     const { fixture } = setup({ mode: 'create' });
     start(fixture);
-    clickFooterButton(fixture); // avanza al bloque 2 sin responder nada del bloque 1
+    clickBlockNavNext(fixture); // avanza al bloque 2 sin responder nada del bloque 1
 
     expect(blockHeaderText(fixture)).toContain('Bloque 2');
 
@@ -269,7 +290,7 @@ describe('QuestionnaireComponent — gradiente por peso y check de bloque comple
     start(fixture);
 
     fillActiveBlockCompletely(fixture);
-    clickFooterButton(fixture); // avanza de verdad al bloque 2
+    clickBlockNavNext(fixture); // avanza de verdad al bloque 2
 
     const bars = segments(fixture);
     expect(bars[0].querySelector('.quest-progress__check')).not.toBeNull();
@@ -281,8 +302,8 @@ describe('QuestionnaireComponent — revisar bloques ya visitados (tarea 14.3b)'
   it('un tramo visitado navega directo a revisarlo; uno no alcanzado no es clicable', () => {
     const { fixture } = setup({ mode: 'create' });
     start(fixture);
-    clickFooterButton(fixture); // bloque 1 -> 2
-    clickFooterButton(fixture); // bloque 2 -> 3
+    clickBlockNavNext(fixture); // bloque 1 -> 2
+    clickBlockNavNext(fixture); // bloque 2 -> 3
 
     expect(blockHeaderText(fixture)).toContain('Bloque 3');
     expect(segments(fixture)[3].disabled).toBe(true); // bloque 4, no alcanzado
@@ -293,17 +314,19 @@ describe('QuestionnaireComponent — revisar bloques ya visitados (tarea 14.3b)'
     expect(blockHeaderText(fixture)).toContain('Bloque 1');
   });
 
-  it('al revisar, el botón cambia a "Volver a donde estabas" y regresa al más avanzado, no al siguiente', () => {
+  it('al revisar, el botón de bloque siguiente cambia a "Volver a donde estabas" y regresa al más avanzado, no al siguiente', () => {
+    // El texto ya no vive en el footer (sección 21b: el footer pasa a ser solo la acción final) —
+    // ahora es el aria-label/title del botón de bloque siguiente, junto a los puntos de pregunta.
     const { fixture } = setup({ mode: 'create' });
     start(fixture);
-    clickFooterButton(fixture); // bloque 1 -> 2
-    clickFooterButton(fixture); // bloque 2 -> 3
+    clickBlockNavNext(fixture); // bloque 1 -> 2
+    clickBlockNavNext(fixture); // bloque 2 -> 3
     segments(fixture)[0].click(); // revisar el bloque 1
     fixture.detectChanges();
 
-    expect(footerButton(fixture).textContent?.trim()).toBe('Volver a donde estabas');
+    expect(blockNavNextButton(fixture).getAttribute('aria-label')).toBe('Volver a donde estabas');
 
-    clickFooterButton(fixture);
+    clickBlockNavNext(fixture);
 
     expect(blockHeaderText(fixture)).toContain('Bloque 3'); // el más avanzado, no el bloque 2
   });
@@ -344,31 +367,77 @@ describe('QuestionnaireComponent — prerellenado y autoguardado (tarea 14.4)', 
     const payload = saveDraftSpy.calls.mostRecent().args[0] as Answer[];
     expect(payload.some((answer) => answer.answer === 'mi respuesta')).toBe(true);
 
-    clickFooterButton(fixture); // cambiar de bloque también autoguarda
+    clickBlockNavNext(fixture); // cambiar de bloque también autoguarda
     expect(saveDraftSpy).toHaveBeenCalledTimes(2);
   });
 });
 
-describe('QuestionnaireComponent — botón del bloque activo (tarea 14.5)', () => {
-  it('en los bloques 1-5, "Siguiente bloque" nunca se deshabilita por respuestas pendientes', () => {
+describe('QuestionnaireComponent — navegación entre bloques junto a los puntos de pregunta (sección 21b)', () => {
+  // Encontrado en verificación manual: antes, "Siguiente bloque" y "Enviar cuestionario" compartían
+  // el mismo botón del footer — confuso, porque su función cambiaba de golpe al llegar al último
+  // bloque. Ahora avanzar/retroceder de bloque vive junto a los puntos de pregunta (mismo punto
+  // visual que la navegación de preguntas, visualmente distinto — doble chevron en vez de uno
+  // simple), y el footer queda solo para la acción final.
+  it('en el bloque 1, el botón de bloque anterior está deshabilitado (no existe "anterior")', () => {
     const { fixture } = setup({ mode: 'create' });
     start(fixture);
 
-    expect(footerButton(fixture).textContent?.trim()).toBe('Siguiente bloque');
-    expect(footerButton(fixture).disabled).toBe(false);
+    expect(blockNavPreviousButton(fixture).disabled).toBe(true);
   });
 
+  it('en el bloque 6, el botón de bloque siguiente está deshabilitado (no existe "siguiente")', () => {
+    const { fixture } = setup({ mode: 'edit', existingAnswers: answersFor(idsUpTo(36)) });
+    segments(fixture)[5].click();
+    fixture.detectChanges();
+
+    expect(blockNavNextButton(fixture).disabled).toBe(true);
+  });
+
+  it('en los bloques 1-5, el botón de bloque siguiente nunca se deshabilita por respuestas pendientes', () => {
+    const { fixture } = setup({ mode: 'create' });
+    start(fixture);
+
+    expect(blockNavNextButton(fixture).disabled).toBe(false);
+    expect(blockNavNextButton(fixture).getAttribute('aria-label')).toBe('Bloque siguiente');
+  });
+
+  it('el botón de bloque anterior, a partir del bloque 2, retrocede un bloque (sin salir del cuestionario)', () => {
+    const { fixture } = setup({ mode: 'create' });
+    start(fixture);
+    clickBlockNavNext(fixture); // bloque 1 -> 2
+    clickBlockNavNext(fixture); // bloque 2 -> 3
+    expect(blockHeaderText(fixture)).toContain('Bloque 3');
+
+    clickBlockNavPrevious(fixture);
+
+    // A diferencia de la flecha de cabecera en el bloque 1, este botón nunca navega fuera del
+    // componente — si lo hiciera, `blockHeaderText` ya no encontraría el `.card-header` del wizard.
+    expect(blockHeaderText(fixture)).toContain('Bloque 2');
+  });
+
+  it('el footer no existe salvo en el último bloque: ahí solo vive la acción final', () => {
+    const { fixture } = setup({ mode: 'create' });
+    start(fixture);
+
+    expect(footerButton(fixture)).toBeNull();
+
+    clickBlockNavNext(fixture); // bloque 1 -> 2
+    expect(footerButton(fixture)).toBeNull();
+  });
+});
+
+describe('QuestionnaireComponent — botón del bloque activo (tarea 14.5)', () => {
   it('en el bloque 6 (modo creación), dice "Enviar cuestionario" y exige las 36 respuestas', () => {
     const { fixture } = setup({ mode: 'create', existingAnswers: answersFor(idsUpTo(35)) });
     start(fixture);
 
     expect(blockHeaderText(fixture)).toContain('Bloque 6'); // 35/36: el bloque 6 es el primero incompleto
-    expect(footerButton(fixture).textContent?.trim()).toBe('Enviar cuestionario');
-    expect(footerButton(fixture).disabled).toBe(true);
+    expect(footerButton(fixture)?.textContent?.trim()).toBe('Enviar cuestionario');
+    expect(footerButton(fixture)?.disabled).toBe(true);
 
     typeActiveAnswer(fixture, 'la última respuesta'); // completa la pregunta 36, la que faltaba
 
-    expect(footerButton(fixture).disabled).toBe(false);
+    expect(footerButton(fixture)?.disabled).toBe(false);
   });
 
   it('en el bloque 6 (modo edición), dice "Guardar y recalcular compatibilidad"', () => {
@@ -377,8 +446,8 @@ describe('QuestionnaireComponent — botón del bloque activo (tarea 14.5)', () 
     fixture.detectChanges();
 
     expect(blockHeaderText(fixture)).toContain('Bloque 6');
-    expect(footerButton(fixture).textContent?.trim()).toBe('Guardar y recalcular compatibilidad');
-    expect(footerButton(fixture).disabled).toBe(false);
+    expect(footerButton(fixture)?.textContent?.trim()).toBe('Guardar y recalcular compatibilidad');
+    expect(footerButton(fixture)?.disabled).toBe(false);
   });
 });
 
@@ -395,7 +464,7 @@ describe('QuestionnaireComponent — envío final según el modo (tarea 14.5b)',
     // `clickFooterButton`): un `detectChanges()` síncrono justo después del click, mientras la
     // promesa async del manejador todavía no se ha resuelto, hace que `whenStable()` deje de
     // esperarla — mismo patrón que ya usan login/register para su envío con navegación.
-    footerButton(fixture).click();
+    footerButton(fixture)!.click();
     await fixture.whenStable();
 
     expect(completeSpy).toHaveBeenCalledTimes(1);
@@ -425,7 +494,7 @@ describe('QuestionnaireComponent — envío final según el modo (tarea 14.5b)',
     fixture.detectChanges();
 
     // Igual que arriba: sin `detectChanges()` entre el click y `whenStable()`.
-    footerButton(fixture).click();
+    footerButton(fixture)!.click();
     await fixture.whenStable();
 
     expect(calls).toEqual(['update', 'recalculate']);

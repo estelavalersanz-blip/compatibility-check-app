@@ -87,7 +87,9 @@ El sistema SHALL presentar las 36 preguntas agrupadas en 6 bloques de 6 pregunta
 preguntas 1-6, ..., bloque 6 = preguntas 31-36), mostrando **un único bloque a la vez** (nunca los 6
 simultáneamente en la misma pantalla) como pasos de un wizard, y SHALL dar al bloque activo un estilo
 visual (gradiente de fondo) que refleje su peso relativo en el resultado final, de forma que los bloques
-con más peso se distingan visualmente de los de menos peso.
+con más peso se distingan visualmente de los de menos peso. Los controles para avanzar o retroceder de
+bloque SHALL ser distintos, en posición y en función, del control de envío final del cuestionario — no
+SHALL compartir el mismo control ni cambiar su función según el bloque en el que se esté.
 
 #### Scenario: Bloques de igual peso se ven igual
 - **WHEN** se muestra el bloque 1 y, en otro momento, el bloque 2 (ambos con el mismo peso del 5%)
@@ -119,6 +121,17 @@ con más peso se distingan visualmente de los de menos peso.
 - **WHEN** el usuario intenta navegar directamente a un bloque posterior al más avanzado que ha
   alcanzado (por ejemplo, saltar del bloque 2 al bloque 5 sin haber pasado por el 3 y el 4)
 - **THEN** el sistema no permite ese salto; solo se puede avanzar bloque a bloque
+
+#### Scenario: El control de envío final solo aparece en el último bloque
+- **WHEN** el usuario está en cualquier bloque anterior al último
+- **THEN** el control de envío/guardado final del cuestionario no se muestra; solo están disponibles los
+  controles de avanzar/retroceder de bloque
+
+#### Scenario: Navegación de bloque visualmente distinguible de la navegación de preguntas
+- **WHEN** el usuario ve los controles de navegación del bloque activo
+- **THEN** los controles de avanzar/retroceder de bloque son visualmente distintos de los de
+  avanzar/retroceder entre las preguntas del propio bloque, aunque compartan la misma zona de la
+  pantalla
 
 ### Requirement: Una pregunta a pantalla completa, con navegación por puntos
 El sistema SHALL presentar las 6 preguntas del bloque activo de una en una, ocupando toda la pantalla

@@ -128,7 +128,8 @@ No copiar en `features/registration` y `features/settings` por separado — es u
 Ver `SKILL.md` y `design-tokens.md` para la regla completa. **No renderices los 6 bloques a la vez** —
 solo la card del bloque activo. `currentBlockIndex`/`maxReachedBlockIndex` distinguen "qué bloque estoy
 viendo" de "hasta dónde he llegado", para poder volver a revisar/editar cualquier bloque ya visitado sin
-perder el sitio donde ibas — ver `goToBlock()`/`nextBlock()` en `design-tokens.md`. La clase
+perder el sitio donde ibas — ver `goToBlock()`/`previousBlockNav()`/`nextBlockNav()` en
+`design-tokens.md`. La clase
 `question-block--weight-XX` y las clases `quest-progress__*` salen de `design-tokens.md`, no las
 inventes aquí:
 
@@ -172,18 +173,34 @@ inventes aquí:
         [(ngModel)]="activeQuestion().answer"
         (blur)="saveDraft()"></textarea>
     </div>
-    <!-- navegación de puntos + flechas entre las 6 preguntas del bloque, ver design-tokens.md -->
-    <app-question-nav
-      [questions]="activeBlock().questions"
-      [currentIndex]="currentQuestionIndex()"
-      [maxReachedIndex]="maxReachedQuestionIndex()"
-      (indexChange)="goToQuestion($event)" />
+    <!-- navegación de bloque anterior/siguiente (doble chevron) flanqueando la navegación de
+         puntos + flechas entre las 6 preguntas del bloque — mismo punto visual, iconos
+         visualmente distintos entre sí, ver design-tokens.md -->
+    <div class="d-flex align-items-center justify-content-center gap-2 mt-3">
+      <button type="button" class="btn btn-link p-0 text-secondary" [disabled]="currentBlockIndex() === 0"
+              (click)="previousBlockNav()" aria-label="Bloque anterior" title="Bloque anterior">
+        <i class="bi bi-chevron-double-left fs-5" aria-hidden="true"></i>
+      </button>
+      <app-question-nav
+        [questions]="activeBlock().questions"
+        [currentIndex]="currentQuestionIndex()"
+        [maxReachedIndex]="maxReachedQuestionIndex()"
+        (indexChange)="goToQuestion($event)" />
+      <button type="button" class="btn btn-link p-0 text-secondary" [disabled]="isLastBlock()"
+              (click)="nextBlockNav()" [attr.aria-label]="nextBlockNavLabel()" [title]="nextBlockNavLabel()">
+        <i class="bi bi-chevron-double-right fs-5" aria-hidden="true"></i>
+      </button>
+    </div>
   </div>
-  <div class="card-footer bg-white d-flex justify-content-end">
-    <button type="button" class="btn btn-dark" (click)="nextBlock()">
-      {{ footerButtonLabel() }}
-    </button>
-  </div>
+  <!-- El card-footer SOLO se muestra en el último bloque (sección 21b) — nunca hace de
+       "Siguiente bloque", eso vive en el botón de arriba junto a los puntos -->
+  @if (isLastBlock()) {
+    <div class="card-footer bg-white d-flex justify-content-end">
+      <button type="button" class="btn btn-dark" [disabled]="footerButtonDisabled()" (click)="onFooterButtonClick()">
+        {{ footerButtonLabel() }}
+      </button>
+    </div>
+  }
 </div>
 ```
 

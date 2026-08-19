@@ -74,6 +74,14 @@ bastante código de infraestructura (hashing, tokens de recuperación con expira
 sin aportar nada que Supabase Auth no resuelva ya gratis, contradiciendo el criterio de "acotado" del
 TFM.
 
+> **Nota posterior a este archivado** (post-166/166, durante pruebas reales de email): el SMTP incluido
+> en el free tier de Supabase resultó tener dos límites que esta decisión no anticipaba — un rate limit
+> muy bajo (2 emails/hora) y, más importante, solo entrega a direcciones del equipo del proyecto en
+> Supabase, bloqueando el registro a cualquier usuario real ajeno al equipo. Se resolvió configurando un
+> SMTP propio de Gmail en el Dashboard (no cambia nada de lo descrito arriba: sigue siendo
+> `resetPasswordForEmail`/`updateUser` de Supabase Auth, solo cambia qué servidor de correo usa Supabase
+> por detrás — ver `README.md`).
+
 **Implementación concreta (sección 4 de `tasks.md`)**: `SupabaseAuthGuard` delega la validación en
 `supabase.auth.getUser(token)` (vía `SupabaseService`, la misma puerta de acceso que el resto del
 backend) en vez de verificar la firma del JWT a mano — evita gestionar un segundo secreto
@@ -680,6 +688,11 @@ llamar a `resetPasswordForEmail` — el backend nunca ve ni necesita un host/usu
 límite de envíos del free tier sigue siendo un riesgo aceptado (ver Risks), no algo que resolver
 añadiendo un proveedor de email adicional en esta v1.
 
+> **Nota posterior a este archivado**: el límite del free tier sí acabó necesitando resolverse — ver la
+> nota de la decisión 3b más arriba. Sigue siendo cierto que el backend/repo nunca gestiona ninguna
+> credencial SMTP: la cuenta de Gmail se configura enteramente dentro del Dashboard de Supabase, sin
+> tocar `apps/backend/.env` ni los secrets de Render.
+
 **Gestión de credenciales — API key del LLM (Groq/OpenRouter) y `service_role` de Supabase**: ambas
 viven **exclusivamente como variables de entorno en Render** (backend) — nunca en el repositorio, nunca
 en el frontend (el orquestador de IA es backend-only, decisión 4, así que Vercel no necesita esta
@@ -766,8 +779,10 @@ con unitarios/e2e no depende de tener Docker levantado en cada guardado.
 - **Pool pequeño de usuarios → candidatos repetidos** → Mitigación: seed ampliado a 8–12 perfiles
   variados en `seed-data`.
 - **Límites de envío de email del free tier de Supabase Auth** (rate limit bajo para emails
-  transaccionales) → Mitigación: documentar el límite en la memoria; suficiente para una demo con pocos
-  usuarios de prueba, no para producción real.
+  transaccionales, y solo entrega a direcciones del equipo del proyecto) → Mitigación original:
+  documentar el límite en la memoria; suficiente para una demo con pocos usuarios de prueba, no para
+  producción real. **Nota posterior a este archivado**: acabó resuelto de verdad, no solo documentado
+  — SMTP propio de Gmail configurado en el Dashboard de Supabase (ver nota de la decisión 3b).
 - **Aprovisionamiento manual (sin Terraform) puede desincronizarse entre entornos o perderse si no se
   documenta** → Mitigación: los pasos exactos (proyecto Vercel, servicio Render, proyecto Supabase)
   quedan escritos paso a paso en `docs/architecture.md`, no solo en la memoria del desarrollador; al ser

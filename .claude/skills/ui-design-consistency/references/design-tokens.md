@@ -392,7 +392,19 @@ goToBlock(index: number): void {
   }
 }
 
-nextBlock(): void {
+// Botones de bloque anterior/siguiente junto a los puntos de pregunta (sección 21b — sustituyen al
+// antiguo botón único del footer, que hacía de "Siguiente bloque" Y de envío final a la vez).
+previousBlockNav(): void {
+  if (this.currentBlockIndex() === 0) {
+    return;
+  }
+  this.enterBlock(this.currentBlockIndex() - 1);
+}
+
+nextBlockNav(): void {
+  if (this.isLastBlock()) {
+    return;
+  }
   if (this.currentBlockIndex() < this.maxReachedBlockIndex()) {
     this.currentBlockIndex.set(this.maxReachedBlockIndex()); // "Volver a donde estabas"
   } else {
@@ -474,31 +486,50 @@ El mismo gradiente de la fila del bloque activo colorea el `card-header` de su p
     </div>
   </div>
   <div class="card-body">
-    <!-- pregunta activa + textarea, ver "Navegación entre las 6 preguntas del bloque activo" más abajo -->
+    <!-- pregunta activa + textarea -->
+    <div class="d-flex align-items-center justify-content-center gap-2 mt-3">
+      <button type="button" class="btn btn-link p-0 text-secondary" [disabled]="currentBlockIndex() === 0"
+              (click)="previousBlockNav()" aria-label="Bloque anterior" title="Bloque anterior">
+        <i class="bi bi-chevron-double-left fs-5" aria-hidden="true"></i>
+      </button>
+      <!-- <app-question-nav>, ver "Navegación entre las 6 preguntas del bloque activo" más abajo -->
+      <button type="button" class="btn btn-link p-0 text-secondary" [disabled]="isLastBlock()"
+              (click)="nextBlockNav()" [attr.aria-label]="nextBlockNavLabel()" [title]="nextBlockNavLabel()">
+        <i class="bi bi-chevron-double-right fs-5" aria-hidden="true"></i>
+      </button>
+    </div>
   </div>
-  <div class="card-footer bg-white d-flex justify-content-end">
-    <button type="button" class="btn btn-dark" (click)="nextBlock()">
+  <!-- El footer YA NO hace de "Siguiente bloque" (sección 21b) — solo se muestra en el último
+       bloque, únicamente como acción final de envío/guardado -->
+  <div class="card-footer bg-white d-flex justify-content-end" *ngIf="isLastBlock()">
+    <button type="button" class="btn btn-dark" [disabled]="footerButtonDisabled()" (click)="onFooterButtonClick()">
       {{ footerButtonLabel() }}
     </button>
   </div>
 </div>
 ```
 
-`footerButtonLabel()` combina si estás revisando o avanzando (ver `nextBlock()`/`goToBlock()` arriba),
-si es el último bloque, y el modo (creación/edición — decisión 3h de `design.md`):
+`footerButtonLabel()` ya solo depende del modo (creación/edición — decisión 3h de `design.md`): el
+propio `*ngIf="isLastBlock()"` del footer garantiza que esto nunca se lee fuera del último bloque, así
+que no hace falta que el método distinga por bloque él mismo. El matiz de "¿estoy revisando o avanzando
+de verdad?" (antes texto del botón del footer) ahora es el `aria-label`/`title` del botón de bloque
+siguiente junto a los puntos, `nextBlockNavLabel()` — "Volver a donde estabas" si se revisa un bloque ya
+superado, "Bloque siguiente" en caso contrario:
 
 ```ts
 footerButtonLabel(): string {
-  if (this.currentBlockIndex() < this.maxReachedBlockIndex()) {
-    return 'Volver a donde estabas'; // estás revisando un bloque ya superado
-  }
-  if (!this.isLastBlock()) {
-    return 'Siguiente bloque';
-  }
   return this.mode === 'edit' ? 'Guardar y recalcular compatibilidad' : 'Enviar cuestionario';
 }
 
-async onSubmitLastBlock(): Promise<void> {
+footerButtonDisabled(): boolean {
+  return !this.allAnswered(); // exige las 36, no solo las del bloque activo
+}
+
+async onFooterButtonClick(): Promise<void> {
+  await this.submitLastBlock();
+}
+
+private async submitLastBlock(): Promise<void> {
   if (this.mode === 'edit') {
     await this.questionnaireService.update(this.answers()); // PATCH /users/me/questionnaire
     await this.matchingService.recalculate();                // POST /users/me/recalculate, encadenado
@@ -529,7 +560,7 @@ abajo y con alcance local al bloque activo (se reinicia al entrar a un bloque di
 <!-- apps/frontend/src/app/features/questionnaire/question-nav.component.html -->
 <div class="d-flex align-items-center justify-content-center gap-3 mt-3">
   <button type="button" class="btn btn-link p-0 text-body" [disabled]="currentQuestionIndex() === 0"
-          (click)="previousQuestion()" aria-label="Pregunta anterior">
+          (click)="previousQuestion()" aria-label="Pregunta anterior" title="Pregunta anterior">
     <i class="bi bi-chevron-left fs-5"></i>
   </button>
   <div class="d-flex gap-2">
@@ -541,7 +572,7 @@ abajo y con alcance local al bloque activo (se reinicia al entrar a un bloque di
     }
   </div>
   <button type="button" class="btn btn-link p-0 text-body" [disabled]="currentQuestionIndex() === 5"
-          (click)="nextQuestion()" aria-label="Siguiente pregunta">
+          (click)="nextQuestion()" aria-label="Siguiente pregunta" title="Siguiente pregunta">
     <i class="bi bi-chevron-right fs-5"></i>
   </button>
 </div>
@@ -816,12 +847,15 @@ En **modo edición** (`mode === 'edit'`), esta pantalla no se muestra nunca — 
       <div class="small mt-2"><button type="button" class="btn btn-link p-0" (click)="pickPhoto()">Subir foto</button></div>
     </div>
     <div class="mb-3">
-      <label class="form-label" for="name">Nombre completo</label>
-      <input id="name" class="form-control" formControlName="name">
+      <label class="form-label" for="name">Nombre completo <span class="text-danger" aria-hidden="true">*</span></label>
+      <input id="name" class="form-control" formControlName="name" required>
     </div>
     <div class="mb-3">
-      <label class="form-label" for="alias">Un alias único</label>
-      <input id="alias" class="form-control" formControlName="alias">
+      <label class="form-label" for="alias">Un alias único <span class="text-danger" aria-hidden="true">*</span></label>
+      <input id="alias" class="form-control" formControlName="alias" required>
+      <!-- El asterisco es aria-hidden (decorativo) — el atributo required nativo es lo que
+           realmente anuncian los lectores de pantalla. Encontrado en verificación manual: sin
+           ninguno de los dos, "Siguiente" se quedaba deshabilitado sin pista de por qué. -->
       <!-- feedback de disponibilidad de GET /users/check-alias, is-invalid/invalid-feedback si ocupado -->
     </div>
     <div class="d-flex justify-content-end">
@@ -852,12 +886,18 @@ En **modo edición** (`mode === 'edit'`), esta pantalla no se muestra nunca — 
 
 ```scss
 .profile-photo-picker {
+  margin: 0 auto; // ver nota debajo — sin esto, queda descentrado pese al text-center del padre
   width: 96px;
   height: 96px;
   border: none;
   padding: 0;
   background: linear-gradient(135deg, #FB8500, #BE1E2D); // mismo degradado de marca que Shell B
 }
+// El propio boton necesita display:flex (no incluido en este extracto abreviado) para centrar el
+// icono/imagen DE DENTRO — eso lo convierte en caja de bloque, así que el `text-center` del
+// contenedor padre ya no lo centra a EL. margin: 0 auto lo centra igual, sin depender de eso.
+// Encontrado en verificación manual con captura real, no solo en teoría — ver el fichero real
+// (registration.component.scss) para el bloque completo con display/align-items/justify-content.
 .profile-photo-picker__placeholder {
   display: block;
   width: 100%;
@@ -963,7 +1003,7 @@ async recalculateNow(): Promise<void> {
 Ninguno de los dos atajos duplica lógica de recálculo propia: ambos llaman al mismo
 `POST /users/me/recalculate` que ya usa el botón del dashboard (decisión 5b) — o, en el caso del
 cuestionario, quedan encadenados dentro del propio botón "Guardar y recalcular compatibilidad" del
-último bloque en modo edición (ver `footerButtonLabel()`/`onSubmitLastBlock()` más arriba).
+último bloque en modo edición (ver `footerButtonLabel()`/`submitLastBlock()` más arriba).
 
 El botón "Editar tus respuestas" es `btn-outline-dark` (acción secundaria de la sección, no la principal
 de la pantalla — esa sigue siendo "Guardar cambios" del perfil). Configuración **no** duplica el botón
