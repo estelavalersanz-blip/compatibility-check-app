@@ -130,6 +130,24 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
     expect(items.every((item) => collapse?.contains(item))).toBe(true);
   });
 
+  /**
+   * Feedback explícito de la usuaria con captura: en el menú desplegado en móvil, los 3 botones
+   * salían alineados a la izquierda en vez de a la derecha (donde está el propio icono de
+   * hamburguesa). Causa real: `.navbar-nav` es `display: flex; flex-direction: column` por debajo
+   * de 768px (Bootstrap, `_navbar.scss`) — con `align-items` en su valor por defecto (`stretch`),
+   * cada `<li>` ocupa el ancho completo, y el botón (`display: inline-block`) queda alineado al
+   * inicio de ese `<li>` salvo que se indique lo contrario. `text-end` resuelve esto por
+   * `text-align`, heredado — inocuo en escritorio (`navbar-expand-md` pasa `.navbar-nav` a fila, ahí
+   * `text-align` no reposiciona los `<li>`, que ya se colocan por flexbox, no por su contenido).
+   * Depende de la misma media query que el test anterior, así que se comprueba por estructura.
+   */
+  it('los 3 botones van alineados a la derecha en el menú móvil (clase text-end)', async () => {
+    const { harness } = await setup(true);
+    const nav = rootElement(harness).querySelector('.navbar-nav');
+
+    expect(nav?.classList.contains('text-end')).toBe(true);
+  });
+
   it('la cabecera usa el degradado de marca (navbar-dark), no el fondo blanco anterior', async () => {
     const { harness } = await setup(true);
     const nav = rootElement(harness).querySelector('nav');

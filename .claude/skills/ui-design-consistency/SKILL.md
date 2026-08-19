@@ -428,15 +428,14 @@ pregunta. Cada card muestra el score general y las 6 puntuaciones por dimensión
 la justificación/explicación de la IA — nunca `respuesta_usuario_1`/`respuesta_usuario_2`. Esto no es
 una decisión de estilo: ver `design.md` decisión 5d y `specs/results-dashboard` para el porqué.
 
-## Configuración y Chats: estilo modal sobre la pantalla principal
+## Configuración y Chats: cierre explícito ("×") sobre la pantalla principal
 
 `features/settings`, `features/chats` y `features/chats/:id` (las 3 pantallas descritas en las dos
-secciones siguientes) se muestran como un **modal superpuesto** sobre la pantalla principal
-(cuestionario o dashboard) en vez de sentirse como una pantalla más entre las que hay que "volver
-atrás": backdrop oscurecido a pantalla completa, card centrada, cierre explícito con una "×". Decisión
-tomada a partir de feedback explícito de la usuaria (2026-08-19): estas 3 son *acciones puntuales*
-sobre el flujo principal (editar tu perfil, revisar un chat), no destinos permanentes como el propio
-dashboard.
+secciones siguientes) llevan un botón de **cierre explícito ("×")** que navega a la pantalla
+principal, en vez de sentirse como una pantalla más entre las que hay que "volver atrás" a mano.
+Decisión tomada a partir de feedback explícito de la usuaria (2026-08-19): estas 3 son *acciones
+puntuales* sobre el flujo principal (editar tu perfil, revisar un chat), no destinos permanentes como
+el propio dashboard.
 
 **Es SOLO un restyle visual, no un cambio de arquitectura**: las 3 siguen siendo rutas reales de
 Shell A con sus guards sin cambios (`profileGuard` + `questionnaireCompletedGuard`, ver
@@ -445,17 +444,23 @@ deep-linking, botón atrás del navegador y guards siguen funcionando tal cual. 
 `NgbModal` de `@ng-bootstrap/ng-bootstrap` (ya es dependencia del proyecto) como forma de abrir estas
 pantallas y se descartó a propósito: perdería esa navegabilidad real sin necesidad. Bootstrap tampoco
 tiene su JS de modales cargado en este proyecto (decisión 3c-bis de `design.md`), así que un modal
-"de verdad" habría exigido JS propio de todos modos — el camino elegido (restyle visual puro de una
-ruta normal) no lo necesita.
+"de verdad" habría exigido JS propio de todos modos.
 
-El envoltorio compartido es `shared/modal-panel/modal-panel.component.ts` (`<app-modal-panel>`): un
-backdrop a pantalla completa (por debajo de la cabecera de `core/shell` en el eje z — Chats/
-Configuración/Cerrar sesión siguen pulsables con el "modal" abierto) más una card centrada con cierre.
-Con un `title` de entrada, el propio panel añade su franja de título+cierre (Configuración, Chats);
-sin él (conversación de chat, que ya tiene su propia cabecera contextual), el contenido proyectado
-lleva su propio cierre en su propia cabecera. Marcado/CSS exactos y el porqué del `position: absolute`
-(nunca `fixed` — falso positivo real de desbordamiento en los tests de responsive si no) en
-`references/design-tokens.md`.
+**Decisión revisada (2026-08-19, tras verlo en producción)**: la primera versión iba más lejos —
+backdrop oscurecido a pantalla completa con una card centrada flotando encima, imitando un diálogo de
+verdad. Dos problemas reales llevaron a simplificarlo: (1) como estas rutas SIGUEN sustituyendo a la
+anterior en el `<router-outlet>` (nunca la mantienen montada de fondo — ver el párrafo anterior), no
+había nada real que mostrar detrás del backdrop; se veía como un gris plano sin sentido en vez de la
+pantalla principal atenuada. (2) La card, centrada dentro de un backdrop a pantalla completa, podía
+quedar parcialmente escondida detrás de la propia cabecera de `core/shell` (bug real de
+posicionamiento). Con eso, se optó por lo más simple: el panel ocupa **todo el ancho de `<main>`,
+como cualquier otra pantalla de Shell A** — la "×" es la única señal de que se puede "cerrar".
+
+El envoltorio compartido es `shared/modal-panel/modal-panel.component.ts` (`<app-modal-panel>`): una
+`card` normal — sin backdrop, sin centrado propio, sin ancho máximo — con una franja `card-header` de
+título+cierre cuando se le pasa `title` (Configuración, Chats); sin él (conversación de chat, que ya
+tiene su propia cabecera contextual), el contenido proyectado lleva su propio cierre en su propia
+cabecera. Marcado exacto en `references/design-tokens.md`.
 
 ## Chat interno: botón en la card de compatibilidad, listado y conversación
 

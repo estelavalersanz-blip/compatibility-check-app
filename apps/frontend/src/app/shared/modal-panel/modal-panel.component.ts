@@ -19,6 +19,11 @@ import { RouterLink } from '@angular/router';
  * "volver a /chats" + nombre del participante), el panel no añade nada de chrome propio: el
  * contenido proyectado es responsable de su propia cabecera Y de su propio botón de cerrar, para no
  * duplicar una segunda franja de título encima de la que ya existe.
+ *
+ * Ocupa todo el ancho de `<main>`, como cualquier otra pantalla de Shell A — sin backdrop oscurecido
+ * ni card flotante centrada (decisión revisada tras verlo en producción, ver
+ * `modal-panel.component.scss`): la "×" es la única señal visual de que se puede "cerrar" esta
+ * pantalla, sin necesitar mostrar nada realmente detrás.
  */
 @Component({
   selector: 'app-modal-panel',

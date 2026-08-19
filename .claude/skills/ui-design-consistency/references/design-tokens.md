@@ -403,6 +403,18 @@ siendo `btn btn-outline-light btn-sm`, sin más cambios. `border-bottom` (el bor
 navbar antiguo del cuerpo) se quita: el propio contraste de color entre el degradado y el cuerpo blanco
 ya separa ambas zonas, un borde gris adicional no aporta nada ahí y desentonaría con el degradado.
 
+**Alineación de los 3 botones en el menú móvil (bug real, feedback con captura, 2026-08-19)**: el
+`<ul class="navbar-nav ms-auto ...">` salía alineado a la izquierda en el desplegable móvil, no a la
+derecha (donde está el propio icono de hamburguesa). Causa: `.navbar-nav` es
+`display: flex; flex-direction: column` por debajo de 768px (Bootstrap, `_navbar.scss`) — con
+`align-items` en su valor por defecto (`stretch`), cada `<li>` ocupa el ancho completo del desplegable,
+y el botón (`.btn`, `display: inline-block`) se alinea al inicio de ese `<li>` salvo que se le diga lo
+contrario. `ms-auto` no arregla esto: solo empuja el `<ul>` hacia la derecha cuando `.navbar-nav` es una
+fila (`navbar-expand-md`, ≥768px) — en columna (móvil) no tiene ningún efecto visible. Se añade
+`text-end` al mismo `<ul>` (clase final: `navbar-nav ms-auto align-items-md-center gap-2 text-end`):
+alinea el contenido inline de cada `<li>` a la derecha, inocuo en escritorio (ahí los `<li>` ya se
+posicionan por flexbox en fila, no por `text-align`).
+
 ## Barra de progreso ponderada del wizard del cuestionario
 
 Los 6 bloques del cuestionario (`design.md` decisión 6c) tienen pesos 5/5/15/20/25/30%. En el wizard,
@@ -1021,14 +1033,14 @@ impredecible, así que el refuerzo aquí es "qué candidatos ya están listos" (
 no "cuánto queda". El polling (`GET /users/me/comparisons`) se detiene y navega al dashboard en cuanto
 todas están en `completed`/`error`.
 
-## Modal sobre la pantalla principal: `shared/modal-panel` (Configuración y Chats)
+## Cierre explícito sobre la pantalla principal: `shared/modal-panel` (Configuración y Chats)
 
 Feedback explícito de la usuaria (2026-08-19): `features/settings`, `features/chats` y
-`features/chats/:id` deberían sentirse como un modal superpuesto sobre la pantalla principal
-(cuestionario o dashboard), con su propio cierre explícito, en vez de una pantalla más entre las que
-hay que "volver atrás". Ver `SKILL.md`, "Configuración y Chats: estilo modal sobre la pantalla
-principal", para el porqué completo (incluye por qué se descartó `NgbModal`). Aquí solo el marcado/CSS
-exactos del envoltorio compartido:
+`features/chats/:id` deberían llevar un cierre explícito ("×") hacia la pantalla principal, en vez de
+depender solo del botón atrás del navegador o de la cabecera. Ver `SKILL.md`, "Configuración y Chats:
+cierre explícito ('×') sobre la pantalla principal", para el porqué completo (incluye por qué se
+descartó `NgbModal`, y por qué una primera versión con backdrop + card centrada se simplificó a esto).
+Aquí el marcado exacto del envoltorio compartido:
 
 ```ts
 // apps/frontend/src/app/shared/modal-panel/modal-panel.component.ts
@@ -1046,54 +1058,22 @@ export class ModalPanelComponent {
 
 ```html
 <!-- apps/frontend/src/app/shared/modal-panel/modal-panel.component.html -->
-<div class="modal-panel-backdrop">
-  <div class="modal-panel-card card">
-    @if (title()) {
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <span class="fw-semibold">{{ title() }}</span>
-        <button type="button" class="btn btn-link p-0 text-body" routerLink="/" aria-label="Cerrar">
-          <i class="bi bi-x-lg" aria-hidden="true"></i>
-        </button>
-      </div>
-    }
-    <ng-content></ng-content>
-  </div>
+<div class="card">
+  @if (title()) {
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">{{ title() }}</span>
+      <button type="button" class="btn btn-link p-0 text-body" routerLink="/" aria-label="Cerrar">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+  }
+  <ng-content></ng-content>
 </div>
 ```
 
-```scss
-// apps/frontend/src/app/shared/modal-panel/modal-panel.component.scss
-.modal-panel-backdrop {
-  position: absolute; // NUNCA fixed — ver nota de responsive más abajo
-  inset: 0;
-  z-index: 1010; // por debajo de $zindex-sticky (1020, el de .sticky-top del navbar)
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  overflow-y: auto;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-panel-card {
-  width: 100%;
-  max-width: 560px;
-  max-height: calc(100vh - 2rem);
-  overflow-y: auto;
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3); // única card de la app con sombra propia
-}
-```
-
-**`position: absolute`, nunca `fixed` (bug real, tarea de responsive sección 21)**: `fixed` ignora
-siempre su ancestro DOM y se mide contra la ventana real del navegador, así que
-`expectNoHorizontalOverflow` (`core/testing/no-horizontal-overflow.ts`, que mueve el componente a un
-`<div>` sintético de 375px para medir) nunca podía constreñirlo — daba un falso positivo de
-desbordamiento en cualquier viewport de Karma más ancho que 375px reales, en las 3 pantallas que usan
-este panel. `absolute` con `inset: 0` resuelve exactamente igual contra el viewport completo cuando no
-hay ningún ancestro con `position` propio de por medio (el caso real de esta app, dentro de
-`<main class="container">` de `core/shell`), así que el efecto visual en producción es idéntico — la
-única diferencia real (no queda "clavado" al hacer scroll de página) no importa aquí porque la propia
-card ya limita su alto (`max-height`) y escrolea por dentro.
+Sin CSS propio: es una `.card` normal de Bootstrap, ocupando todo el ancho de `<main>` como cualquier
+otra pantalla de Shell A (ver "El patrón container + card" más abajo) — nada de backdrop, ancho
+máximo ni centrado propio.
 
 **`title` opcional**: con él (Configuración, Chats), el panel añade su propia franja `card-header` con
 el título y el cierre. Sin él (conversación de chat, que ya tiene su propia cabecera contextual — ver

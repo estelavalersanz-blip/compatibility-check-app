@@ -216,7 +216,7 @@ inventes aquí:
   `card-footer` es el único formulario real de la pantalla (input de texto + botón de enviar). Ver
   `design-tokens.md` para el marcado y CSS completos de las burbujas. Envuelta en
   `<app-modal-panel>` **sin** `title` (feedback explícito de la usuaria, 2026-08-19, ver `SKILL.md`,
-  "Configuración y Chats: estilo modal..."): ya tiene su propia cabecera contextual, así que el cierre
+  "Configuración y Chats: cierre explícito ('×')..."): ya tiene su propia cabecera contextual, así que el cierre
   del modal se añade ahí mismo, no en una segunda franja.
 - **`features/settings`** (sección 17): 3 cards apiladas (`.mb-4` entre ellas), no una sola — "perfil"
   (foto/nombre/alias/cualidades), "tu cuestionario" (resumen + navegación a `/questionnaire?mode=edit`)
@@ -227,7 +227,7 @@ inventes aquí:
   que `features/registration` (paso 1/paso 2), pero aquí en un solo formulario, sin wizard — y la foto
   es opcional (si no se toca, se conserva la ya guardada), a diferencia del registro donde es
   obligatoria. Las 3 cards van envueltas en `<app-modal-panel title="Configuración">` (ver `SKILL.md`,
-  "Configuración y Chats: estilo modal...") — quedan anidadas dentro de la card propia del panel a
+  "Configuración y Chats: cierre explícito ('×')...") — quedan anidadas dentro de la card propia del panel a
   propósito (restyle visual, no una reestructuración de este caso especial).
 - **`features/chats`** (listado): envuelto en `<app-modal-panel title="Chats">` — el `list-group-flush`
   va directo dentro, sin una `card`/`card-body` propia de más (quedaría redundante anidada dentro de la

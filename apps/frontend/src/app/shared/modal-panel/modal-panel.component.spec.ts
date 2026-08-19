@@ -111,12 +111,22 @@ describe('ModalPanelComponent', () => {
     expect(closeButton).toBeNull();
   });
 
-  it('el backdrop cubre toda la pantalla (clase modal-panel-backdrop) y envuelve una card centrada', async () => {
+  /**
+   * Decisión revisada (feedback explícito de la usuaria tras verlo en producción): una primera
+   * versión envolvía la card en un backdrop oscurecido a pantalla completa, centrada y con ancho
+   * máximo — sin la pantalla anterior realmente visible detrás (Option 1 nunca la mantiene montada),
+   * el hueco se veía como un gris plano sin sentido, y además se escondía parcialmente detrás de la
+   * cabecera (bug real de posicionamiento). Ahora el panel ocupa todo el ancho de `<main>`, como
+   * cualquier otra pantalla — sin backdrop ni centrado propio.
+   */
+  it('ocupa todo el ancho disponible, sin backdrop ni card centrada/flotante', async () => {
     const harness = await mount(HostWithTitleComponent);
     const root = rootElement(harness);
 
-    const backdrop = root.querySelector('.modal-panel-backdrop');
-    expect(backdrop).not.toBeNull();
-    expect(backdrop?.querySelector('.modal-panel-card.card')).not.toBeNull();
+    expect(root.querySelector('.modal-panel-backdrop')).toBeNull();
+    expect(root.querySelector('.modal-panel-card')).toBeNull();
+    const card = root.querySelector('.card');
+    expect(card).not.toBeNull();
+    expect(getComputedStyle(card as Element).maxWidth).toBe('none');
   });
 });
