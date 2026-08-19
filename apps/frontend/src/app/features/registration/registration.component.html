@@ -44,22 +44,24 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label" for="name">Nombre completo</label>
+          <label class="form-label" for="name">Nombre completo <span class="text-danger" aria-hidden="true">*</span></label>
           <input
             id="name"
             class="form-control"
             formControlName="name"
+            required
             [class.is-invalid]="step1Form.controls.name.invalid && step1Form.controls.name.touched"
           />
           <div class="invalid-feedback">Introduce tu nombre completo.</div>
         </div>
 
         <div class="mb-3">
-          <label class="form-label" for="alias">Un alias único</label>
+          <label class="form-label" for="alias">Un alias único <span class="text-danger" aria-hidden="true">*</span></label>
           <input
             id="alias"
             class="form-control"
             formControlName="alias"
+            required
             [class.is-invalid]="step1Form.controls.alias.dirty && step1Form.controls.alias.hasError('aliasTaken')"
             [class.is-valid]="step1Form.controls.alias.dirty && aliasAvailable()"
           />

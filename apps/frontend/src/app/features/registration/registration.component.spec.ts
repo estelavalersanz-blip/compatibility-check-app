@@ -158,6 +158,21 @@ describe('RegistrationComponent (tarea 13.0)', () => {
     expect(nextButton.disabled).toBe(false);
   });
 
+  it('marca nombre y alias como obligatorios (asterisco visible + atributo required)', () => {
+    // Encontrado en verificación manual: el botón "Siguiente" se queda deshabilitado sin ninguna
+    // pista de por qué — confuso para quien no sepa que ambos campos son obligatorios.
+    const { fixture } = setup();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const nameLabel = root.querySelector('label[for="name"]');
+    const aliasLabel = root.querySelector('label[for="alias"]');
+    expect(nameLabel?.textContent).toContain('*');
+    expect(aliasLabel?.textContent).toContain('*');
+
+    expect(root.querySelector<HTMLInputElement>('#name')?.required).toBe(true);
+    expect(root.querySelector<HTMLInputElement>('#alias')?.required).toBe(true);
+  });
+
   it('"Siguiente" solo avanza de paso: no llama a createProfile ni crea/modifica ningún perfil', async () => {
     const { fixture, createProfileSpy } = setup();
     await fillValidStep1(fixture);
