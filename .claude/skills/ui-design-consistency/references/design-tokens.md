@@ -348,14 +348,23 @@ selector de foto de completar perfil — antes era fondo blanco liso (`bg-white`
 la pantalla, debajo de la cabecera, sigue en blanco en los dos casos — el degradado es solo de la
 cabecera.
 
+**El logo + "AfinIA" son un enlace a la pantalla principal** (decisión confirmada con Estela,
+retomada y formalizada en `openspec/changes/archive/*-add-navbar-brand-home-link`): antes un `<span>`
+puramente decorativo, sin ningún punto de entrada de vuelta a la pantalla principal desde
+Configuración/Chats salvo el botón "Atrás" del navegador. Ahora es un `<a routerLink="/">` — navega a
+`/` y deja que `mainRouteGuard` decida el destino real (cuestionario o dashboard según el estado del
+usuario, spec `results-dashboard` "Enrutamiento de la página principal"), sin duplicar esa lógica de
+prioridad en `ShellComponent`. Mismo patrón que ya usa `previousBlock()` del cuestionario (flecha de
+la cabecera en el bloque 1).
+
 ```html
 <!-- apps/frontend/src/app/core/shell/shell.component.html -->
 <nav class="navbar navbar-expand-md navbar-dark shell-navbar sticky-top">
   <div class="container">
-    <span class="navbar-brand d-flex align-items-center gap-2">
+    <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/" aria-label="Ir a la pantalla principal">
       <app-brand-mark />
       AfinIA
-    </span>
+    </a>
     <!-- toggler + colapsable con los 3 botones (Chats/Configuración/Cerrar sesión), sin cambios -->
   </div>
 </nav>
@@ -377,6 +386,13 @@ cabecera.
 .shell-navbar .btn-link:hover,
 .shell-navbar .btn-link:focus {
   color: #FFFFFF;
+  opacity: 0.85;
+}
+
+// El logo/"AfinIA" (`.navbar-brand`) ya hereda el color correcto de `navbar-dark` sin forzar nada —
+// solo hace falta el mismo hover/focus que el resto de la cabecera, para que se note que es clicable.
+.shell-navbar .navbar-brand:hover,
+.shell-navbar .navbar-brand:focus {
   opacity: 0.85;
 }
 ```

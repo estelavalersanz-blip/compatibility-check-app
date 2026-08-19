@@ -1,5 +1,5 @@
 import { PinoLogger } from 'nestjs-pino';
-import { AiOrchestratorService } from './ai-orchestrator.service';
+import { AiOrchestratorService, PRODUCTION_RETRY_BACKOFF_MS } from './ai-orchestrator.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 interface FakeComparisonRow {
@@ -254,6 +254,54 @@ describe('AiOrchestratorService', () => {
     expect(complete).toHaveBeenCalledTimes(12); // 6 lotes × 2 intentos cada uno
     expect(db.comparisons.find((c) => c.id === 'cmp-1')?.status).toBe('completed');
     expect(db.questionResults).toHaveLength(36);
+  });
+
+  describe('backoff entre reintentos (bug real de producción, 2026-08-19)', () => {
+    /**
+     * Con solo 50/150ms de espera (valor histórico), los 3 reintentos se agotaban casi al instante
+     * contra el límite de Groq de 8.000 tokens/minuto — Groq pide esperar 20-30s reales tras un
+     * 429, así que ningún reintento tenía margen real antes de volver a fallar. Este test NO
+     * comprueba el valor numérico en sí contra temporizadores reales (eso haría la suite lenta sin
+     * aportar nada) — solo que el 4º parámetro del constructor (inyectado vía `AI_RETRY_BACKOFF_MS`
+     * en la app real, `ai.module.ts`) es el que de verdad se usa entre intentos, no un valor fijo
+     * ignorado.
+     */
+    it('usa el backoff pasado por parámetro entre reintentos de un mismo lote, no un valor fijo interno', async () => {
+      const db = new FakeDb();
+      seedComparisonWithBothUsers(db);
+      const attemptsByBlock = new Map<string, number>();
+      const complete = jest.fn().mockImplementation((request: { userPrompt: string }) => {
+        const marker = BLOCK_MARKERS.find((m) => request.userPrompt.includes(m)) as string;
+        const attempt = (attemptsByBlock.get(marker) ?? 0) + 1;
+        attemptsByBlock.set(marker, attempt);
+        // Solo MARK_0 necesita un reintento (falla una vez, luego vale) — así el único backoff que
+        // se llega a esperar de verdad es retryBackoffMs[0], nunca retryBackoffMs[1].
+        return Promise.resolve(
+          marker === 'MARK_0' && attempt === 1 ? 'inválido' : buildValidBatchResponse(),
+        );
+      });
+      const customBackoffMs = [200, 60_000]; // el 2º valor no debería llegar a usarse aquí
+      const service = new AiOrchestratorService(
+        { complete },
+        buildSupabaseService(db),
+        buildLogger() as unknown as PinoLogger,
+        customBackoffMs,
+      );
+
+      const startedAt = Date.now();
+      await service.analyzeComparison('cmp-1');
+      const elapsedMs = Date.now() - startedAt;
+
+      // >= el backoff inyectado (con margen por la ejecución real) y muy por debajo del segundo
+      // valor (60s): si el código ignorase el parámetro y usara siempre el 2º índice, o un valor
+      // fijo distinto, este rango lo detectaría.
+      expect(elapsedMs).toBeGreaterThanOrEqual(180);
+      expect(elapsedMs).toBeLessThan(10_000);
+    });
+
+    it('PRODUCTION_RETRY_BACKOFF_MS (el valor real que usa ai.module.ts) da margen a los 20-30s que Groq pide tras un 429, no los 50/150ms de los tests', () => {
+      expect(PRODUCTION_RETRY_BACKOFF_MS).toEqual([10_000, 25_000]);
+    });
   });
 
   it('marca la comparación como error tras 3 intentos fallidos de un lote, sin persistir nada nuevo', async () => {

@@ -17,9 +17,32 @@ import { writableTable } from '../supabase/writable-table';
 const BATCH_SIZE = 6;
 const MAX_CONCURRENT_BATCHES = 2;
 const MAX_ATTEMPTS_PER_BATCH = 3;
-/** Backoff entre reintentos (2 esperas para 3 intentos) — pequeño a propósito: valores realistas de
- *  segundos harían la suite de tests lenta sin aportar nada distinto a validar aquí. */
-const BACKOFF_MS = [50, 150];
+
+/**
+ * Token de inyección del backoff entre reintentos (mismo patrón que `AI_PROVIDER` en
+ * `ai-provider.interface.ts`) — `ai.module.ts` lo vincula a `PRODUCTION_RETRY_BACKOFF_MS`; los
+ * tests construyen la clase directamente (`new AiOrchestratorService(...)`, sin pasar por el
+ * contenedor de Nest) y usan el valor por defecto del propio constructor, ínfimo a propósito.
+ */
+export const AI_RETRY_BACKOFF_MS = 'AI_RETRY_BACKOFF_MS';
+
+/**
+ * Bug real de producción (2026-08-19): con solo 50/150ms de espera (valor histórico, pensado
+ * únicamente para no ralentizar los tests), los 3 reintentos se agotaban casi al instante contra el
+ * límite gratuito de Groq de 8.000 tokens/minuto (`openai/gpt-oss-120b`) — Groq pide esperar 20-30s
+ * reales tras un 429 ("Please try again in 26.1s", confirmado contra la API real con datos que
+ * habían fallado en producción), así que ningún reintento llegaba a tener margen real antes de
+ * volver a fallar, y la comparación quedaba en `error` para siempre. 10s/25s da ese margen sin
+ * bloquear la UI (el usuario está en `features/processing`, con spinner y sondeo propio — nunca
+ * esperando síncronamente esta llamada).
+ */
+export const PRODUCTION_RETRY_BACKOFF_MS: number[] = [10_000, 25_000];
+
+/** Backoff por defecto SOLO para tests que construyen la clase directamente sin especificar uno —
+ *  ínfimo a propósito, igual que el valor histórico: valores realistas harían la suite lenta sin
+ *  aportar nada distinto a validar en esos tests (el valor real se prueba aparte, sin temporizadores
+ *  reales, comprobando directamente `PRODUCTION_RETRY_BACKOFF_MS`). */
+const TEST_DEFAULT_BACKOFF_MS = [50, 150];
 
 interface ComparisonRow {
   id: string;
@@ -122,6 +145,8 @@ export class AiOrchestratorService {
     @Inject(AI_PROVIDER) private readonly aiProvider: AiProvider,
     private readonly supabaseService: SupabaseService,
     private readonly logger: PinoLogger,
+    @Inject(AI_RETRY_BACKOFF_MS)
+    private readonly retryBackoffMs: number[] = TEST_DEFAULT_BACKOFF_MS,
   ) {
     this.logger.setContext(AiOrchestratorService.name);
   }
@@ -212,7 +237,7 @@ export class AiOrchestratorService {
           'Lote inválido o fallido, se reintentará si quedan intentos',
         );
         if (attempt < MAX_ATTEMPTS_PER_BATCH) {
-          await sleep(BACKOFF_MS[attempt - 1]);
+          await sleep(this.retryBackoffMs[attempt - 1]);
         }
       }
     }
