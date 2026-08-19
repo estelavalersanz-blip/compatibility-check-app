@@ -56,6 +56,10 @@ async function setup(
         { path: 'chats', component: BlankChildComponent },
         { path: 'settings', component: BlankChildComponent },
         { path: 'auth/login', component: BlankChildComponent },
+        // Ruta raíz aparte (real: aquí es donde vive `mainRouteGuard`, ver app.routes.ts) solo para
+        // poder comprobar que el logo/"AfinIA" de la cabecera navega ahí — este test no ejercita el
+        // guard en sí (ya cubierto en main-route.guard.spec.ts), solo que el enlace apunta a "/".
+        { path: '', pathMatch: 'full', component: BlankChildComponent },
       ]),
       { provide: AuthService, useValue: { ...fakeAuthService(hasSession), signOut: signOutSpy } },
       { provide: ChatService, useValue: fakeChatService(options.conversations ?? []) },
@@ -192,6 +196,26 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/settings');
+  });
+
+  /**
+   * Decisión: el logo y el texto "AfinIA" de la cabecera son un único enlace a "/" — reutiliza la
+   * resolución ya existente de `mainRouteGuard` (cuestionario o dashboard según el estado del
+   * usuario, spec `results-dashboard` "Enrutamiento de la página principal") en vez de duplicar esa
+   * lógica aquí, mismo patrón que ya usa `questionnaire.component.ts` (`previousBlock()` en el
+   * bloque 1) para "salir" a la pantalla principal correcta sin decidirlo él mismo.
+   */
+  it('el logo/"AfinIA" de la cabecera es un único enlace a la pantalla principal ("/")', async () => {
+    const { harness } = await setup(true);
+    const brand = rootElement(harness).querySelector<HTMLAnchorElement>('.navbar-brand');
+    if (!brand) {
+      throw new Error('No se encontró el logo/"AfinIA" de la cabecera');
+    }
+
+    brand.click();
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/');
   });
 
   it('cerrar sesión limpia la sesión y redirige a la pantalla de autenticación', async () => {

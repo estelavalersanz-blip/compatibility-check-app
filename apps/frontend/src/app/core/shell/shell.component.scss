@@ -20,3 +20,10 @@
   color: #FFFFFF;
   opacity: 0.85;
 }
+
+// El logo/"AfinIA" ahora es un enlace real (antes <span>, sin estado interactivo) — mismo tratamiento
+// de hover/focus que el resto de la cabecera, para que se note que es clicable.
+.shell-navbar .navbar-brand:hover,
+.shell-navbar .navbar-brand:focus {
+  opacity: 0.85;
+}

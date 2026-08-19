@@ -84,15 +84,20 @@ compatibilidad calculada sin perfil). En esta pantalla concreta, la cabecera de 
 el icono de chat ni el enlace de Configuración** — solo el botón de cerrar sesión. El resto de pantallas
 de Shell A sí llevan los tres.
 
+**El logo/"AfinIA" es un enlace a la pantalla principal**, no un elemento decorativo: navega a `/` y
+reutiliza `mainRouteGuard` para resolver cuestionario o dashboard según el estado del usuario — único
+punto de entrada de vuelta a la pantalla principal desde Configuración o Chats (ver
+`references/design-tokens.md`, sección "Shell A", para el motivo completo).
+
 ```html
 <nav class="navbar navbar-expand-md navbar-dark shell-navbar sticky-top">
   <div class="container">
-    <span class="navbar-brand d-flex align-items-center gap-2">
+    <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/" aria-label="Ir a la pantalla principal">
       <svg class="brand-mark" viewBox="0 0 345.3 336.08" width="28" height="28" aria-hidden="true">
         <!-- 5 <path> del logo — copia el bloque completo de references/design-tokens.md -->
       </svg>
       AfinIA
-    </span>
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navShell">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -578,6 +583,8 @@ pantalla por pantalla de forma aislada:
 - [ ] Si la pantalla es Shell A: ¿el icono de chat aparece a la izquierda de Configuración (chat,
       configuración, logout, en ese orden), y ambos (chat + configuración) están ausentes en la pantalla
       de completar perfil?
+- [ ] Si la pantalla es Shell A: ¿el logo/"AfinIA" de la cabecera es un enlace real a `/` (no un `<span>`
+      decorativo), con el mismo hover/focus que el resto de la cabecera?
 - [ ] Si la pantalla es una conversación de chat: ¿los mensajes propios y los del otro participante se
       distinguen por alineación/color (no solo por texto), y el área de mensajes tiene scroll propio en
       vez de hacer crecer toda la página?

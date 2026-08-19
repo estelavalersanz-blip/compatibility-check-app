@@ -14,6 +14,15 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // design.md (modelo abierto, no un proveedor cerrado), solo cambia de familia de modelo.
 const GROQ_MODEL = 'openai/gpt-oss-120b';
 
+// Bug real de producción (2026-08-19, ver apps/backend/src/ai/ai-orchestrator.service.ts —
+// PRODUCTION_RETRY_BACKOFF_MS): sin fijar esto, el modelo gasta de media ~1.000-1.300 tokens
+// ocultos "razonando" (`usage.reasoning_tokens`) antes de cada respuesta — solo eso ya agotaba el
+// límite gratuito de Groq de 8.000 tokens/minuto con una única comparación (6 lotes). `'low'`
+// (valor real soportado por este modelo, ver GroqDocs "Reasoning") reduce esos tokens ocultos a
+// ~20 sin pérdida apreciable de calidad de puntuación/explicación — comprobado a mano con los
+// mismos datos reales que habían fallado, 'low' vs 'medium' (el valor por defecto de Groq).
+const GROQ_REASONING_EFFORT = 'low';
+
 interface GroqChatCompletionResponse {
   choices?: Array<{ message?: { content?: string } }>;
 }
@@ -44,6 +53,7 @@ export class GroqProvider implements AiProvider {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model: GROQ_MODEL,
+          reasoning_effort: GROQ_REASONING_EFFORT,
           messages: [
             { role: 'system', content: request.systemPrompt },
             { role: 'user', content: request.userPrompt },
