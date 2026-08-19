@@ -327,9 +327,11 @@ const USER_C: FakeAuthUser = { id: 'auth-user-c', email: 'c@test.com' };
 const AUTH_TOKENS = { 'jwt-c': USER_C };
 const USER_B_ID = 'user-b';
 
-// 36 preguntas / BATCH_SIZE=6 (`ai-orchestrator.service.ts`) = 6 lotes por comparación cuando
-// ninguno falla y necesita reintento (aquí nunca ocurre: el proveedor fake siempre responde válido).
-const BATCHES_PER_COMPARISON = 6;
+// 6 preguntas muestreadas por comparación (1 por bloque, `selectSampledQuestionIds` en
+// `ai-orchestrator.service.ts`), no las 36 completas -> 1 sola llamada a `complete()` por
+// comparación cuando ninguna necesita reintento (aquí nunca ocurre: el proveedor fake siempre
+// responde válido).
+const CALLS_PER_COMPARISON = 1;
 const EXPECTED_CANDIDATES_FOR_C = 3;
 
 /**
@@ -446,8 +448,9 @@ describe('Alta de un usuario nuevo no propaga análisis a usuarios existentes (e
       'user-f',
     ]);
 
-    // (a) Exactamente las llamadas de C, ni una más: sus 3 candidatos × 6 lotes cada uno.
-    expect(complete).toHaveBeenCalledTimes(EXPECTED_CANDIDATES_FOR_C * BATCHES_PER_COMPARISON);
+    // (a) Exactamente las llamadas de C, ni una más: sus 3 candidatos × 1 llamada cada uno (6
+    // preguntas muestreadas por comparación, no 6 lotes de 6).
+    expect(complete).toHaveBeenCalledTimes(EXPECTED_CANDIDATES_FOR_C * CALLS_PER_COMPARISON);
 
     // (b) B sigue exactamente como estaba: mismo conteo, mismos ids, ninguna fila tocada ni de
     // refilón (el alta de C nunca consulta ni escribe filas donde B es `requester_user_id`).

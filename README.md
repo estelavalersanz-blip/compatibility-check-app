@@ -115,13 +115,29 @@ Todo el stack corre en planes gratuitos (design.md, decisión 10) — esto es lo
 cuenta de cara a una presentación en vivo, con lo ya confirmado real durante la tarea 20.2 (verificación
 end-to-end) marcado explícitamente:
 
-- **Groq — límite de peticiones (confirmado real)**: completar más de un cuestionario nuevo seguido
-  en pocos minutos (o reintentar varias comparaciones a la vez) agota el límite del free tier y Groq
-  responde `429`; el reintento automático interno (backoff de 50/150ms, pensado para no ralentizar
-  los tests) no espera lo suficiente para recuperarse solo. Antes de la presentación, evita disparar
-  varios análisis reales seguidos; si una comparación queda en `error` por esto, espera ~1 minuto y
-  usa el botón de reintentar (`POST /comparisons/:id/reanalyze`) en vez de repetir el cuestionario
-  entero.
+- **Groq — límite de tokens/minuto (confirmado real, mitigado)**: el free tier de Groq limita
+  `openai/gpt-oss-120b` a 8.000 tokens/minuto. Analizar las 36 preguntas de una comparación (6 lotes)
+  agotaba ese presupuesto con una sola comparación —el modelo gasta de media ~1.000-1.300 tokens
+  ocultos de "razonamiento" por lote, además del propio contenido—, así que las 3 comparaciones
+  creadas de golpe al completar el cuestionario dejaban 2 de cada 3 en `error` incluso con
+  reintentos (reproducido de verdad contra la API real de Groq, no solo sospechado). **Mitigado en
+  tres frentes** (`apps/backend/src/ai/`, ver `openspec/changes/archive/` para el detalle de cada
+  decisión):
+  1. `reasoning_effort: 'low'` en cada petición — ~38% menos tokens por lote, misma calidad de
+     puntuación/explicación comprobada con los mismos datos reales.
+  2. Backoff entre reintentos realista (10s/25s, no los 50/150ms iniciales — Groq pide esperar ese
+     margen tras un `429`, y 50/150ms nunca alcanzaba a recuperarse).
+  3. **Analizar solo 6 preguntas muestreadas (1 al azar de cada uno de los 6 bloques del
+     cuestionario) en vez de las 36 completas** — medido contra la API real
+     (`tokens ≈ 600 + 292 × preguntas`): las 3 comparaciones de una tacada caben con margen dentro
+     del presupuesto del minuto, cosa que 36 preguntas no permitían ni con `reasoning_effort: 'low'`.
+     El muestreo es estratificado por bloque (nunca aleatorio puro sobre las 36) para no arriesgarse
+     a dejar sin representar el bloque de mayor peso (30%). Efecto colateral positivo: ahora se
+     envían menos respuestas del usuario al proveedor externo de IA por comparación (6 de 36, no
+     todas).
+
+  Si una comparación aun así quedara en `error`, el botón de reintentar
+  (`POST /comparisons/:id/reanalyze`) vuelve a muestrear 6 preguntas nuevas al azar.
 - **Groq — catálogo de modelos (confirmado real)**: Groq retira modelos con cierta frecuencia — el
   modelo original de este proyecto (`llama-3.3-70b-versatile`) dejó de existir y todas las llamadas
   devolvían `404` hasta sustituirlo por `openai/gpt-oss-120b`

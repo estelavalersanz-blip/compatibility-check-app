@@ -252,7 +252,9 @@ describe('POST /comparisons/:id/reanalyze (e2e)', () => {
 
     await waitFor(() => db.comparisons.find((c) => c.id === 'cmp-1')?.status === 'completed');
 
-    expect(db.questionResults).toHaveLength(36);
+    // 6 preguntas muestreadas (1 por bloque), no las 36 completas — `createAlwaysValidAiProvider`
+    // sirve un único lote de 6 porque solo se llama una vez a `complete()`.
+    expect(db.questionResults).toHaveLength(6);
     expect(db.questionResults.every((r) => !(r.result as { stale?: boolean })?.stale)).toBe(true);
     expect(db.aggregatedResults).toHaveLength(1);
   });

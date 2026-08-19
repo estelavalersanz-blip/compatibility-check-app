@@ -294,7 +294,10 @@ describe('AI_PROVIDER vinculado a OpenRouterProvider (e2e)', () => {
 
     await waitFor(() => db.comparisons.find((c) => c.id === 'cmp-1')?.status === 'completed');
 
-    expect(db.questionResults).toHaveLength(36);
+    // 6 preguntas muestreadas (1 por bloque, `selectSampledQuestionIds`), no las 36 completas — el
+    // fake sirve un único lote de 6 resultados (`sixValidResults`, arriba) porque solo se llama una
+    // vez a `complete()`.
+    expect(db.questionResults).toHaveLength(6);
     expect(db.aggregatedResults).toHaveLength(1);
 
     // No basta con llegar a `completed`: se confirma que quien respondió fue de verdad

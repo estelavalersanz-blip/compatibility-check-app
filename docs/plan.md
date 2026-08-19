@@ -23,7 +23,8 @@ poder demostrar/probar la comparación sin depender de usuarios reales.
 amplio de personas ya registradas en BD**, mediante una fase previa de "afinidad por cualidades": el
 usuario elige 5 cualidades personales de una lista de 15; el sistema busca en BD los 3 usuarios (reales
 o seed) con más cualidades coincidentes con esa selección (pre-compatibilidad), y solo con esos 3 se
-ejecuta la comparación completa de las 36 preguntas vía IA. El resultado final se presenta como una
+ejecuta la comparación de compatibilidad vía IA (6 preguntas muestreadas por comparación desde
+2026-08-19, no las 36 completas — ver "Orquestación de las llamadas a IA"). El resultado final se presenta como una
 gráfica por cada uno de los 3 candidatos, acompañada de su foto — por lo que el registro de usuario
 incluye la subida de una foto, y los usuarios seed llevan fotos genéricas de ejemplo.
 
@@ -66,7 +67,7 @@ formen parte del alcance actual.
 | Almacenamiento de fotos | **Supabase Storage (free tier, ~1GB)** | Mismo proyecto que la BD, un único proveedor/API key que gestionar; genera URLs públicas para pintar la foto de cada candidato en el dashboard. |
 | UI / diseño | **AfinIA** (nombre de marca, con logo propio) sobre **Bootstrap 5 + Bootstrap Icons** (vía `@ng-bootstrap/ng-bootstrap` para componentes interactivos que sí lo necesitan — modales, dropdowns; el cuestionario usa un estado propio, no `NgbAccordion`/`NgbNav`), recompilado desde Sass con **paleta propia** (`#FB8500` Princeton Orange, `#BE1E2D` Carmine, `#000000` texto/oscuro y **relleno del botón de acción principal en toda la app** — `btn-dark`, no `btn-primary`, `#FDF0D5` Papaya Whip fondo suave, `#FFFFFF` blanco base) y **tipografía Poppins** (alternativas: DM Sans/Roboto) | Sistema de diseño único para toda la interfaz (layout, formularios, botones, tarjetas, cabecera) e iconografía, sin CSS a medida ni mezclar librerías de iconos. Los ejemplos oficiales de Bootstrap (*Sign-in*, *Dashboard*, *Album*) sirven de esqueleto de partida para cada shell/patrón, reskinado con los tokens propios — el cuestionario ya no se basa en el ejemplo *Accordion*, es un wizard de 6 pasos con una pregunta a pantalla completa (ver más abajo). Una **landing pública** (fondo degradado, animación de entrada del logo) precede a cualquier pantalla de autenticación. **La interfaz es completamente responsive** (móvil <768px, tablet 768–991px, escritorio ≥992px) usando el grid y utilidades responsive de Bootstrap, ya que no hay app nativa/APK — el acceso es exclusivamente web. Todo esto está codificado como skill de Claude Code en `.claude/skills/ui-design-consistency/` para que las 12 pantallas sean coherentes entre sí sin depender de recordarlo manualmente. |
 | Autenticación | **Supabase Auth (email/contraseña)** | Mismo proyecto que la BD/Storage; hashea y guarda la contraseña en la misma Postgres, emite JWT de sesión y resuelve el email de recuperación de contraseña con su SMTP gratuito — sin implementar hashing, tokens ni envío de email a mano, y sin proveedor de email adicional que gestionar. El frontend Angular llama a Supabase Auth directamente (`@supabase/supabase-js`); el backend solo valida el JWT en un guard. |
-| IA | **Groq API** (modelo open-weight `openai/gpt-oss-120b`, ver nota) como proveedor principal; **OpenRouter** mencionado como alternativa/comparativa | Free tier rápido, buen soporte de salida JSON estructurada ("JSON mode"), modelos open source. **Nota**: el modelo original de esta fila era Llama 3.3 (`llama-3.3-70b-versatile`) — dejó de existir en el catálogo de Groq y se sustituyó en la tarea 20.2 (verificación end-to-end); Groq retira modelos con cierta frecuencia, así que el nombre exacto puede volver a necesitar actualizarse (`GET /openai/v1/models` confirma el catálogo vigente con la misma API key). |
+| IA | **Groq API** (modelo open-weight `openai/gpt-oss-120b`, ver nota) como proveedor principal; **OpenRouter** mencionado como alternativa/comparativa | Free tier rápido, buen soporte de salida JSON estructurada ("JSON mode"), modelos open source. **Nota**: el modelo original de esta fila era Llama 3.3 (`llama-3.3-70b-versatile`) — dejó de existir en el catálogo de Groq y se sustituyó en la tarea 20.2 (verificación end-to-end); Groq retira modelos con cierta frecuencia, así que el nombre exacto puede volver a necesitar actualizarse (`GET /openai/v1/models` confirma el catálogo vigente con la misma API key). **Nota 2 (2026-08-19)**: el free tier de Groq limita `openai/gpt-oss-120b` a 8.000 tokens/minuto — analizar las 36 preguntas completas de una comparación (6 lotes) agotaba ese presupuesto con una sola comparación, dejando 2 de las 3 comparaciones de un usuario nuevo en `error`. Mitigado analizando solo **6 preguntas muestreadas (1 al azar por bloque)** en vez de las 36, con `reasoning_effort: 'low'` y un backoff entre reintentos de 10s/25s (no 50/150ms) — ver la sección "Orquestación de las llamadas a IA" más abajo y `openspec/changes/archive/2026-08-19-sample-questions-per-block/design.md` para las alternativas consideradas. OpenRouter se investigó como alternativa real (no solo mencionada): su tier gratuito resultó poco fiable ahora mismo (modelos `:free` retirados sin aviso o saturados por la demanda compartida de todos sus usuarios, 429 fuera de nuestro control) — se descartó por eso, no por falta de intento. |
 | Despliegue gratuito | **Frontend en Vercel + Backend en Render + BD/Auth en Supabase**, todo con su integración Git nativa (sin Terraform, sin YAML de despliegue propio) | Combinación 100% free tier sin tarjeta de crédito, estándar para proyectos académicos. CI (lint+test+build, unitarios e integración) vive en GitHub Actions como puerta de calidad antes de mergear — el despliegue en sí lo dispara cada plataforma por su cuenta, no un job de Actions (ver "CI/CD, sin Terraform" más abajo). |
 | Logs | **`nestjs-pino`** (backend), único destino stdout en Render (tail en vivo) | JSON estructurado de fábrica con contexto por módulo/`comparison_id`. Sin proveedor externo de persistencia: se evaluó Better Stack/Logtail y se descartó en la tarea 19.1 por la fricción de su alta (exigía una integración adicional ajena al proyecto sin poder omitirla) — limitación aceptada, sin histórico buscable más allá de la sesión reciente de Render (ver `design.md` decisión 8b). |
 
@@ -80,7 +81,8 @@ justificación técnica del diseño:
 
 - **Responsabilidad única (SRP)**: cada módulo de NestJS hace una sola cosa y la hace explícita en su
   nombre — `matching/candidate-selector.service.ts` solo calcula pre-compatibilidad y selecciona los 3
-  candidatos; `comparisons/weighting.util.ts` solo agrega las 36 puntuaciones con los pesos; `ai/`
+  candidatos; `comparisons/weighting.util.ts` solo agrega las puntuaciones por pregunta (6
+  muestreadas por comparación desde 2026-08-19, no siempre 36) con los pesos; `ai/`
   solo orquesta llamadas al LLM. Ningún servicio mezcla cálculo de negocio con acceso a datos ni con
   llamadas HTTP externas.
 - **Inversión de dependencias (DIP) e Open/Closed**: `ai/` define una interfaz (`ai-provider.interface.ts`)
@@ -295,7 +297,8 @@ Si hay menos de 3 usuarios disponibles en BD (caso posible antes de tener sufici
 reales), se procede con los que haya (0, 1 o 2) y se informa en la UI. Este cálculo es una decisión de
 diseño explícita a documentar en la memoria: la pre-compatibilidad por cualidades es solo un filtro de
 _selección_ de candidatos, no entra en el cálculo ponderado final (que sigue basándose exclusivamente
-en las 36 respuestas comparadas por IA).
+en las respuestas comparadas por IA — una muestra de 6 por comparación desde 2026-08-19, no las 36
+completas).
 
 **Regla de diseño fija (v1): el cálculo de candidatos y sus comparaciones se ejecuta una única vez, en
 el momento en que el propio usuario termina su cuestionario, y nunca se recalcula retroactivamente
@@ -360,7 +363,8 @@ PATCH /users/me/questionnaire         → (autenticado) edita las 36 respuestas 
 GET   /users/me/comparisons           → (autenticado) estado de las 3 comparaciones
                                          (pending/analyzing/completed) + datos básicos del candidato
                                          (alias, foto, shared_qualities) + resultado agregado
-GET   /comparisons/:id/detail         → (autenticado) detalle de las 36 comparaciones por pregunta:
+GET   /comparisons/:id/detail         → (autenticado) detalle de las comparaciones por pregunta (6
+                                         muestreadas por comparación desde 2026-08-19, no 36):
                                          pregunta, puntuaciones por dimensión, compatibilidad y
                                          explicación de la IA — **nunca** respuesta_usuario_1/2, aunque
                                          sí existan en el registro de BD
@@ -390,14 +394,23 @@ en background. El frontend hace polling de `GET /users/me/comparisons` hasta que
 
 ## Orquestación de las llamadas a IA
 
-- Cada usuario genera **3 comparaciones** (una por candidato), y cada comparación necesita analizar 36
-  preguntas → con el batching de abajo son 6 llamadas por comparación, **18 llamadas en total por
-  usuario nuevo**. Esto refuerza la necesidad del batching y de limitar la concurrencia para no agotar
-  el rate limit del free tier de Groq; las 3 comparaciones se procesan con concurrencia limitada entre
-  sí (ej. 1 comparación a la vez, 2 batches en paralelo dentro de cada una).
-- **Batching de 6 preguntas por llamada → 6 llamadas por comparación** (en vez de 36 llamadas
-  sueltas), con concurrencia limitada (2 en paralelo) para respetar el rate limit del free tier de
-  Groq y reducir el overhead de repetir el system prompt 36 veces.
+- **Actualizado 2026-08-19 (bug real de producción, ver `openspec/changes/archive/
+  2026-08-19-sample-questions-per-block`)**: cada comparación ya no analiza las 36 preguntas
+  completas, solo **6 muestreadas — 1 al azar de cada uno de los 6 bloques del cuestionario** —,
+  enviadas en una única llamada. Motivo: medido contra la API real de Groq, las 36 preguntas
+  (6 lotes) agotaban el presupuesto de 8.000 tokens/minuto del free tier con una sola comparación,
+  dejando 2 de las 3 comparaciones de un usuario nuevo en `error`; con 6 preguntas por comparación
+  (~2.371 tokens medidos), las 3 comparaciones de un usuario nuevo caben con margen en ese mismo
+  presupuesto. El muestreo es estratificado por bloque (nunca aleatorio puro sobre las 36) para
+  preservar la representación proporcional de los pesos de bloque de abajo — un muestreo sin
+  estratificar podría dejar sin representar el bloque de mayor peso (30%).
+- Cada usuario genera **3 comparaciones** (una por candidato) → **3 llamadas en total por usuario
+  nuevo** (1 por comparación, ya no 18). Las 3 comparaciones se siguen procesando con concurrencia
+  limitada entre sí (1 comparación a la vez) — la infraestructura de lotes/concurrencia
+  (`chunk`/`runWithConcurrencyLimit`, hasta 2 lotes en paralelo por comparación) se mantiene en el
+  código por si en el futuro se ajustara el número de preguntas muestreadas por bloque a más de 1
+  (dejaría de caber en un único lote), pero con 6 preguntas por comparación siempre resuelve en un
+  solo lote.
 - Prompt tipo "psicólogo especializado en relaciones" pidiendo explícitamente un **array JSON** con
   las claves exactas del ejemplo del usuario, usando el modo de salida estructurada de Groq.
 - Validación de la respuesta con **Zod** contra el esquema esperado (claves presentes, valores en
@@ -405,11 +418,14 @@ en background. El frontend hace polling de `GET /users/me/comparisons` hasta que
   batch con instrucción de corrección; si sigue fallando, `comparison.status = 'error'` para reintento
   manual vía `/reanalyze`.
 - **Cálculo del resultado final con ponderación compuesta (bloques dentro de dimensiones)**: dentro de
-  cada una de las 6 dimensiones, la media ya no es simple sobre las 36 preguntas — las 36 se agrupan en
-  **6 bloques de 6 preguntas, en el mismo orden que los lotes de la IA** (bloque 1 = preguntas 1–6, ...,
+  cada una de las 6 dimensiones, la media nunca es simple sobre las preguntas analizadas — se agrupan
+  según a qué uno de los **6 bloques del cuestionario** pertenecen (bloque 1 = preguntas 1–6, ...,
   bloque 6 = preguntas 31–36), con pesos incrementales por bloque: **5%, 5%, 15%, 20%, 25%, 30%**
-  (las preguntas finales, más reveladoras, pesan más). Las 6 medias de dimensión resultantes (ya
-  ponderadas por bloque) se combinan después con los pesos por dimensión ya existentes
+  (las preguntas finales, más reveladoras, pesan más). Desde 2026-08-19 cada bloque aporta 1 sola
+  pregunta muestreada al azar (ver más arriba), no las 6 — el cálculo no necesitó ningún cambio de
+  código: la media de "1 elemento" es ese mismo valor, así que el peso de cada bloque se sigue
+  aplicando igual. Las 6 medias de dimensión resultantes (ya ponderadas por bloque) se combinan
+  después con los pesos por dimensión ya existentes
   (20/25/10/25/10/10) para dar `compatibilidad_final`. El campo `compatibilidad` per-pregunta se sigue
   guardando como dato informativo (detalle expandible) sin participar en este cálculo. Ambos vectores de
   pesos (`dimension` y `block`) se persisten en `comparison_aggregated_results.weights` para que el
@@ -481,8 +497,9 @@ Pantallas (12 en total — ver `.claude/skills/ui-design-consistency/` para el m
    `completed`/`error`.
 5. **Dashboard de resultados** (`features/results-dashboard`): **hasta 3 tarjetas de resultado**, una por
    candidato, cada una con su foto, alias, score final destacado y un **gráfico radar de las 6
-   dimensiones**; al expandir una tarjeta se ve el detalle de las 36 preguntas con sus puntuaciones y la
-   explicación de la IA — **nunca el texto de ninguna respuesta**, ni la propia ni la del candidato; solo
+   dimensiones**; al expandir una tarjeta se ve el detalle de las preguntas analizadas (6 muestreadas
+   desde 2026-08-19, no las 36 completas — ver "Orquestación de las llamadas a IA") con sus
+   puntuaciones y la explicación de la IA — **nunca el texto de ninguna respuesta**, ni la propia ni la del candidato; solo
    puntuaciones y, opcionalmente, la justificación de la IA. Las tarjetas se ordenan de mayor a menor
    `compatibilidad_final`. Incluye el botón "recalcular compatibilidad" (`btn-dark`, habilitado solo si
    `needs_recalculation=true`), que llama a `POST /users/me/recalculate` y refresca el dashboard al
@@ -591,19 +608,24 @@ Pasos de aprovisionamiento manual:
 - **Rate limits del free tier de Groq y cold-start de Render pueden afectar una demo en vivo** —
   confirmado real en la tarea 20.2: con varias comparaciones/lotes disparados seguidos (p. ej. dos
   cuestionarios completados en pocos minutos, o reintentar varias comparaciones `error` a la vez),
-  Groq responde `429` con facilidad y el reintento automático (backoff de 50/150ms, pensado para no
-  ralentizar los tests) no alcanza a esperar lo suficiente. **Para la demo real**: no completar más
-  de un cuestionario nuevo seguido en pocos minutos; si una comparación queda en `error` por esto,
-  esperar ~1 minuto y usar el botón de reintentar (`POST /comparisons/:id/reanalyze`) en vez de
-  repetir el cuestionario entero.
+  Groq respondía `429` con facilidad. **Mitigado el 2026-08-19** tras reproducir el fallo real
+  (2 de cada 3 comparaciones de un usuario nuevo en `error`) contra la API real de Groq: backoff
+  entre reintentos realista (10s/25s, no los 50/150ms iniciales) y, sobre todo, analizar solo 6
+  preguntas muestreadas por comparación en vez de las 36 completas — medido: las 3 comparaciones de
+  un usuario nuevo caben ahora con margen en el presupuesto de 8.000 tokens/minuto del free tier
+  (antes, una sola comparación ya lo agotaba). Riesgo reducido, no eliminado del todo: sigue siendo
+  un free tier compartido. Si una comparación aun así quedara en `error`, usar el botón de
+  reintentar (`POST /comparisons/:id/reanalyze`) en vez de repetir el cuestionario entero.
 - El score de compatibilidad generado por un LLM **no tiene validez psicológica/clínica ni pretende
   dictaminar si dos personas podrían enamorarse**: el dashboard debe incluir un disclaimer explícito
   ("resultado orientativo, no sustituye asesoramiento
   profesional").
 - Posibles sesgos del modelo (estereotipos culturales/de género); mitigable parcialmente vía prompt
   engineering, sin eliminarlo del todo.
-- Las respuestas a las 36 preguntas son datos sensibles/íntimos enviados a un proveedor externo de IA:
-  minimizar PII enviada y avisar al usuario en la interfaz.
+- Las respuestas a las 36 preguntas son datos sensibles/íntimos: se siguen guardando las 36 en BD,
+  pero desde 2026-08-19 solo se envían a la IA (proveedor externo) las 6 muestreadas por
+  comparación, no las 36 — reduce, sin eliminar, cuánto dato sensible sale del propio backend;
+  minimizar PII enviada y avisar al usuario en la interfaz sigue aplicando igual.
 - Salida no determinista del LLM: la misma pareja de respuestas puede dar puntuaciones ligeramente
   distintas entre ejecuciones.
 - **Fotos de usuario reales**: al ser un TFM con datos de prueba, conviene aclarar en la memoria que
@@ -657,6 +679,18 @@ sistema, solo sustituir piezas concretas.
 | 2 (mejor calidad de análisis) | Añadir un nuevo provider para **Anthropic Claude** (Haiku para coste, Sonnet para mayor calidad de razonamiento psicológico) implementando la misma interfaz | Mejor seguimiento de instrucciones complejas ("actúa como psicólogo, no inventes, justifica"), salida estructurada nativa (structured outputs/tool use) más fiable que forzar JSON por prompt, y soporte de **prompt caching** para no re-facturar el system prompt (la parte fija: rol de psicólogo + pesos + formato) en cada una de las 6 llamadas por comparación. |
 | 3 (reducir nº de llamadas) | Con un modelo de mayor ventana de contexto y mejor fiabilidad de JSON, pasar de 6 batches de 6 preguntas a **1 sola llamada con las 36 preguntas** por comparación | De 18 a **3 llamadas por usuario nuevo** (una por candidato), menor latencia total y menor coste de overhead de prompt repetido. |
 | 4 (opcional, a escala) | Usar la **Batch API** del proveedor (procesamiento asíncrono no en tiempo real) para los análisis | Descuentos habituales de ~50% frente a llamadas síncronas; encaja de forma natural porque el análisis ya es asíncrono en el diseño actual (pantalla de "procesando" + polling). |
+
+**Corrección sobre el paso 3 (2026-08-19)**: medido contra la API real de Groq, una única llamada con
+las **36** preguntas completas de una comparación costaría ~11.100 tokens — por encima del límite de
+8.000 tokens/minuto del free tier ella sola, así que esa idea (tal como estaba escrita) no habría
+resuelto el problema real de límite de tasa que sí motivó este apartado; solo reduce la latencia y el
+overhead de repetir el system prompt, no el consumo total de tokens. Lo que sí funcionó, y ya está
+implementado (no es solo un "camino de mejora" pendiente), es lo contrario: **reducir el número de
+preguntas analizadas** (6 muestreadas por comparación, 1 por bloque, en una única llamada — ver
+"Orquestación de las llamadas a IA" y `openspec/changes/archive/2026-08-19-sample-questions-per-block`),
+no aumentar cuántas preguntas caben en cada llamada. El paso 3 seguiría siendo válido combinado con
+el paso 1 (plan de pago, que sí sube el límite de tokens/minuto) o con un proveedor de mayor límite,
+pero no como sustituto de ninguno de los dos.
 
 ### Despliegue: de free tier a infraestructura de producción
 

@@ -100,7 +100,7 @@ describe('AiOrchestratorService — escritura en bloque contra el stack local re
     comparisonId = comparison.id;
   });
 
-  it('con un proveedor de IA que siempre valida, inserta las 36 filas + el agregado y marca completed', async () => {
+  it('con un proveedor de IA que siempre valida, inserta las 6 filas muestreadas + el agregado y marca completed', async () => {
     const supabaseService = new SupabaseService();
     const orchestrator = new AiOrchestratorService(
       buildAlwaysValidAiProvider(),
@@ -121,7 +121,8 @@ describe('AiOrchestratorService — escritura en bloque contra el stack local re
       .from('comparison_question_results')
       .select('id, question_id')
       .eq('comparison_id', comparisonId);
-    expect(questionResults).toHaveLength(36);
+    // 6 preguntas muestreadas (1 por bloque, `selectSampledQuestionIds`), no las 36 completas.
+    expect(questionResults).toHaveLength(6);
 
     const { data: aggregatedResults } = await admin
       .from('comparison_aggregated_results')
@@ -153,7 +154,7 @@ describe('AiOrchestratorService — escritura en bloque contra el stack local re
       .select('result')
       .eq('comparison_id', comparisonId);
     const rows = asStaleFlaggedRows(questionResults);
-    expect(rows).toHaveLength(36); // ni 37 (acumulado) ni menos
+    expect(rows).toHaveLength(6); // ni 7 (acumulado sobre el stale) ni menos
     expect(rows.every((row) => !row.result.stale)).toBe(true);
 
     const { data: aggregatedResults } = await admin

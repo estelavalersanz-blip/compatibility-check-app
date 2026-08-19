@@ -55,6 +55,28 @@ describe('OpenRouterProvider', () => {
     expect(JSON.stringify(fields)).not.toContain('la respuesta secreta');
   });
 
+  /**
+   * Bug real encontrado el 2026-08-19: la constante apuntaba a `meta-llama/llama-3.3-70b-instruct`
+   * (variante de PAGO de OpenRouter) en vez de `meta-llama/llama-3.3-70b-instruct:free` — el sufijo
+   * `:free` es el identificador real del modelo gratuito (confirmado en la documentación pública de
+   * OpenRouter); sin él, "proveedor alternativo gratuito" no era gratuito en absoluto.
+   */
+  it('usa la variante :free del modelo (gratuita), no la de pago', async () => {
+    const fetchSpy = jest.fn().mockResolvedValue(
+      fakeResponse({
+        json: () => Promise.resolve({ choices: [{ message: { content: '[]' } }] }),
+      }),
+    );
+    global.fetch = fetchSpy;
+    const { provider } = buildProvider();
+
+    await provider.complete({ systemPrompt: 's', userPrompt: 'u' });
+
+    const [, requestInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(requestInit.body as string) as { model?: string };
+    expect(body.model).toBe('meta-llama/llama-3.3-70b-instruct:free');
+  });
+
   it('error de red: propaga un error claro y lo loguea', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
     const { provider, logger } = buildProvider();
