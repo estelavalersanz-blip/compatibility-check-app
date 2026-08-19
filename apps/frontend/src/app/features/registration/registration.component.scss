@@ -19,6 +19,18 @@
   color: #ffffff;
 }
 
+// Bug real reportado por la usuaria (captura, 2026-08-19, encontrado en `features/settings` pero
+// aplica igual aquí — mismo marcado, ver comentario de cabecera): sin `object-fit`, una foto que no
+// sea ya perfectamente cuadrada se renderiza a su proporción intrínseca en vez de rellenar el círculo
+// — sale pequeña y descentrada en vez de recortada y centrada. `cover` escala manteniendo la
+// proporción original y recorta el exceso.
+.profile-photo-picker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
 .profile-photo-picker__placeholder {
   display: flex;
   align-items: center;
