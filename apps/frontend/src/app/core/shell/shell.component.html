@@ -22,7 +22,7 @@
     </button>
     <div class="collapse navbar-collapse" [class.show]="!navCollapsed()" id="navShell">
       @if (hasSession()) {
-        <ul class="navbar-nav ms-auto align-items-md-center gap-2 text-end">
+        <ul class="navbar-nav ms-auto align-items-md-center gap-2 align-items-end">
           @if (!minimalNav()) {
             <li class="nav-item">
               <button type="button" class="btn btn-link nav-link position-relative" routerLink="/chats">
