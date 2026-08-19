@@ -1,2 +1,22 @@
-// El navbar/card usan solo utilidades de Bootstrap ya recompiladas con los tokens de marca
-// (apps/frontend/src/styles.scss) — sin overrides propios aquí.
+// El card del contenido usa solo utilidades de Bootstrap ya recompiladas con los tokens de marca
+// (apps/frontend/src/styles.scss) — sin overrides propios ahí.
+
+// Cabecera con el mismo degradado de marca que Shell B (auth-shell.component.scss) y el selector de
+// foto de completar perfil (registration.component.scss) — no un color nuevo, ver design-tokens.md.
+.shell-navbar {
+  background: linear-gradient(160deg, #FB8500 0%, #BE1E2D 100%);
+}
+
+// `navbar-dark` (en el HTML, en vez de `navbar-light`) ya adapta el icono del hamburger y el color
+// base de `.navbar-brand` — pero "Chats"/"Configuración" son <button class="btn btn-link nav-link">,
+// no <a class="nav-link">: `.btn-link` trae su propio color que no hereda de `navbar-dark`, así que
+// hace falta forzarlo aquí explícitamente.
+.shell-navbar .btn-link {
+  color: #FFFFFF;
+}
+
+.shell-navbar .btn-link:hover,
+.shell-navbar .btn-link:focus {
+  color: #FFFFFF;
+  opacity: 0.85;
+}

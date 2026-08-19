@@ -85,7 +85,7 @@ el icono de chat ni el enlace de Configuración** — solo el botón de cerrar s
 de Shell A sí llevan los tres.
 
 ```html
-<nav class="navbar navbar-expand-md navbar-light bg-white border-bottom sticky-top">
+<nav class="navbar navbar-expand-md navbar-dark shell-navbar sticky-top">
   <div class="container">
     <span class="navbar-brand d-flex align-items-center gap-2">
       <svg class="brand-mark" viewBox="0 0 345.3 336.08" width="28" height="28" aria-hidden="true">
@@ -113,7 +113,7 @@ de Shell A sí llevan los tres.
           </button>
         </li>
         <li class="nav-item">
-          <button class="btn btn-outline-dark btn-sm" (click)="logout()">
+          <button class="btn btn-outline-light btn-sm" (click)="logout()">
             <i class="bi bi-box-arrow-right"></i> Cerrar sesión
           </button>
         </li>
@@ -141,6 +141,11 @@ Por qué es así:
 - `<main class="container py-4 py-md-5">` es el único punto donde cada feature inyecta su contenido.
   Ninguna pantalla autenticada debería envolver su contenido en su propio `container` adicional — ya lo
   provee el shell.
+- El fondo de la cabecera es el degradado de marca (`navbar-dark shell-navbar`), no blanco liso — mismo
+  degradado que Shell B y el selector de foto de completar perfil. El cuerpo (`<main>`) sigue en blanco.
+  Valores exactos, el porqué de `navbar-dark` + el override de `.btn-link`, y `btn-outline-light` en vez
+  de `btn-outline-dark` para el botón de logout: ver `references/design-tokens.md`, sección "Shell A:
+  cabecera de la aplicación autenticada".
 
 ### Shell B — Pantallas públicas de autenticación (`features/auth`)
 
@@ -285,12 +290,14 @@ Reglas concretas:
   punto que exige las 36 respuestas completas; el wizard es solo la forma de navegar la entrada de
   datos, no cambia esa regla de validación. El borrador se sigue guardando en BD, no en
   `localStorage` (decisión 5c).
-- **Revisar un bloque anterior no te "atasca" ahí**: el estado distingue el bloque que se está viendo
-  (`currentBlockIndex`) del bloque más avanzado al que ya llegaste (`maxReachedBlockIndex`). Si
-  entraste a revisar un bloque anterior (por la flecha de cabecera o haciendo clic en su segmento),
-  el botón de bloque siguiente junto a los puntos cambia su tooltip/aria-label de "Bloque siguiente"
-  a **"Volver a donde estabas"** y te devuelve directamente a `maxReachedBlockIndex` en vez de
-  obligarte a pasar de nuevo por cada bloque intermedio uno a uno.
+- **Revisar un bloque anterior no te "atasca" ahí, pero tampoco te devuelve solo al más avanzado**: el
+  estado distingue el bloque que se está viendo (`currentBlockIndex`) del bloque más avanzado al que ya
+  llegaste (`maxReachedBlockIndex`) — `maxReachedBlockIndex` sigue existiendo (lo necesita la barra de
+  progreso para saber qué tramos son clicables), pero el botón de bloque siguiente junto a los puntos ya
+  **no** tiene un comportamiento especial al revisar: siempre dice "Bloque siguiente" y siempre avanza al
+  inmediato siguiente, se esté revisando o no (desactivado a petición expresa — antes saltaba directo al
+  más avanzado). Para saltar directo a un bloque concreto ya alcanzado, sigue estando el propio tramo de
+  la barra de progreso.
 - El paso del bloque activo sigue el patrón container+card normal (ver más abajo): la card lleva un
   `card-header` con el gradiente de ese bloque (título del bloque, sin el peso como texto, más la
   insignia si ya está completo) y un `card-body` con la pregunta activa + `textarea` + navegación de
@@ -556,9 +563,9 @@ pantalla por pantalla de forma aislada:
       misma pantalla), con la barra de progreso ponderada usando el gradiente por peso de
       `design-tokens.md` y los bloques de igual peso (1 y 2) visualmente idénticos?
 - [ ] Si la pantalla es el cuestionario: ¿se puede volver a revisar y editar cualquier bloque anterior ya
-      visitado (flecha de volver o clic en su segmento de la barra), y el botón de bloque siguiente junto
-      a los puntos de pregunta cambia su tooltip/aria-label a "Volver a donde estabas" cuando estás
-      revisando en vez de avanzando?
+      visitado (flecha de cabecera o clic en su segmento de la barra), y el botón de bloque siguiente
+      junto a los puntos de pregunta mantiene siempre el mismo comportamiento lineal (avanza al
+      inmediato siguiente), sin un salto especial al más avanzado al estar revisando?
 - [ ] Si la pantalla es el cuestionario: ¿los refuerzos de gamificación (racha, insignia de bloque,
       banner final) usan solo colores de la paleta ya definida y no cambian la regla de que hacen falta
       las 36 respuestas para enviar?

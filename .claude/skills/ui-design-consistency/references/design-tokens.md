@@ -340,6 +340,53 @@ Los 4 textos de botón/título de arriba están transcritos de una captura de mo
 si al implementar el copy exacto difiere (p. ej. "Enviar contraseña" podría en realidad ser "Enviar
 enlace"), el estilo/estructura no cambia, solo ajusta el texto del botón/título correspondiente.
 
+## Shell A: cabecera de la aplicación autenticada
+
+**Cambio de diseño confirmado con Estela**: la cabecera de Shell A (cuestionario, dashboard, chats,
+configuración, completar perfil) lleva el mismo degradado de marca que Shell B (`auth-shell`) y el
+selector de foto de completar perfil — antes era fondo blanco liso (`bg-white`), ya no. El cuerpo de
+la pantalla, debajo de la cabecera, sigue en blanco en los dos casos — el degradado es solo de la
+cabecera.
+
+```html
+<!-- apps/frontend/src/app/core/shell/shell.component.html -->
+<nav class="navbar navbar-expand-md navbar-dark shell-navbar sticky-top">
+  <div class="container">
+    <span class="navbar-brand d-flex align-items-center gap-2">
+      <app-brand-mark />
+      AfinIA
+    </span>
+    <!-- toggler + colapsable con los 3 botones (Chats/Configuración/Cerrar sesión), sin cambios -->
+  </div>
+</nav>
+```
+
+```scss
+// apps/frontend/src/app/core/shell/shell.component.scss
+.shell-navbar {
+  background: linear-gradient(160deg, #FB8500 0%, #BE1E2D 100%);
+}
+
+// `navbar-dark` (en vez de `navbar-light`) ya adapta el icono del hamburger y el color base de
+// `.navbar-brand` — pero "Chats"/"Configuración" son <button class="btn btn-link nav-link">, no
+// <a class="nav-link">: `.btn-link` trae su propio color que no hereda de `navbar-dark`, así que hay
+// que forzarlo aquí explícitamente (encontrado de verdad implementando esto, no algo hipotético).
+.shell-navbar .btn-link {
+  color: #FFFFFF;
+}
+.shell-navbar .btn-link:hover,
+.shell-navbar .btn-link:focus {
+  color: #FFFFFF;
+  opacity: 0.85;
+}
+```
+
+El botón "Cerrar sesión" pasa de `btn-outline-dark` a **`btn-outline-light`** (mismo patrón de
+Bootstrap: variante de contorno clara para fondos oscuros/saturados, en vez de un color a mano) — sigue
+siendo `btn btn-outline-light btn-sm`, sin más cambios. `border-bottom` (el borde gris que separaba el
+navbar antiguo del cuerpo) se quita: el propio contraste de color entre el degradado y el cuerpo blanco
+ya separa ambas zonas, un borde gris adicional no aporta nada ahí y desentonaría con el degradado.
+
 ## Barra de progreso ponderada del wizard del cuestionario
 
 Los 6 bloques del cuestionario (`design.md` decisión 6c) tienen pesos 5/5/15/20/25/30%. En el wizard,
@@ -401,17 +448,20 @@ previousBlockNav(): void {
   this.enterBlock(this.currentBlockIndex() - 1);
 }
 
+// Siempre lineal (al inmediato siguiente), sea cual sea el bloque en el que se esté — el salto
+// directo a "donde estabas" al revisar un bloque anterior se desactivó a petición expresa (antes
+// saltaba directo a maxReachedBlockIndex en vez de avanzar de uno en uno). maxReachedBlockIndex
+// sigue sin retroceder nunca (lo necesita la barra de progreso para saber qué tramos son clicables),
+// pero ya no decide a dónde avanza este botón.
 nextBlockNav(): void {
   if (this.isLastBlock()) {
     return;
   }
-  if (this.currentBlockIndex() < this.maxReachedBlockIndex()) {
-    this.currentBlockIndex.set(this.maxReachedBlockIndex()); // "Volver a donde estabas"
-  } else {
-    const next = this.currentBlockIndex() + 1;
-    this.currentBlockIndex.set(next);
-    this.maxReachedBlockIndex.set(next); // avanzar de verdad sí mueve el máximo alcanzado
+  const next = this.currentBlockIndex() + 1;
+  if (next > this.maxReachedBlockIndex()) {
+    this.maxReachedBlockIndex.set(next);
   }
+  this.enterBlock(next);
 }
 ```
 
@@ -494,7 +544,7 @@ El mismo gradiente de la fila del bloque activo colorea el `card-header` de su p
       </button>
       <!-- <app-question-nav>, ver "Navegación entre las 6 preguntas del bloque activo" más abajo -->
       <button type="button" class="btn btn-link p-0 text-secondary" [disabled]="isLastBlock()"
-              (click)="nextBlockNav()" [attr.aria-label]="nextBlockNavLabel()" [title]="nextBlockNavLabel()">
+              (click)="nextBlockNav()" aria-label="Bloque siguiente" title="Bloque siguiente">
         <i class="bi bi-chevron-double-right fs-5" aria-hidden="true"></i>
       </button>
     </div>
@@ -511,10 +561,12 @@ El mismo gradiente de la fila del bloque activo colorea el `card-header` de su p
 
 `footerButtonLabel()` ya solo depende del modo (creación/edición — decisión 3h de `design.md`): el
 propio `*ngIf="isLastBlock()"` del footer garantiza que esto nunca se lee fuera del último bloque, así
-que no hace falta que el método distinga por bloque él mismo. El matiz de "¿estoy revisando o avanzando
-de verdad?" (antes texto del botón del footer) ahora es el `aria-label`/`title` del botón de bloque
-siguiente junto a los puntos, `nextBlockNavLabel()` — "Volver a donde estabas" si se revisa un bloque ya
-superado, "Bloque siguiente" en caso contrario:
+que no hace falta que el método distinga por bloque él mismo. El botón de bloque siguiente junto a los
+puntos siempre dice/hace lo mismo ("Bloque siguiente", avanza al inmediato siguiente) sea cual sea el
+bloque en el que se esté — el comportamiento especial "Volver a donde estabas" (saltar directo al más
+avanzado al revisar uno anterior) se desactivó a petición expresa; el salto directo a un bloque concreto
+sigue existiendo, pero solo desde los tramos de la barra de progreso (`goToBlock()`), no desde este
+botón:
 
 ```ts
 footerButtonLabel(): string {

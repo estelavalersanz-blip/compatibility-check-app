@@ -187,7 +187,7 @@ inventes aquí:
         [maxReachedIndex]="maxReachedQuestionIndex()"
         (indexChange)="goToQuestion($event)" />
       <button type="button" class="btn btn-link p-0 text-secondary" [disabled]="isLastBlock()"
-              (click)="nextBlockNav()" [attr.aria-label]="nextBlockNavLabel()" [title]="nextBlockNavLabel()">
+              (click)="nextBlockNav()" aria-label="Bloque siguiente" title="Bloque siguiente">
         <i class="bi bi-chevron-double-right fs-5" aria-hidden="true"></i>
       </button>
     </div>
