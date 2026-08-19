@@ -69,9 +69,19 @@ export class AuthService {
 
   /** Con `enable_confirmations = false` (`supabase/config.toml`), abre sesión de inmediato — sin
    *  paso de confirmación por email (verificado contra el stack local: un email ya registrado
-   *  responde con `AuthApiError`, `code: 'user_already_exists'`, no con un "falso éxito"). */
+   *  responde con `AuthApiError`, `code: 'user_already_exists'`, no con un "falso éxito").
+   *
+   *  `emailRedirectTo` calculado con `window.location.origin`, no un valor fijo: en producción (con
+   *  confirmación de email real, a diferencia de local) sin esto Supabase cae al "Site URL" del
+   *  Dashboard — reproducido en vivo, seguía en el `localhost:3000` de scaffolding inicial, nunca
+   *  actualizado. La raíz (`/`) es a propósito, no `/registration`: `mainRouteGuard` ya sabe mandar a
+   *  un usuario recién confirmado sin perfil a completarlo, así no se duplica esa decisión aquí. */
   async signUp(email: string, password: string): Promise<void> {
-    const { error } = await this.supabase.auth.signUp({ email, password });
+    const { error } = await this.supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
     if (error) {
       throw error;
     }
@@ -79,9 +89,15 @@ export class AuthService {
 
   /** Verificado contra el stack local: un email inexistente responde `error: null` igual que uno
    *  existente — Supabase ya evita filtrar qué emails están registrados, sin necesitar lógica propia
-   *  aquí para mostrar siempre el mismo mensaje de confirmación (spec `authentication`). */
+   *  aquí para mostrar siempre el mismo mensaje de confirmación (spec `authentication`).
+   *
+   *  `redirectTo` con el mismo motivo que en `signUp()` — reproducido en vivo con el email real
+   *  recibido: el enlace llevaba a `localhost:3000` en vez de a `/auth/reset-password`, la pantalla
+   *  que ya existe justo para consumir este enlace. */
   async resetPasswordForEmail(email: string): Promise<void> {
-    const { error } = await this.supabase.auth.resetPasswordForEmail(email);
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
     if (error) {
       throw error;
     }
