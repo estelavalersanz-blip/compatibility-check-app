@@ -46,13 +46,32 @@ export class RegisterComponent {
       await this.authService.signUp(email, password);
       await this.router.navigate(['/registration']);
     } catch (error) {
-      this.submitError.set(
-        isAuthApiError(error) && error.code === 'user_already_exists'
-          ? 'Ese email ya está en uso.'
-          : 'No se pudo crear la cuenta. Inténtalo de nuevo.',
-      );
+      // Se registra siempre en consola (igual que `main.ts` con errores de arranque): el mensaje
+      // que ve el usuario es deliberadamente corto, pero un error sin más detalle en ningún sitio
+      // es indiagnosticable — verificado en vivo: un 429 por rate limit de Supabase caía aquí y no
+      // dejaba ningún rastro.
+      console.error(error);
+      this.submitError.set(this.resolveSignUpErrorMessage(error));
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private resolveSignUpErrorMessage(error: unknown): string {
+    if (isAuthApiError(error)) {
+      if (error.code === 'user_already_exists') {
+        return 'Ese email ya está en uso.';
+      }
+      // Limite de peticiones/envío de emails de Supabase (plan gratuito, sin SMTP propio) — se
+      // comprueba por `status` (429), no por `code`: reproducido en vivo contra producción con un
+      // email nunca usado (descarta que fuera un problema de esa cuenta), pero la herramienta de
+      // red no capturó el cuerpo de la respuesta para confirmar el `code` exacto (¿el más probable,
+      // `over_email_send_rate_limit`? ¿o `over_request_rate_limit`? no se pudo verificar cuál de
+      // los dos). 429 cubre cualquiera de las dos sin tener que acertar el string exacto.
+      if (error.status === 429) {
+        return 'Demasiados intentos seguidos. Espera unos minutos antes de volver a intentarlo.';
+      }
+    }
+    return 'No se pudo crear la cuenta. Inténtalo de nuevo.';
   }
 }
