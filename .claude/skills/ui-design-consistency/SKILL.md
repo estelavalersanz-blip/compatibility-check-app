@@ -106,9 +106,10 @@ punto de entrada de vuelta a la pantalla principal desde Configuración o Chats 
         <li class="nav-item">
           <button class="btn btn-link nav-link position-relative" routerLink="/chats">
             <i class="bi bi-chat-dots"></i> Chats
-            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-secondary
-                         border border-light rounded-circle" *ngIf="hasUnreadMessages()">
-              <span class="visually-hidden">Mensajes sin leer</span>
+            <span class="badge rounded-pill bg-white text-dark position-absolute top-0 start-100
+                         translate-middle" *ngIf="unreadMessageCount() > 0"
+                  [attr.aria-label]="unreadMessageCount() + ' mensajes sin leer'">
+              {{ unreadMessageCount() }}
             </span>
           </button>
         </li>
@@ -139,10 +140,16 @@ Por qué es así:
 - Los botones de chat, configuración y logout van siempre en ese orden (chat primero, a la izquierda de
   Configuración), siempre a la derecha (`ms-auto`), nunca en el lado izquierdo ni intercambiados de
   orden entre pantallas.
-- El icono de chat lleva un punto de notificación (`bg-secondary` — el rojo Carmine, uso legítimo como
-  acento de "atención", no como botón neutro) cuando hay mensajes sin leer, con el patrón estándar de
-  Bootstrap de badge posicionado (`position-relative` en el botón + `position-absolute
-  top-0 start-100 translate-middle` en el punto) — no inventes un badge con estilos propios.
+- El icono de chat lleva un badge con el **número real** de mensajes sin leer (suma de `unreadCount` de
+  todas las conversaciones, no solo "hay alguno") cuando ese total es mayor que 0, con el patrón
+  estándar de Bootstrap de badge posicionado (`position-relative` en el botón + `position-absolute
+  top-0 start-100 translate-middle` en el badge) — no inventes un badge con estilos propios. Colores
+  `bg-white text-dark`, no `bg-secondary` (rojo Carmine): bug real reportado por la usuaria — contra el
+  degradado naranja→rojo de la propia cabecera, un punto rojo casi no se distinguía, y tampoco decía
+  cuántos mensajes había. `bg-secondary` sigue siendo el color correcto para badges de no-leídos sobre
+  fondos claros (p. ej. la fila de cada conversación en `features/chats`, ver más abajo) — el problema
+  era específico de este badge, sobre este fondo degradado, no una regla general a cambiar en todas
+  partes.
 - `<main class="container py-4 py-md-5">` es el único punto donde cada feature inyecta su contenido.
   Ninguna pantalla autenticada debería envolver su contenido en su propio `container` adicional — ya lo
   provee el shell.
@@ -421,6 +428,35 @@ pregunta. Cada card muestra el score general y las 6 puntuaciones por dimensión
 la justificación/explicación de la IA — nunca `respuesta_usuario_1`/`respuesta_usuario_2`. Esto no es
 una decisión de estilo: ver `design.md` decisión 5d y `specs/results-dashboard` para el porqué.
 
+## Configuración y Chats: estilo modal sobre la pantalla principal
+
+`features/settings`, `features/chats` y `features/chats/:id` (las 3 pantallas descritas en las dos
+secciones siguientes) se muestran como un **modal superpuesto** sobre la pantalla principal
+(cuestionario o dashboard) en vez de sentirse como una pantalla más entre las que hay que "volver
+atrás": backdrop oscurecido a pantalla completa, card centrada, cierre explícito con una "×". Decisión
+tomada a partir de feedback explícito de la usuaria (2026-08-19): estas 3 son *acciones puntuales*
+sobre el flujo principal (editar tu perfil, revisar un chat), no destinos permanentes como el propio
+dashboard.
+
+**Es SOLO un restyle visual, no un cambio de arquitectura**: las 3 siguen siendo rutas reales de
+Shell A con sus guards sin cambios (`profileGuard` + `questionnaireCompletedGuard`, ver
+`app.routes.ts`), montadas por el `<router-outlet>` de `core/shell` exactamente igual que antes —
+deep-linking, botón atrás del navegador y guards siguen funcionando tal cual. Se consideró
+`NgbModal` de `@ng-bootstrap/ng-bootstrap` (ya es dependencia del proyecto) como forma de abrir estas
+pantallas y se descartó a propósito: perdería esa navegabilidad real sin necesidad. Bootstrap tampoco
+tiene su JS de modales cargado en este proyecto (decisión 3c-bis de `design.md`), así que un modal
+"de verdad" habría exigido JS propio de todos modos — el camino elegido (restyle visual puro de una
+ruta normal) no lo necesita.
+
+El envoltorio compartido es `shared/modal-panel/modal-panel.component.ts` (`<app-modal-panel>`): un
+backdrop a pantalla completa (por debajo de la cabecera de `core/shell` en el eje z — Chats/
+Configuración/Cerrar sesión siguen pulsables con el "modal" abierto) más una card centrada con cierre.
+Con un `title` de entrada, el propio panel añade su franja de título+cierre (Configuración, Chats);
+sin él (conversación de chat, que ya tiene su propia cabecera contextual), el contenido proyectado
+lleva su propio cierre en su propia cabecera. Marcado/CSS exactos y el porqué del `position: absolute`
+(nunca `fixed` — falso positivo real de desbordamiento en los tests de responsive si no) en
+`references/design-tokens.md`.
+
 ## Chat interno: botón en la card de compatibilidad, listado y conversación
 
 Tres piezas de UI para la capability `internal-chat` (ver `design.md` decisión 9):
@@ -429,14 +465,16 @@ Tres piezas de UI para la capability `internal-chat` (ver `design.md` decisión 
   `results-dashboard`), `btn btn-dark btn-sm` con icono `bi-chat-dots` que llama a
   `POST /conversations` con el candidato de esa card y navega a `features/chats/:id` con la conversación
   devuelta (nueva o ya existente — el backend es idempotente, la UI nunca decide si crear o reutilizar).
-- **`features/chats` (listado)**: sigue el patrón container+card normal, pero el `card-body` contiene un
-  `list-group` (no un formulario) con una fila por conversación — foto/alias del otro participante,
+- **`features/chats` (listado)**: envuelto en el modal de la sección anterior (`title="Chats"`); dentro,
+  un `list-group` (no un formulario) con una fila por conversación — foto/alias del otro participante,
   último mensaje (truncado) y su fecha, más un punto de no leído si aplica. Ordenado por actividad más
   reciente. Sin card-footer (no hay una acción "principal" del listado en sí).
 - **`features/chats/:id` (conversación)**: **excepción al patrón container+card estándar**, igual que el
-  dashboard o el cuestionario. `card-header` con foto/alias del otro participante y una flecha de volver
-  al listado; `card-body` con scroll propio (`overflow-y: auto`, altura fija en CSS, nunca
-  `height: 100vh` a pelo) mostrando los mensajes en orden cronológico; `card-footer` con un
+  dashboard o el cuestionario — y, a diferencia de Configuración/Chats, envuelta en el modal **sin**
+  `title` (ver sección anterior): ya tiene su propia cabecera contextual, así que el cierre del modal se
+  añade ahí mismo en vez de en una segunda franja. `card-header` con foto/alias del otro participante y
+  una flecha de volver al listado; `card-body` con scroll propio (`overflow-y: auto`, altura fija en
+  CSS, nunca `height: 100vh` a pelo) mostrando los mensajes en orden cronológico; `card-footer` con un
   `<input>`/`form-control` de texto + botón de enviar (icono `bi-send`, `btn-dark`) — es el único
   "formulario" real de esta pantalla.
 
@@ -448,8 +486,14 @@ generar scroll horizontal en ningún viewport (ver sección de responsive).
 
 ## Configuración: perfil, cuestionario y contraseña
 
-`features/settings` sigue el patrón container+card estándar con **3 secciones** dentro del mismo
-`card-body` (separadas por `settings-section`/subtítulo, no 3 cards distintas):
+`features/settings` (envuelta en el modal de la sección anterior, `title="Configuración"`) tiene **3
+cards independientes** apiladas (`.mb-4` entre ellas) — no 3 secciones dentro de un mismo `card-body`,
+a pesar de lo que decía una versión anterior de este documento: son 3 acciones de guardado
+independientes (perfil, cuestionario, contraseña), cada una con su propio `card-footer`/botón/estado de
+error, a diferencia del resto de pantallas de Shell A que editan una única entidad de una vez (ver
+`references/page-template.md`, "Casos especiales"). Orden en pantalla — **Perfil → Cuestionario →
+Contraseña** (feedback explícito de la usuaria, 2026-08-19: el cuestionario va antes que cambiar la
+contraseña, no al final):
 
 1. **Perfil**: nombre, alias (validación en vivo) y las píldoras de cualidad (`shared/quality-pill`,
    mismo tope de 5 que el registro) — botón "Guardar cambios" (`btn-dark`) al final de esta sección. Al

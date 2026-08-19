@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Conversation } from '@compatibility-check-app/shared-types';
 import { ChatService } from '../../core/chat.service';
+import { ModalPanelComponent } from '../../shared/modal-panel/modal-panel.component';
 
 /**
  * Listado de conversaciones (sección 17b; spec `internal-chat`, "Acceso a todas las conversaciones
@@ -11,11 +12,17 @@ import { ChatService } from '../../core/chat.service';
  * `results-dashboard` (que sí ordena en cliente), aquí no hay ningún campo propio de `Conversation`
  * con el que poder reproducir ese orden en cliente si `lastMessage` es `null` (conversación sin
  * mensajes todavía), así que la fuente de verdad del orden es el backend.
+ *
+ * Envuelta en `ModalPanelComponent` (feedback explícito de la usuaria): la ruta/guards siguen sin
+ * cambios (`profileGuard` + `questionnaireCompletedGuard`, ver `app.routes.ts`), solo el restyle
+ * visual — la card+`card-body` propias que antes envolvían el `list-group` se retiran (quedarían
+ * redundantes anidadas dentro de la card del panel modal): `list-group-flush` ya está pensado por
+ * Bootstrap para ir como hijo directo de una `.card`, sin una `.card-body` de por medio.
  */
 @Component({
   selector: 'app-chats',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, ModalPanelComponent],
   templateUrl: './chats.component.html',
   styleUrl: './chats.component.scss',
 })

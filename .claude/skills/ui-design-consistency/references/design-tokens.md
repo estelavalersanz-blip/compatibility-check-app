@@ -1021,42 +1021,135 @@ impredecible, así que el refuerzo aquí es "qué candidatos ya están listos" (
 no "cuánto queda". El polling (`GET /users/me/comparisons`) se detiene y navega al dashboard en cuanto
 todas están en `completed`/`error`.
 
+## Modal sobre la pantalla principal: `shared/modal-panel` (Configuración y Chats)
+
+Feedback explícito de la usuaria (2026-08-19): `features/settings`, `features/chats` y
+`features/chats/:id` deberían sentirse como un modal superpuesto sobre la pantalla principal
+(cuestionario o dashboard), con su propio cierre explícito, en vez de una pantalla más entre las que
+hay que "volver atrás". Ver `SKILL.md`, "Configuración y Chats: estilo modal sobre la pantalla
+principal", para el porqué completo (incluye por qué se descartó `NgbModal`). Aquí solo el marcado/CSS
+exactos del envoltorio compartido:
+
+```ts
+// apps/frontend/src/app/shared/modal-panel/modal-panel.component.ts
+@Component({
+  selector: 'app-modal-panel',
+  standalone: true,
+  imports: [RouterLink],
+  templateUrl: './modal-panel.component.html',
+  styleUrl: './modal-panel.component.scss',
+})
+export class ModalPanelComponent {
+  readonly title = input<string | null>(null);
+}
+```
+
+```html
+<!-- apps/frontend/src/app/shared/modal-panel/modal-panel.component.html -->
+<div class="modal-panel-backdrop">
+  <div class="modal-panel-card card">
+    @if (title()) {
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold">{{ title() }}</span>
+        <button type="button" class="btn btn-link p-0 text-body" routerLink="/" aria-label="Cerrar">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+    <ng-content></ng-content>
+  </div>
+</div>
+```
+
+```scss
+// apps/frontend/src/app/shared/modal-panel/modal-panel.component.scss
+.modal-panel-backdrop {
+  position: absolute; // NUNCA fixed — ver nota de responsive más abajo
+  inset: 0;
+  z-index: 1010; // por debajo de $zindex-sticky (1020, el de .sticky-top del navbar)
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-panel-card {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3); // única card de la app con sombra propia
+}
+```
+
+**`position: absolute`, nunca `fixed` (bug real, tarea de responsive sección 21)**: `fixed` ignora
+siempre su ancestro DOM y se mide contra la ventana real del navegador, así que
+`expectNoHorizontalOverflow` (`core/testing/no-horizontal-overflow.ts`, que mueve el componente a un
+`<div>` sintético de 375px para medir) nunca podía constreñirlo — daba un falso positivo de
+desbordamiento en cualquier viewport de Karma más ancho que 375px reales, en las 3 pantallas que usan
+este panel. `absolute` con `inset: 0` resuelve exactamente igual contra el viewport completo cuando no
+hay ningún ancestro con `position` propio de por medio (el caso real de esta app, dentro de
+`<main class="container">` de `core/shell`), así que el efecto visual en producción es idéntico — la
+única diferencia real (no queda "clavado" al hacer scroll de página) no importa aquí porque la propia
+card ya limita su alto (`max-height`) y escrolea por dentro.
+
+**`title` opcional**: con él (Configuración, Chats), el panel añade su propia franja `card-header` con
+el título y el cierre. Sin él (conversación de chat, que ya tiene su propia cabecera contextual — ver
+más abajo), el panel no añade nada propio: el contenido proyectado lleva su propio `card-header` Y su
+propio botón de cerrar (mismo marcado del botón, duplicado a propósito en ese único caso en vez de
+complicar el componente compartido).
+
 ## Configuración: sección de perfil (recalcular ahora) y sección de cuestionario
 
-**Sección Perfil** — tras guardar, si la selección de cualidades cambió (`needs_recalculation` pasa a
+**3 cards independientes** (no 3 secciones dentro del mismo `card-body` — ver `page-template.md`,
+"Casos especiales", para el porqué), envueltas en `<app-modal-panel title="Configuración">` (ver
+sección anterior), en este orden: **Perfil → Cuestionario → Contraseña** (feedback explícito de la
+usuaria, 2026-08-19: cuestionario antes que contraseña, no al final).
+
+**Card Perfil** — tras guardar, si la selección de cualidades cambió (`needs_recalculation` pasa a
 `true`), ofrece recalcular sin tener que ir antes al dashboard:
 
 ```html
 <!-- apps/frontend/src/app/features/settings/settings.component.html -->
-<div class="settings-section">
-  <h3 class="text-uppercase small text-body-secondary mb-2">Perfil</h3>
-  <!-- nombre, alias, quality-pill... -->
-  <button type="button" class="btn btn-dark" (click)="saveProfile()">Guardar cambios</button>
-
-  @if (profileSaved() && user().needsRecalculation) {
-    <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 py-2 mt-3" role="alert">
-      <span>Guardado. Tu compatibilidad ha quedado pendiente de recalcular.</span>
-      <button type="button" class="btn btn-outline-dark btn-sm text-nowrap" (click)="recalculateNow()">
-        Recalcular compatibilidad ahora
-      </button>
+<app-modal-panel title="Configuración">
+  <div class="card mb-4">
+    <div class="card-header">Tu perfil</div>
+    <div class="card-body">
+      <!-- nombre, alias, quality-pill... -->
+      @if (showRecalculateBanner()) {
+        <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 mt-3" role="alert">
+          <span>Tu compatibilidad necesita recalcularse con tus nuevas cualidades.</span>
+          <button type="button" class="btn btn-dark btn-sm text-nowrap" (click)="recalculateNow()">
+            Recalcular compatibilidad ahora
+          </button>
+        </div>
+      }
     </div>
-  }
-</div>
+    <div class="card-footer bg-white d-flex justify-content-end">
+      <button type="button" class="btn btn-dark" (click)="saveProfile()">Guardar cambios</button>
+    </div>
+  </div>
+
+  <!-- card "Tu cuestionario" aquí (ver más abajo) -->
+  <!-- card "Cambiar contraseña" al final -->
+</app-modal-panel>
 ```
 
-**Sección Cuestionario** — resumen + botón que **navega** (no despliega inline) al cuestionario en modo
+**Card Cuestionario** — resumen + botón que **navega** (no despliega inline) al cuestionario en modo
 edición, donde el propio guardado del último bloque ya recalcula (ver decisión 3h de `design.md` y la
 sección "Pantalla de bienvenida del cuestionario" más arriba):
 
 ```html
-<div class="settings-section">
-  <h3 class="text-uppercase small text-body-secondary mb-2">Cuestionario</h3>
-  <p class="text-body-secondary small mb-2">
-    Respondido el {{ user().questionnaireCompletedAt | date:'longDate' }}.
-  </p>
-  <button type="button" class="btn btn-outline-dark btn-sm" routerLink="/questionnaire" [queryParams]="{mode: 'edit'}">
-    <i class="bi bi-pencil"></i> Editar tus respuestas
-  </button>
+<div class="card mb-4">
+  <div class="card-header">Tu cuestionario</div>
+  <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>Completado el {{ questionnaireCompletedAt() | date: 'longDate' }}</span>
+    <button type="button" class="btn btn-outline-dark" routerLink="/questionnaire" [queryParams]="{ mode: 'edit' }">
+      Editar tus respuestas
+    </button>
+  </div>
 </div>
 ```
 
@@ -1103,45 +1196,54 @@ startChat(candidateUserId: string): void {
 
 ### Listado de conversaciones (`features/chats`)
 
+Envuelto en `<app-modal-panel title="Chats">` (ver más arriba) — el `list-group-flush` va directo,
+**sin** una `card`+`card-body.p-0` propia de por medio: quedaría redundante anidada dentro de la card
+del propio panel (Bootstrap ya prevé `list-group-flush` como hijo directo de una `.card`):
+
 ```html
 <!-- apps/frontend/src/app/features/chats/chats.component.html -->
-<h1 class="h3 mb-1">Chats</h1>
-<p class="text-body-secondary mb-4">Tus conversaciones con perfiles con los que ha habido compatibilidad.</p>
-
-<div class="card">
-  <div class="card-body p-0">
-    <div class="list-group list-group-flush">
-      @for (conversation of conversations(); track conversation.id) {
-        <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-3"
-                routerLink="/chats/{{ conversation.id }}">
-          <img [src]="conversation.otherParticipant.photoUrl" class="rounded-circle" width="40" height="40" alt="">
-          <div class="flex-grow-1 text-start overflow-hidden">
-            <div class="fw-semibold">{{ conversation.otherParticipant.alias }}</div>
-            <div class="text-body-secondary text-truncate small">{{ conversation.lastMessage?.body }}</div>
-          </div>
-          @if (conversation.unreadCount > 0) {
-            <span class="badge rounded-pill bg-secondary">{{ conversation.unreadCount }}</span>
-          }
-        </button>
-      }
-    </div>
+<app-modal-panel title="Chats">
+  <div class="list-group list-group-flush">
+    @for (conversation of conversations(); track conversation.id) {
+      <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-3"
+              (click)="openConversation(conversation.id)">
+        <img [src]="conversation.otherParticipant.photoUrl" class="rounded-circle" width="40" height="40" alt="">
+        <div class="flex-grow-1 text-start overflow-hidden">
+          <div class="fw-semibold">{{ conversation.otherParticipant.alias }}</div>
+          <div class="text-body-secondary text-truncate small">{{ conversation.lastMessage?.body }}</div>
+        </div>
+        @if (conversation.unreadCount > 0) {
+          <span class="badge rounded-pill bg-secondary">{{ conversation.unreadCount }}</span>
+        }
+      </button>
+    }
   </div>
-</div>
+</app-modal-panel>
 ```
 
 Sin `card-footer`: el listado no tiene una acción "principal" propia, cada fila navega a su conversación.
 
 ### Conversación (`features/chats/:id`) — burbujas de mensaje
 
+Envuelto en `<app-modal-panel>` **sin** `title` (ya tiene su propia cabecera contextual): el cierre del
+modal (a "/", pantalla principal) se añade directamente en esa cabecera, junto al nombre —
+`justify-content-between` entre el grupo "volver + foto + alias" y el botón de cerrar, distinto de la
+flecha de volver (que solo retrocede un paso, a `/chats`):
+
 ```html
 <!-- apps/frontend/src/app/features/chats/chat-conversation.component.html -->
-<div class="card">
-  <div class="card-header d-flex align-items-center gap-2">
-    <button type="button" class="btn btn-link p-0 text-body" routerLink="/chats">
-      <i class="bi bi-arrow-left fs-4"></i>
+<app-modal-panel>
+  <div class="card-header d-flex align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-2 overflow-hidden">
+      <button type="button" class="btn btn-link p-0 text-body" routerLink="/chats" aria-label="Volver a chats">
+        <i class="bi bi-arrow-left fs-4"></i>
+      </button>
+      <img [src]="conversation().otherParticipant.photoUrl" class="rounded-circle flex-shrink-0" width="32" height="32" alt="">
+      <span class="fw-semibold text-truncate">{{ conversation().otherParticipant.alias }}</span>
+    </div>
+    <button type="button" class="btn btn-link p-0 text-body flex-shrink-0" routerLink="/" aria-label="Cerrar">
+      <i class="bi bi-x-lg" aria-hidden="true"></i>
     </button>
-    <img [src]="conversation().otherParticipant.photoUrl" class="rounded-circle" width="32" height="32" alt="">
-    <span class="fw-semibold">{{ conversation().otherParticipant.alias }}</span>
   </div>
   <div class="card-body chat-messages" #scrollAnchor>
     @for (message of messages(); track message.id) {
@@ -1157,7 +1259,7 @@ Sin `card-footer`: el listado no tiene una acción "principal" propia, cada fila
       <i class="bi bi-send"></i>
     </button>
   </div>
-</div>
+</app-modal-panel>
 ```
 
 ```scss

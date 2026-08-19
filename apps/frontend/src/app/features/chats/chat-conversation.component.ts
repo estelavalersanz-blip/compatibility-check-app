@@ -15,6 +15,7 @@ import { Message } from '@compatibility-check-app/shared-types';
 import { interval } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { ChatService } from '../../core/chat.service';
+import { ModalPanelComponent } from '../../shared/modal-panel/modal-panel.component';
 
 /** Sondeo mientras la conversación está abierta (tarea 17b.5/17b.6) — más frecuente que el de
  *  no leídos de `core/shell` (20-30s) y que el de `features/processing` (3s): aquí hay una
@@ -30,11 +31,17 @@ interface ParticipantView {
  * Conversación de chat (sección 17b; spec `internal-chat`). "Caso especial" ya documentado en
  * `page-template.md`: el `card-body` es la lista de mensajes con scroll propio, el `card-footer` es
  * el único formulario real de la pantalla.
+ *
+ * Envuelta en `ModalPanelComponent` sin `title` (feedback explícito de la usuaria): esta pantalla ya
+ * tiene su propia cabecera contextual (flecha "volver a /chats" + nombre del participante), así que
+ * el panel no añade una segunda franja de título — el cierre del "modal" (a la pantalla principal,
+ * "/") se añade directamente en esa misma cabecera, junto al nombre, distinto de la flecha de volver
+ * (que solo retrocede a `/chats`, un paso, no sale del todo).
  */
 @Component({
   selector: 'app-chat-conversation',
   standalone: true,
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, ModalPanelComponent],
   templateUrl: './chat-conversation.component.html',
   styleUrl: './chat-conversation.component.scss',
 })
