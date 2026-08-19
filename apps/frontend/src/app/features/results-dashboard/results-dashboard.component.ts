@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, InjectionToken, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import {
   ComparisonQuestionDetail,
@@ -8,11 +9,9 @@ import {
 } from '@compatibility-check-app/shared-types';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, interval } from 'rxjs';
 import { ChatService } from '../../core/chat.service';
 import { ComparisonsService } from '../../core/comparisons.service';
-import { MatchingService } from '../../core/matching.service';
-import { UsersService } from '../../core/users.service';
 
 /** Etiquetas legibles para el radar chart — las claves en sí (`emocional`, `valores`, ...) son las
  *  mismas de `AggregatedResult`/`ComparisonQuestionDetail`, sin traducir en ningún otro sitio. */
@@ -24,6 +23,24 @@ const DIMENSION_LABELS: Record<Dimension, string> = {
   madurez: 'Madurez',
   apertura: 'Apertura',
 };
+
+/**
+ * Sondeo mientras quede alguna comparación en `pending`/`analyzing` (bug real reportado por la
+ * usuaria con captura: tras recalcular, las tarjetas se quedaban con el spinner para siempre — la
+ * única carga (inicial) llegaba antes de que el análisis asíncrono de IA terminara, y nada volvía a
+ * refrescar hasta un F5 manual). Mismo valor que `features/processing` (3s) en producción: aquí
+ * también hay alguien mirando spinners en vivo, no un contador de fondo como el de `core/shell`.
+ *
+ * `InjectionToken` con `factory` (mismo patrón que `core/supabase-client.ts`), no una constante
+ * literal como en el resto de componentes de este proyecto: a diferencia de esos sondeos, el fix de
+ * ESTE bug es el propio sondeo periódico, así que su test sí necesita avanzar el reloj de verdad —
+ * y esperar 3s reales por test sería lento y fea. El test sobrescribe este token con un valor de
+ * milisegundos mínimo; producción nunca lo hace, así que cae siempre en la `factory` de abajo.
+ */
+export const DASHBOARD_POLL_INTERVAL_MS = new InjectionToken<number>('DASHBOARD_POLL_INTERVAL_MS', {
+  providedIn: 'root',
+  factory: () => 3000,
+});
 
 interface CardView extends ComparisonSummary {
   expanded: boolean;
@@ -49,17 +66,15 @@ interface CardView extends ComparisonSummary {
 })
 export class ResultsDashboardComponent {
   private readonly comparisonsService = inject(ComparisonsService);
-  private readonly usersService = inject(UsersService);
-  private readonly matchingService = inject(MatchingService);
   private readonly chatService = inject(ChatService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly pollIntervalMs = inject(DASHBOARD_POLL_INTERVAL_MS);
 
   readonly dimensions = DIMENSIONS;
 
   readonly loading = signal(true);
   readonly comparisons = signal<CardView[]>([]);
-  readonly needsRecalculation = signal(false);
-  readonly recalculating = signal(false);
   readonly chatError = signal<string | null>(null);
 
   /** Spec `results-dashboard`, escenario "Estado de procesamiento antes de completarse": mientras
@@ -81,13 +96,26 @@ export class ResultsDashboardComponent {
 
   constructor() {
     // Primera carga con suscripción directa, nunca envuelta en un timer/interval (gotcha zoneless
-    // ya conocido, ver core/shell/shell.component.ts). Sin sondeo aquí: a diferencia de
-    // features/processing, esta pantalla no espera nada por defecto — solo se refresca tras pulsar
-    // "Recalcular" (tarea 16.4).
-    this.usersService.getOwnProfile().subscribe((profile) => {
-      this.needsRecalculation.set(profile?.needsRecalculation ?? false);
-    });
+    // ya conocido, ver core/shell/shell.component.ts) — el sondeo periódico va aparte, más abajo.
     this.fetchComparisons();
+
+    // El intervalo corre siempre (como el sondeo de no leídos de `core/shell`), pero `fetchComparisons`
+    // solo hace una petición real mientras `hasPendingComparisons()` sea cierto — una vez todo está en
+    // `completed`/`error` se vuelve un no-op barato en vez de seguir pidiendo datos que ya no cambian.
+    // El intervalo corre siempre (como el sondeo de no leídos de `core/shell`), pero `fetchComparisons`
+    // solo hace una petición real mientras `hasPendingComparisons()` sea cierto — una vez todo está en
+    // `completed`/`error` se vuelve un no-op barato en vez de seguir pidiendo datos que ya no cambian.
+    interval(this.pollIntervalMs)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.hasPendingComparisons()) {
+          this.fetchComparisons();
+        }
+      });
+  }
+
+  private hasPendingComparisons(): boolean {
+    return this.comparisons().some((card) => card.status === 'pending' || card.status === 'analyzing');
   }
 
   private fetchComparisons(): void {
@@ -140,25 +168,6 @@ export class ResultsDashboardComponent {
     this.comparisons.update((current) =>
       current.map((card) => (card.id === comparisonId ? { ...card, ...changes } : card)),
     );
-  }
-
-  /** Tarea 16.4/16.5: tras completarse el recálculo, un único refresco de
-   *  `GET /users/me/comparisons` (y del propio perfil, para que el botón vuelva a deshabilitarse) —
-   *  sin sondeo propio aquí, a diferencia de features/processing. */
-  async recalculateNow(): Promise<void> {
-    if (!this.needsRecalculation() || this.recalculating()) {
-      return;
-    }
-    this.recalculating.set(true);
-    try {
-      await firstValueFrom(this.matchingService.recalculate());
-      this.usersService.invalidateOwnProfile();
-      const profile = await firstValueFrom(this.usersService.getOwnProfile());
-      this.needsRecalculation.set(profile?.needsRecalculation ?? false);
-      this.fetchComparisons();
-    } finally {
-      this.recalculating.set(false);
-    }
   }
 
   /** Tarea 16.6/16.7: idempotente en el backend — la UI nunca decide si crea o reutiliza. */

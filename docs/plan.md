@@ -42,10 +42,13 @@ sesión para editar más adelante contraseña, nombre, alias, foto y cualidades.
 
 **Edición y recálculo bajo demanda**: desde la página de perfil, el usuario puede editar también sus
 respuestas del cuestionario y su selección de cualidades. Cualquiera de las dos ediciones habilita un
-botón de "recalcular compatibilidad" en el dashboard, que vuelve a seleccionar candidatos y relanza el
-análisis IA **solo para ese usuario** (sin afectar a otros usuarios que lo tuvieran como candidato). La
-página principal de la app es el cuestionario mientras el usuario no lo haya completado nunca, y pasa a
-ser el dashboard de resultados una vez completado — el dashboard se refresca al ejecutar el recálculo.
+atajo de "recalcular compatibilidad" **en la propia pantalla de Configuración** (nota, 2026-08-19: vivía
+también, de forma redundante, en el dashboard — retirado de ahí a petición explícita de la usuaria, ver
+`openspec/changes/archive/*-simplify-dashboard-recalculate`), que vuelve a seleccionar candidatos y
+relanza el análisis IA **solo para ese usuario** (sin afectar a otros usuarios que lo tuvieran como
+candidato). La página principal de la app es el cuestionario mientras el usuario no lo haya completado
+nunca, y pasa a ser el dashboard de resultados una vez completado — el dashboard se refresca solo,
+sondeando mientras el análisis sigue en curso, sin necesitar un F5 manual.
 
 El repo (`C:\CompatibilityCheckApp\compatibility-check-app`) está prácticamente vacío: solo un
 `README.md` con el título y un `.gitignore` de Angular CLI (sin `angular.json` ni código). Esto
@@ -320,8 +323,9 @@ comparaciones tras editar sus respuestas o sus cualidades desde su perfil. Sigue
 (máximo 18 llamadas, igual que el cálculo inicial) porque el efecto se limita a quien pulsa el botón —
 nunca se propaga a otros usuarios que lo tuvieran como candidato.
 
-Editar respuestas o cualidades marca `users.needs_recalculation = true`, lo que habilita el botón
-"recalcular compatibilidad" en el dashboard. Al pulsarlo se despacha `RecalculateCompatibilityCommand`,
+Editar respuestas o cualidades marca `users.needs_recalculation = true`, lo que habilita el atajo
+"recalcular compatibilidad" en Configuración (2026-08-19: retirado del dashboard por ser redundante con
+este). Al activarlo se despacha `RecalculateCompatibilityCommand`,
 cuyo handler reutiliza `candidate-selector.service.ts` (puede elegir candidatos distintos si las
 cualidades cambiaron), **elimina las comparaciones anteriores del usuario** (cascada ya prevista en el
 esquema) y publica de nuevo `ComparisonsCreatedEvent` para que el mismo handler de `ai` dispare el

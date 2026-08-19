@@ -517,9 +517,13 @@ contraseña, no al final):
 3. **Contraseña**: contraseña actual + nueva (con reautenticación, decisión 7b) — botón "Cambiar
    contraseña" (`btn-outline-dark`, es una acción independiente de "Guardar cambios").
 
-El botón de recalcular del dashboard (decisión 5b) sigue existiendo tal cual — es el punto al que llevan
-los dos atajos de arriba, no algo que se duplique con lógica propia en cada sitio. El marcado exacto de
-la sección de cuestionario y del atajo de recalcular está en `references/design-tokens.md`.
+**El dashboard ya NO tiene su propio botón de recalcular** (retirado a petición explícita de la usuaria,
+2026-08-19 — ver `openspec/changes/archive/*-simplify-dashboard-recalculate`): la decisión original 5b
+de `design.md` lo ponía ahí, siempre visible pero casi siempre deshabilitado (solo se activa si el
+perfil está pendiente de recalcular), lo que resultaba redundante con estos dos atajos de Configuración,
+que SÍ llaman directo a `POST /users/me/recalculate` por su cuenta (sin depender de ningún botón del
+dashboard) y navegan allí ya con los resultados en marcha. El marcado exacto de la sección de
+cuestionario y de ambos atajos está en `references/design-tokens.md`.
 
 ## Sistema de botones, iconos y formularios
 
