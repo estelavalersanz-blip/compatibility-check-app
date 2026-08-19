@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { isAuthApiError } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
 import { AuthShellComponent } from '../../../core/auth-shell/auth-shell.component';
 import { AuthService } from '../../../core/auth.service';
@@ -45,10 +46,22 @@ export class ResetPasswordComponent {
     try {
       await this.authService.updatePassword(this.form.getRawValue().password);
       await this.router.navigate(['/']);
-    } catch {
-      this.submitError.set('No se pudo actualizar la contraseña. Inténtalo de nuevo.');
+    } catch (error) {
+      // Reproducido en vivo: un 422 'same_password' caía en el mismo mensaje generico que
+      // cualquier otro fallo, sin pista de que bastaba con elegir una contraseña distinta a la
+      // actual. Se registra siempre en consola (mismo patron que register/forgot-password) para
+      // que el proximo caso no dependa de reproducirlo a ciegas.
+      console.error(error);
+      this.submitError.set(this.resolveUpdateErrorMessage(error));
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private resolveUpdateErrorMessage(error: unknown): string {
+    if (isAuthApiError(error) && error.code === 'same_password') {
+      return 'La nueva contraseña debe ser diferente a la actual.';
+    }
+    return 'No se pudo actualizar la contraseña. Inténtalo de nuevo.';
   }
 }
