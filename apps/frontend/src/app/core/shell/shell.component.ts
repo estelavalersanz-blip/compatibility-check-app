@@ -41,8 +41,11 @@ export class ShellComponent {
    */
   readonly minimalNav = signal(this.readMinimalNavFromRoute());
 
-  /** Tareas 11.2b/11.2c: indicador de no leídos, sondeado — nunca se muestra si `minimalNav()`. */
-  readonly hasUnreadMessages = signal(false);
+  /** Tareas 11.2b/11.2c: indicador de no leídos, sondeado — nunca se muestra si `minimalNav()`.
+   *  Suma de `unreadCount` de todas las conversaciones (no solo "hay alguno") — bug real reportado
+   *  por la usuaria: el indicador anterior era un punto vacío sin número, además de
+   *  `bg-secondary` (rojo) casi invisible contra el degradado naranja→rojo de la propia cabecera. */
+  readonly unreadMessageCount = signal(0);
 
   /**
    * Tarea 21.1/21.2 (responsive) — bug real encontrado en la verificación manual de la tarea 21.7:
@@ -87,7 +90,9 @@ export class ShellComponent {
   }
 
   private applyUnread(conversations: Conversation[]): void {
-    this.hasUnreadMessages.set(conversations.some((conversation) => conversation.unreadCount > 0));
+    this.unreadMessageCount.set(
+      conversations.reduce((total, conversation) => total + conversation.unreadCount, 0),
+    );
   }
 
   /** Ver el comentario de `navCollapsed` — el toggle real que Bootstrap dejaría de hacer solo. */

@@ -214,12 +214,21 @@ inventes aquí:
 - **`features/chats/:id`** (conversación de chat): el `card-body` no es un formulario ni contenido
   estático, es la lista de mensajes con scroll propio (altura fija, `overflow-y: auto`); el
   `card-footer` es el único formulario real de la pantalla (input de texto + botón de enviar). Ver
-  `design-tokens.md` para el marcado y CSS completos de las burbujas.
+  `design-tokens.md` para el marcado y CSS completos de las burbujas. Envuelta en
+  `<app-modal-panel>` **sin** `title` (feedback explícito de la usuaria, 2026-08-19, ver `SKILL.md`,
+  "Configuración y Chats: estilo modal..."): ya tiene su propia cabecera contextual, así que el cierre
+  del modal se añade ahí mismo, no en una segunda franja.
 - **`features/settings`** (sección 17): 3 cards apiladas (`.mb-4` entre ellas), no una sola — "perfil"
-  (foto/nombre/alias/cualidades), "cambiar contraseña" y "tu cuestionario" (resumen + navegación a
-  `/questionnaire?mode=edit`) son 3 acciones de guardado independientes, cada una con su propio
+  (foto/nombre/alias/cualidades), "tu cuestionario" (resumen + navegación a `/questionnaire?mode=edit`)
+  y "cambiar contraseña", en ese orden (feedback explícito de la usuaria, 2026-08-19: cuestionario antes
+  que contraseña), son 3 acciones de guardado independientes, cada una con su propio
   `card-footer`/botón/estado de error, a diferencia del resto de pantallas de Shell A que editan una
   única entidad de una vez. El picker de foto y las píldoras de cualidad reutilizan el mismo marcado
   que `features/registration` (paso 1/paso 2), pero aquí en un solo formulario, sin wizard — y la foto
   es opcional (si no se toca, se conserva la ya guardada), a diferencia del registro donde es
-  obligatoria.
+  obligatoria. Las 3 cards van envueltas en `<app-modal-panel title="Configuración">` (ver `SKILL.md`,
+  "Configuración y Chats: estilo modal...") — quedan anidadas dentro de la card propia del panel a
+  propósito (restyle visual, no una reestructuración de este caso especial).
+- **`features/chats`** (listado): envuelto en `<app-modal-panel title="Chats">` — el `list-group-flush`
+  va directo dentro, sin una `card`/`card-body` propia de más (quedaría redundante anidada dentro de la
+  card del panel).

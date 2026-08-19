@@ -1,16 +1,21 @@
-<div class="card">
-  <div class="card-header d-flex align-items-center gap-2">
-    <button type="button" class="btn btn-link p-0 text-body" routerLink="/chats" aria-label="Volver a chats">
-      <i class="bi bi-arrow-left fs-4"></i>
-    </button>
-    @if (otherParticipant(); as participant) {
-      @if (participant.photoUrl) {
-        <img [src]="participant.photoUrl" class="rounded-circle" width="32" height="32" alt="" />
-      } @else {
-        <i class="bi bi-person-circle fs-3 text-body-secondary" aria-hidden="true"></i>
+<app-modal-panel>
+  <div class="card-header d-flex align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-2 overflow-hidden">
+      <button type="button" class="btn btn-link p-0 text-body" routerLink="/chats" aria-label="Volver a chats">
+        <i class="bi bi-arrow-left fs-4"></i>
+      </button>
+      @if (otherParticipant(); as participant) {
+        @if (participant.photoUrl) {
+          <img [src]="participant.photoUrl" class="rounded-circle flex-shrink-0" width="32" height="32" alt="" />
+        } @else {
+          <i class="bi bi-person-circle fs-3 text-body-secondary" aria-hidden="true"></i>
+        }
+        <span class="fw-semibold text-truncate">{{ participant.alias }}</span>
       }
-      <span class="fw-semibold">{{ participant.alias }}</span>
-    }
+    </div>
+    <button type="button" class="btn btn-link p-0 text-body flex-shrink-0" routerLink="/" aria-label="Cerrar">
+      <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
   </div>
 
   @if (loading()) {
@@ -48,4 +53,4 @@
       <div class="text-danger small mt-2">{{ sendError() }}</div>
     }
   </div>
-</div>
+</app-modal-panel>

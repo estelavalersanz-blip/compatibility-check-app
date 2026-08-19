@@ -153,6 +153,29 @@ describe('SettingsComponent — perfil (tarea 17.1)', () => {
     expect(root.querySelector('img')?.getAttribute('src')).toBe('https://example.com/una-foto-real.jpg');
   });
 
+  /**
+   * Bug real reportado por la usuaria con captura (2026-08-19): al volver a entrar en Configuración
+   * tras haber subido una foto, salía pequeña y descentrada dentro del círculo en vez de rellenarlo
+   * — faltaba `object-fit: cover` en el `<img>` (sin él, una foto que no sea ya perfectamente
+   * cuadrada se renderiza a su proporción intrínseca en vez de recortada al cuadrado del círculo).
+   * Se comprueba el estilo COMPUTADO, no solo la presencia de una clase — así el test falla de
+   * verdad si algún día se borra la regla de `settings.component.scss` sin querer, igual que hace
+   * `expectNoHorizontalOverflow` para la geometría real (`core/testing/no-horizontal-overflow.ts`).
+   */
+  it('la foto de perfil se recorta con object-fit: cover (bug real: salía pequeña y descentrada)', async () => {
+    const { fixture } = setup({
+      profile: ownProfile({ photoUrl: 'https://example.com/una-foto-real.jpg' }),
+    });
+    await loaded(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+    const img = root.querySelector('img');
+    if (!img) {
+      throw new Error('No se encontró la foto de perfil');
+    }
+
+    expect(getComputedStyle(img).objectFit).toBe('cover');
+  });
+
   it('al llegar a 5 marcadas, las no marcadas quedan deshabilitadas (misma regla que el registro)', async () => {
     const { fixture } = setup();
     await loaded(fixture);
@@ -360,6 +383,18 @@ describe('SettingsComponent — resumen del cuestionario (tarea 17.5)', () => {
     await loaded(fixture);
 
     expect(TestBed.inject(Router).url).toBe('/questionnaire?mode=edit');
+  });
+
+  it('aparece antes que "Cambiar contraseña" (feedback explícito de la usuaria)', async () => {
+    const { fixture } = setup();
+    await loaded(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+
+    // La primera `card-header` ("Configuración") es la del propio `ModalPanelComponent` (tarea del
+    // modal de Chats/Configuración) — las 3 siguientes son las de siempre, sin reordenar entre sí.
+    const headers = Array.from(root.querySelectorAll('.card-header')).map((el) => el.textContent?.trim());
+
+    expect(headers).toEqual(['Configuración', 'Tu perfil', 'Tu cuestionario', 'Cambiar contraseña']);
   });
 });
 

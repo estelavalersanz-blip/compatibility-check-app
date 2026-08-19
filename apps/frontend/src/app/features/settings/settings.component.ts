@@ -10,6 +10,7 @@ import { MatchingService } from '../../core/matching.service';
 import { QualitiesService } from '../../core/qualities.service';
 import { UsersService } from '../../core/users.service';
 import { aliasAvailableValidator } from '../../shared/alias-available.validator';
+import { ModalPanelComponent } from '../../shared/modal-panel/modal-panel.component';
 import { passwordMinLengthValidator, passwordsMatchValidator } from '../../shared/password-validators';
 import { QualityPillComponent } from '../../shared/quality-pill/quality-pill.component';
 
@@ -40,11 +41,16 @@ function sameQualitySelection(a: readonly string[], b: readonly string[]): boole
  * "Caso especial" nuevo de `page-template.md` (documentado ahí): 3 cards apiladas en vez de una sola,
  * porque son 3 acciones independientes con su propio guardado (perfil, contraseña, cuestionario) — no
  * una única entidad que editar de una vez, a diferencia del resto de pantallas de Shell A.
+ *
+ * Envuelta en `ModalPanelComponent` (feedback explícito de la usuaria): la ruta/guards siguen sin
+ * cambios (`profileGuard` + `questionnaireCompletedGuard`, ver `app.routes.ts`), solo el restyle
+ * visual — las 3 cards de dentro quedan anidadas dentro de la card propia del panel modal a
+ * propósito (restyle, no reestructuración de este "caso especial").
  */
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, QualityPillComponent],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, QualityPillComponent, ModalPanelComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })

@@ -1,0 +1,13 @@
+<div class="modal-panel-backdrop">
+  <div class="modal-panel-card card">
+    @if (title()) {
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold">{{ title() }}</span>
+        <button type="button" class="btn btn-link p-0 text-body" routerLink="/" aria-label="Cerrar">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+    <ng-content></ng-content>
+  </div>
+</div>

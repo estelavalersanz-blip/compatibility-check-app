@@ -140,6 +140,26 @@ describe('RegistrationComponent (tarea 13.0)', () => {
     expect(root.querySelectorAll('.quality-pill').length).toBe(0); // paso 2 aún no montado
   });
 
+  /**
+   * Mismo bug real reportado por la usuaria (captura, 2026-08-19) que en `features/settings` — mismo
+   * marcado `.profile-photo-picker`, ver comentario de cabecera de `registration.component.scss`.
+   * Estilo COMPUTADO, no solo presencia de clase, mismo criterio que la prueba análoga de
+   * `settings.component.spec.ts`.
+   */
+  it('la foto de perfil se recorta con object-fit: cover (bug real: salía pequeña y descentrada)', async () => {
+    const { fixture } = setup();
+    selectPhoto(fixture);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const img = root.querySelector('img');
+    if (!img) {
+      throw new Error('No se encontró la vista previa de la foto de perfil');
+    }
+
+    expect(getComputedStyle(img).objectFit).toBe('cover');
+  });
+
   it('"Siguiente" permanece deshabilitado mientras foto/nombre/alias no sean válidos', async () => {
     const { fixture } = setup();
     const root = fixture.nativeElement as HTMLElement;

@@ -1,0 +1,43 @@
+// Valores literales, no variables Sass — mismo criterio que el resto de componentes de este
+// proyecto (`quality-pill`, `chat-conversation`): el Sass de un componente Angular se compila
+// aislado, sin ver los overrides de `styles.scss`.
+//
+// `position: absolute`, NO `fixed` (bug real encontrado en la tarea 21.6b/21.3: `fixed` ignora
+// SIEMPRE su ancestro DOM y se posiciona/mide contra la ventana real, así que
+// `expectNoHorizontalOverflow` — que mueve el componente a un `<div>` sintético de 375px para medir,
+// ver `core/testing/no-horizontal-overflow.ts` — nunca podría constreñirlo, dando un falso positivo
+// de desbordamiento en CUALQUIER viewport de prueba más ancho que 375px real). Sin ningún ancestro
+// con `position` propio entre este componente y `<html>` en la app real, `absolute` con `inset: 0`
+// resuelve igualmente contra el viewport completo (mismo efecto visual que `fixed` aquí: cubre toda
+// la pantalla) — la única diferencia real es que no queda "clavado" al hacer scroll de página, algo
+// irrelevante en las 3 pantallas que usan este panel (su propia card ya limita su alto y escrolea
+// por dentro, más abajo).
+//
+// z-index (1010) por debajo de `$zindex-sticky` (1020 — el que usa `.sticky-top` de la cabecera de
+// `core/shell`), a propósito: el backdrop cubre visualmente TODA la ventana, pero al quedar por
+// debajo de la cabecera en el eje z, esta se sigue pintando por encima — Chats/Configuración/Cerrar
+// sesión siguen pulsables con el "modal" abierto, exactamente igual que antes de este cambio. No hace
+// falta calcular ni fijar a mano la altura real de la cabecera para lograr este efecto (que además
+// cambia con el menú hamburguesa abierto en móvil).
+.modal-panel-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 1010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-panel-card {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  // Profundidad propia: sin ella, la card se confundiría visualmente con el propio fondo oscurecido
+  // en vez de leerse "elevada" sobre él (ninguna otra card de la app lleva sombra — decisión nueva,
+  // solo para esta, ver ui-design-consistency SKILL.md).
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
+}
