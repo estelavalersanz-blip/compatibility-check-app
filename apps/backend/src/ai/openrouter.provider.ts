@@ -5,7 +5,15 @@ import { AiCompletionRequest, AiProvider } from './ai-provider.interface';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // Modelo open-weight equivalente al de `groq.provider.ts` (docs/plan.md: "OpenRouter mencionado
 // como alternativa/comparativa") — mismo formato de mensajes OpenAI-compatible que Groq.
-const OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct';
+//
+// Bug real encontrado el 2026-08-19: sin el sufijo `:free`, este identificador es la variante DE
+// PAGO de OpenRouter (coste real por token) — el modelo gratuito de verdad es
+// `meta-llama/llama-3.3-70b-instruct:free`, un id distinto (confirmado en la documentación pública
+// de OpenRouter). Límites del plan gratuito real: 20 peticiones/minuto, 50/día (1.000/día si se ha
+// comprado alguna vez $10 de crédito) — por request, no por token, a diferencia del límite de Groq
+// (ver ai-orchestrator.service.ts): un análisis completo (18 peticiones) cabe de sobra en el límite
+// por minuto, pero agota gran parte del límite diario gratuito por sí solo.
+const OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 
 interface OpenRouterChatCompletionResponse {
   choices?: Array<{ message?: { content?: string } }>;

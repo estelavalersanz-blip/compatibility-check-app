@@ -117,6 +117,42 @@ describe('computeAggregatedResult', () => {
     expect(Number.isInteger(result.compatibilidad_final * 100)).toBe(true);
   });
 
+  /**
+   * `ai-orchestrator.service.ts` ya no envía las 36 preguntas a la IA, solo 6 (1 al azar por
+   * bloque, `selectSampledQuestionIds` — bug real de límite de tokens/minuto del proveedor,
+   * 2026-08-19): `computeAggregatedResult` recibe entonces 6 `QuestionResultPair`, no 36. No hace
+   * falta ningún cambio de código para esto — `weightedDimensionMean` ya promedia sobre lo que
+   * haya en cada bloque (`average(inBlock...)`), y con 1 solo elemento la media es ese mismo valor
+   * — pero conviene un test explícito que lo confirme y proteja, en vez de asumirlo solo por
+   * lectura del código.
+   */
+  it('con 1 solo resultado por bloque (6 en total, no 36), pondera igual que con los 6 completos', () => {
+    const perBlockScore = [2, 4, 6, 8, 9, 10];
+    // Un único QuestionResultPair por bloque — el primero de cada uno (questionId 1, 7, 13...),
+    // igual que si `selectSampledQuestionIds` hubiera elegido siempre esa pregunta.
+    const onePerBlock: QuestionResultPair[] = perBlockScore.map((value, block) => ({
+      questionId: block * 6 + 1,
+      result: buildResult({
+        emocional: value,
+        valores: value,
+        estilo: value,
+        intereses: value,
+        madurez: value,
+        apertura: value,
+      }),
+    }));
+
+    const result = computeAggregatedResult(onePerBlock);
+
+    // Mismo cálculo exacto que el test de arriba con los 6 completos por bloque (2*.05 + 4*.05 +
+    // 6*.15 + 8*.20 + 9*.25 + 10*.30 = 8.05) — la ponderación por bloque no depende de cuántas
+    // preguntas representen a cada bloque, solo de su valor.
+    for (const dimension of DIMENSIONS) {
+      expect(result[dimension]).toBe(8.05);
+    }
+    expect(result.compatibilidad_final).toBe(8.05);
+  });
+
   it('persiste ambos vectores de pesos exactos usados en el cálculo', () => {
     const pairs = buildPairs(() => ({}));
 

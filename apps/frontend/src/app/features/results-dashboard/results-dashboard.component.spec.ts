@@ -172,7 +172,11 @@ describe('ResultsDashboardComponent — tarjetas (tarea 16.1)', () => {
     expect(fullText).not.toContain('Nombre Propio De Baja');
   });
 
-  it('el detalle de las 36 preguntas solo se muestra al expandir la tarjeta', () => {
+  // Antes "el detalle de las 36 preguntas..." — desde que el backend solo analiza 6 preguntas
+  // muestreadas (1 por bloque, ver ai-orchestrator.service.ts), el detalle ya no son 36 filas; este
+  // test en sí nunca dependió de un conteo real (usa fakeDetail(), no una lista de 36), así que solo
+  // hacía falta corregir la descripción, no la aserción.
+  it('el detalle de las preguntas analizadas solo se muestra al expandir la tarjeta', () => {
     const findDetailSpy = jasmine.createSpy('findDetail').and.returnValue(of([fakeDetail()]));
     const { fixture } = setup({ comparisons: [fakeComparison()], findDetailSpy });
 

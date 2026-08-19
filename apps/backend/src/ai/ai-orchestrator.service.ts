@@ -10,13 +10,22 @@ import {
   PromptQuestionPair,
 } from './prompts/compatibility-prompt';
 import { parseComparisonResultBatch } from './schemas/comparison-result.schema';
-import { computeAggregatedResult, QuestionResultPair } from '../comparisons/weighting.util';
+import {
+  BLOCK_WEIGHTS,
+  computeAggregatedResult,
+  QuestionResultPair,
+} from '../comparisons/weighting.util';
 import { SupabaseService } from '../supabase/supabase.service';
 import { writableTable } from '../supabase/writable-table';
 
 const BATCH_SIZE = 6;
 const MAX_CONCURRENT_BATCHES = 2;
 const MAX_ATTEMPTS_PER_BATCH = 3;
+
+/** Preguntas por bloque (design.md decisión 6c) — mismo tamaño que `BATCH_SIZE`, pero es un dato
+ *  distinto (tamaño de cada bloque del cuestionario, no de un lote de llamada a la IA), nombrado
+ *  aparte a propósito para no confundir ambos conceptos. */
+const QUESTIONS_PER_BLOCK = 6;
 
 /**
  * Token de inyección del backoff entre reintentos (mismo patrón que `AI_PROVIDER` en
@@ -106,9 +115,34 @@ function buildQuestionPairs(
     });
 }
 
+/**
+ * Selecciona 1 pregunta al azar de cada uno de los 6 bloques (design.md decisión 6d) — nunca las 36
+ * completas. Mantiene la representación proporcional de los 6 pesos de bloque
+ * (`BLOCK_WEIGHTS`, 5/5/15/20/25/30%) en vez de un muestreo puramente aleatorio sobre las 36, que
+ * podría dejar fuera por completo el bloque de mayor peso (o sobrerrepresentar el de menor peso) —
+ * sesgo real detectado antes de implementar esto, no solo teórico. Reduce el análisis de 36 a 6
+ * preguntas por comparación para mantenerse dentro del presupuesto de tokens/minuto del proveedor de
+ * IA (bug real de producción, 2026-08-19 — ver `PRODUCTION_RETRY_BACKOFF_MS`): medido contra la API
+ * real de Groq, 6 preguntas caben con margen en el límite gratuito incluso con las 3 comparaciones
+ * de una tacada, cosa que 36 no permitían ni con `reasoning_effort: 'low'`.
+ *
+ * `randomFn` inyectable solo para tests deterministas (por defecto `Math.random` — a diferencia de
+ * los scripts de Workflow, el código de la aplicación en ejecución no tiene esa restricción).
+ */
+export function selectSampledQuestionIds(randomFn: () => number = Math.random): number[] {
+  return BLOCK_WEIGHTS.map((_, block) => {
+    const firstIdInBlock = block * QUESTIONS_PER_BLOCK + 1;
+    const offsetWithinBlock = Math.floor(randomFn() * QUESTIONS_PER_BLOCK);
+    return firstIdInBlock + offsetWithinBlock;
+  });
+}
+
 /** Como máximo `limit` llamadas de `worker` en curso a la vez — ejecuta las `items.length` tareas
- *  hasta completarlas todas, nunca más de `limit` simultáneas (design.md, decisión 6). */
-async function runWithConcurrencyLimit<T, R>(
+ *  hasta completarlas todas, nunca más de `limit` simultáneas (design.md, decisión 6). Exportada
+ *  para poder probar el mecanismo de concurrencia en aislamiento (`analyzeComparison` ya no genera
+ *  más de un lote con la configuración actual de 6 preguntas muestreadas — ver
+ *  `selectSampledQuestionIds` —, así que ya no lo ejercita indirectamente con varios lotes reales). */
+export async function runWithConcurrencyLimit<T, R>(
   items: T[],
   limit: number,
   worker: (item: T, index: number) => Promise<R>,
@@ -131,13 +165,15 @@ async function runWithConcurrencyLimit<T, R>(
 }
 
 /**
- * Orquesta el análisis de IA de una comparación completa (design.md, decisiones 4 y 6): agrupa las
- * 36 preguntas en 6 lotes de 6, valida cada respuesta del LLM, reintenta hasta 3 veces con backoff
- * ante una respuesta inválida, respeta como máximo 2 lotes concurrentes, y al terminar deja la
- * comparación en `completed` (con los 36 resultados y el agregado persistidos) o en `error` (sin
- * persistir nada nuevo) — nunca a medias. Reutilizable tanto para el primer análisis como para un
- * reintento manual (`AnalyzeComparisonCommand`, tarea 9.13): siempre repite desde cero, borrando
- * cualquier resultado previo de esa comparación antes de empezar.
+ * Orquesta el análisis de IA de una comparación completa (design.md, decisiones 4, 6 y 6d): en vez
+ * de las 36 preguntas, selecciona 6 (1 al azar por bloque, `selectSampledQuestionIds`) y las envía
+ * en un único lote a la IA, valida la respuesta, reintenta hasta 3 veces con backoff ante una
+ * respuesta inválida, y al terminar deja la comparación en `completed` (con los 6 resultados
+ * muestreados y el agregado persistidos) o en `error` (sin persistir nada nuevo) — nunca a medias.
+ * Reutilizable tanto para el primer análisis como para un reintento manual
+ * (`AnalyzeComparisonCommand`, tarea 9.13): siempre repite desde cero, borrando cualquier resultado
+ * previo de esa comparación antes de empezar, y volviendo a muestrear 6 preguntas nuevas al azar
+ * (no necesariamente las mismas que la vez anterior).
  */
 @Injectable()
 export class AiOrchestratorService {
@@ -162,7 +198,9 @@ export class AiOrchestratorService {
     await this.clearPreviousResults(comparisonId);
 
     const pairs = buildQuestionPairs(requesterAnswers, candidateAnswers);
-    const batches = chunk(pairs, BATCH_SIZE);
+    const sampledQuestionIds = new Set(selectSampledQuestionIds());
+    const sampledPairs = pairs.filter((pair) => sampledQuestionIds.has(pair.questionId));
+    const batches = chunk(sampledPairs, BATCH_SIZE);
 
     const outcomes = await runWithConcurrencyLimit(batches, MAX_CONCURRENT_BATCHES, (batch) =>
       this.processBatch(
