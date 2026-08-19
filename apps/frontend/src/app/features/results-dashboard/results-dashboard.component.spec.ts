@@ -4,17 +4,22 @@ import {
   AggregatedResult,
   ComparisonQuestionDetail,
   ComparisonSummary,
-  OwnUserProfile,
   UserProfile,
 } from '@compatibility-check-app/shared-types';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { of } from 'rxjs';
 import { ChatService } from '../../core/chat.service';
 import { ComparisonsService } from '../../core/comparisons.service';
-import { MatchingService } from '../../core/matching.service';
 import { expectNoHorizontalOverflow } from '../../core/testing/no-horizontal-overflow';
-import { UsersService } from '../../core/users.service';
-import { ResultsDashboardComponent } from './results-dashboard.component';
+import { DASHBOARD_POLL_INTERVAL_MS, ResultsDashboardComponent } from './results-dashboard.component';
+
+/** Espera real (no `fakeAsync`/`tick` — este proyecto no carga `zone.js/testing`, ver el comentario
+ *  de cabecera de `DASHBOARD_POLL_INTERVAL_MS`): combinado con un `pollIntervalMs` de test de pocos
+ *  milisegundos (ver `setup()`), esperar un puñado de milisegundos reales es rápido y no-flaky, mismo
+ *  criterio que `TEST_DEFAULT_BACKOFF_MS` en el backend (`ai-orchestrator.service.ts`). */
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function fakeCandidate(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
@@ -70,37 +75,21 @@ function fakeDetail(overrides: Partial<ComparisonQuestionDetail> = {}): Comparis
   };
 }
 
-function ownProfile(overrides: Partial<OwnUserProfile> = {}): OwnUserProfile {
-  return {
-    id: 'user-1',
-    name: 'Ada',
-    alias: 'ada',
-    photoUrl: null,
-    questionnaireCompletedAt: '2024-01-01T00:00:00.000Z',
-    needsRecalculation: false,
-    qualityIds: [],
-    ...overrides,
-  };
-}
-
 function setup(
   options: {
     findMineSpy?: jasmine.Spy;
     comparisons?: ComparisonSummary[];
-    getOwnProfileSpy?: jasmine.Spy;
-    needsRecalculation?: boolean;
     findDetailSpy?: jasmine.Spy;
-    recalculateSpy?: jasmine.Spy;
     startConversationSpy?: jasmine.Spy;
+    /** Solo lo pasan los tests de sondeo — el resto no necesita esperar nada, así que se quedan con
+     *  el valor de producción (3000ms) de la propia `factory` del token, sin efecto real en un test
+     *  síncrono. */
+    pollIntervalMs?: number;
   } = {},
 ) {
   const findMineSpy =
     options.findMineSpy ?? jasmine.createSpy('findMine').and.returnValue(of(options.comparisons ?? [fakeComparison()]));
   const findDetailSpy = options.findDetailSpy ?? jasmine.createSpy('findDetail').and.returnValue(of([]));
-  const getOwnProfileSpy =
-    options.getOwnProfileSpy ??
-    jasmine.createSpy('getOwnProfile').and.returnValue(of(ownProfile({ needsRecalculation: options.needsRecalculation ?? false })));
-  const recalculateSpy = options.recalculateSpy ?? jasmine.createSpy('recalculate').and.returnValue(of({}));
   const startConversationSpy =
     options.startConversationSpy ?? jasmine.createSpy('startConversation').and.returnValue(of({ id: 'conv-1' }));
 
@@ -113,18 +102,16 @@ function setup(
       // a registered scale" al crear el <canvas baseChart>.
       provideCharts(withDefaultRegisterables()),
       { provide: ComparisonsService, useValue: { findMine: findMineSpy, findDetail: findDetailSpy } },
-      {
-        provide: UsersService,
-        useValue: { getOwnProfile: getOwnProfileSpy, invalidateOwnProfile: () => undefined },
-      },
-      { provide: MatchingService, useValue: { recalculate: recalculateSpy } },
       { provide: ChatService, useValue: { startConversation: startConversationSpy } },
+      ...(options.pollIntervalMs !== undefined
+        ? [{ provide: DASHBOARD_POLL_INTERVAL_MS, useValue: options.pollIntervalMs }]
+        : []),
     ],
   });
 
   const fixture = TestBed.createComponent(ResultsDashboardComponent);
   fixture.detectChanges();
-  return { fixture, findMineSpy, findDetailSpy, getOwnProfileSpy, recalculateSpy, startConversationSpy };
+  return { fixture, findMineSpy, findDetailSpy, startConversationSpy };
 }
 
 function root(fixture: ComponentFixture<ResultsDashboardComponent>): HTMLElement {
@@ -214,36 +201,64 @@ describe('ResultsDashboardComponent — detalle sin respuestas (tarea 16.2)', ()
   });
 });
 
-describe('ResultsDashboardComponent — recalcular compatibilidad (tarea 16.4)', () => {
-  it('el botón está deshabilitado cuando needsRecalculation es false', () => {
-    const { fixture } = setup({ needsRecalculation: false });
-    expect(findButton(root(fixture), 'Recalcular compatibilidad').disabled).toBe(true);
-  });
-
-  it('habilitado cuando es true; tras completarse el recálculo, se refresca con las nuevas tarjetas', async () => {
-    const getOwnProfileSpy = jasmine
-      .createSpy('getOwnProfile')
-      .and.returnValues(of(ownProfile({ needsRecalculation: true })), of(ownProfile({ needsRecalculation: false })));
+/**
+ * El botón de "Recalcular compatibilidad" se retira del dashboard a petición explícita de la
+ * usuaria (2026-08-19): ya existe un punto de entrada equivalente en `features/settings` (banner
+ * "Recalcular compatibilidad ahora", que aparece justo cuando el perfil queda pendiente de
+ * recalcular — ver spec `user-settings`), así que tenerlo TAMBIÉN aquí, casi siempre deshabilitado,
+ * era redundante. Ver el change de OpenSpec `simplify-dashboard-recalculate`.
+ */
+describe('ResultsDashboardComponent — sondeo mientras hay comparaciones pendientes (bug real)', () => {
+  /**
+   * Bug real reportado por la usuaria con captura: tras recalcular (desde Configuración, que
+   * navega aquí al terminar), las tarjetas se quedaban con el spinner para siempre — hacía falta
+   * un F5 manual para ver los resultados ya calculados. Causa: la única carga (inicial) llegaba
+   * antes de que el análisis asíncrono de IA terminara, y nada volvía a refrescar después.
+   *
+   * `pollIntervalMs` de pocos milisegundos (ver `setup()`/`DASHBOARD_POLL_INTERVAL_MS`) + una
+   * espera real corta (`wait()`), no `fakeAsync`/`tick`: este proyecto no carga `zone.js/testing`
+   * (confirmado al intentarlo — Karma lo rechaza en tiempo de ejecución), así que la única forma de
+   * comprobar que el sondeo periódico de verdad vuelve a pedir datos —y de que para cuando ya no
+   * hace falta— es dejar pasar tiempo real, aunque sea mínimo gracias al intervalo acelerado.
+   */
+  it('vuelve a pedir los datos mientras alguna comparación siga pending/analyzing, y para en cuanto todas terminan', async () => {
     const findMineSpy = jasmine
       .createSpy('findMine')
       .and.returnValues(
-        of([fakeComparison({ id: 'cmp-old', candidate: fakeCandidate({ alias: 'candidata-vieja' }) })]),
-        of([fakeComparison({ id: 'cmp-new', candidate: fakeCandidate({ alias: 'candidata-nueva' }) })]),
+        of([fakeComparison({ id: 'cmp-1', status: 'analyzing', result: null })]),
+        of([fakeComparison({ id: 'cmp-1', status: 'analyzing', result: null })]),
+        of([fakeComparison({ id: 'cmp-1', status: 'completed' })]),
       );
-    const { fixture, recalculateSpy } = setup({ getOwnProfileSpy, findMineSpy });
-    const button = findButton(root(fixture), 'Recalcular compatibilidad');
-    expect(button.disabled).toBe(false);
-    expect(root(fixture).textContent).toContain('candidata-vieja');
+    const { fixture } = setup({ findMineSpy, pollIntervalMs: 15 });
+    expect(findMineSpy).toHaveBeenCalledTimes(1); // carga inicial, síncrona
+    expect(root(fixture).querySelector('.spinner-border.text-primary')).not.toBeNull();
 
-    button.click();
-    await fixture.whenStable();
+    await wait(25);
+    fixture.detectChanges();
+    expect(findMineSpy).toHaveBeenCalledTimes(2); // seguía pendiente: vuelve a pedir sola
+
+    await wait(25);
+    fixture.detectChanges();
+    expect(findMineSpy).toHaveBeenCalledTimes(3); // esta vez llega completed
+    expect(root(fixture).querySelector('.spinner-border.text-primary')).toBeNull();
+    expect(root(fixture).textContent).toContain('Compatibilidad:');
+
+    const callsAfterCompleted = findMineSpy.calls.count();
+    await wait(25);
+    expect(findMineSpy.calls.count()).toBe(callsAfterCompleted); // nada pendiente: no pide de más
+  });
+
+  it('con todo ya completado desde el principio, no hace peticiones de sondeo de más', async () => {
+    const { fixture, findMineSpy } = setup({
+      comparisons: [fakeComparison({ status: 'completed' })],
+      pollIntervalMs: 15,
+    });
+    expect(findMineSpy).toHaveBeenCalledTimes(1);
+
+    await wait(25);
     fixture.detectChanges();
 
-    expect(recalculateSpy).toHaveBeenCalledTimes(1);
-    expect(findMineSpy).toHaveBeenCalledTimes(2);
-    expect(root(fixture).textContent).toContain('candidata-nueva');
-    expect(root(fixture).textContent).not.toContain('candidata-vieja');
-    expect(findButton(root(fixture), 'Recalcular compatibilidad').disabled).toBe(true);
+    expect(findMineSpy).toHaveBeenCalledTimes(1);
   });
 });
 

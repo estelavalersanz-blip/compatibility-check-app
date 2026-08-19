@@ -135,17 +135,27 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
    * salían alineados a la izquierda en vez de a la derecha (donde está el propio icono de
    * hamburguesa). Causa real: `.navbar-nav` es `display: flex; flex-direction: column` por debajo
    * de 768px (Bootstrap, `_navbar.scss`) — con `align-items` en su valor por defecto (`stretch`),
-   * cada `<li>` ocupa el ancho completo, y el botón (`display: inline-block`) queda alineado al
-   * inicio de ese `<li>` salvo que se indique lo contrario. `text-end` resuelve esto por
-   * `text-align`, heredado — inocuo en escritorio (`navbar-expand-md` pasa `.navbar-nav` a fila, ahí
-   * `text-align` no reposiciona los `<li>`, que ya se colocan por flexbox, no por su contenido).
-   * Depende de la misma media query que el test anterior, así que se comprueba por estructura.
+   * cada `<li>` ocupa el ancho completo.
+   *
+   * Primer intento (`text-end`, revertido) — bug real encontrado verificando en producción, no en
+   * este test: `text-align` solo reposiciona contenido `inline`/`inline-block` DENTRO de una caja,
+   * nunca la caja en sí. "Chats"/"Configuración" usan `.nav-link` (Bootstrap: `display: block`), así
+   * que `text-end` no tenía ningún efecto en ellos — solo en "Cerrar sesión" (`.btn` normal,
+   * `display: inline-block`, sin `.nav-link`). Un test que solo comprueba la CLASE presente (como
+   * este) no detecta este tipo de fallo — hacía falta medir posiciones reales en el navegador para
+   * verlo. `align-items-end` sí vale para los 3, sea cual sea su `display`: repositiona el propio
+   * `<li>` (el flex item) en el eje transversal, no su contenido interno.
+   *
+   * Depende de la misma media query que el test anterior, así que aquí solo se comprueba la clase
+   * (estructura) — la geometría real (¿de verdad queda cada botón pegado al borde derecho?) se
+   * verificó a mano en producción tras encontrar el fallo de `text-end`, no aquí.
    */
-  it('los 3 botones van alineados a la derecha en el menú móvil (clase text-end)', async () => {
+  it('los 3 botones van alineados a la derecha en el menú móvil (clase align-items-end)', async () => {
     const { harness } = await setup(true);
     const nav = rootElement(harness).querySelector('.navbar-nav');
 
-    expect(nav?.classList.contains('text-end')).toBe(true);
+    expect(nav?.classList.contains('align-items-end')).toBe(true);
+    expect(nav?.classList.contains('text-end')).toBe(false);
   });
 
   it('la cabecera usa el degradado de marca (navbar-dark), no el fondo blanco anterior', async () => {

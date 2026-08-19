@@ -176,6 +176,30 @@ describe('SettingsComponent — perfil (tarea 17.1)', () => {
     expect(getComputedStyle(img).objectFit).toBe('cover');
   });
 
+  /**
+   * Bug real reportado por la usuaria con captura (2026-08-19), distinto del anterior: no es la foto
+   * la que sale descentrada DENTRO del círculo (eso ya lo arregla `object-fit`), es el propio círculo
+   * el que sale pegado al borde izquierdo de la card en vez de centrado. Causa: `.profile-photo-picker`
+   * es `display: flex` (necesario para centrar el icono/imagen dentro del botón), lo que lo convierte
+   * en una caja de bloque — dejó de ser `inline-block`, así que el `text-center` del `<div>` padre ya
+   * no lo centra a él. `registration.component.scss` ya tenía el mismo componente con
+   * `margin: 0 auto` para compensar esto; a `settings.component.scss` (copia deliberada, no un
+   * partial compartido — ver el comentario de cabecera de ambos ficheros) se le olvidó al escribirla.
+   */
+  it('el círculo de la foto queda centrado horizontalmente (bug real: quedaba pegado a la izquierda)', async () => {
+    const { fixture } = setup();
+    await loaded(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+    const picker = root.querySelector('.profile-photo-picker');
+    if (!picker) {
+      throw new Error('No se encontró el selector de foto de perfil');
+    }
+
+    const style = getComputedStyle(picker);
+    expect(style.marginLeft).toBe(style.marginRight);
+    expect(style.marginLeft).not.toBe('0px');
+  });
+
   it('al llegar a 5 marcadas, las no marcadas quedan deshabilitadas (misma regla que el registro)', async () => {
     const { fixture } = setup();
     await loaded(fixture);

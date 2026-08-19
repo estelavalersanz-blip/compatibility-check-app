@@ -407,13 +407,21 @@ ya separa ambas zonas, un borde gris adicional no aporta nada ahí y desentonar�
 `<ul class="navbar-nav ms-auto ...">` salía alineado a la izquierda en el desplegable móvil, no a la
 derecha (donde está el propio icono de hamburguesa). Causa: `.navbar-nav` es
 `display: flex; flex-direction: column` por debajo de 768px (Bootstrap, `_navbar.scss`) — con
-`align-items` en su valor por defecto (`stretch`), cada `<li>` ocupa el ancho completo del desplegable,
-y el botón (`.btn`, `display: inline-block`) se alinea al inicio de ese `<li>` salvo que se le diga lo
-contrario. `ms-auto` no arregla esto: solo empuja el `<ul>` hacia la derecha cuando `.navbar-nav` es una
-fila (`navbar-expand-md`, ≥768px) — en columna (móvil) no tiene ningún efecto visible. Se añade
-`text-end` al mismo `<ul>` (clase final: `navbar-nav ms-auto align-items-md-center gap-2 text-end`):
-alinea el contenido inline de cada `<li>` a la derecha, inocuo en escritorio (ahí los `<li>` ya se
-posicionan por flexbox en fila, no por `text-align`).
+`align-items` en su valor por defecto (`stretch`), cada `<li>` ocupa el ancho completo del desplegable.
+`ms-auto` no arregla esto: solo empuja el `<ul>` hacia la derecha cuando `.navbar-nav` es una fila
+(`navbar-expand-md`, ≥768px) — en columna (móvil) no tiene ningún efecto visible.
+
+Primer intento (`text-end`) **revertido — bug real encontrado verificando en producción**: `text-align`
+solo reposiciona contenido `inline`/`inline-block` DENTRO de una caja, nunca la caja en sí.
+"Chats"/"Configuración" usan `.nav-link` además de `.btn` (Bootstrap: `.nav-link` es
+`display: block`), así que `text-end` no tenía ningún efecto en ellos — solo funcionaba para "Cerrar
+sesión" (sin `.nav-link`, `.btn` normal = `display: inline-block`). Se cambió a **`align-items-end`**
+en el mismo `<ul>` (clase final: `navbar-nav ms-auto align-items-md-center gap-2 align-items-end`):
+repositiona el propio `<li>` (el flex item) en el eje transversal del contenedor flex, sea cual sea el
+`display` de lo que haya dentro — vale para los 3 botones por igual. Inocuo en escritorio:
+`align-items-md-center` ya sobrescribe `align-items` a partir de 768px (Bootstrap resuelve ese empate
+de especificidad a favor de la utilidad responsive), y ahí `align-items` solo afecta a la alineación
+vertical de una fila, no a la horizontal.
 
 ## Barra de progreso ponderada del wizard del cuestionario
 
@@ -1141,15 +1149,18 @@ async recalculateNow(): Promise<void> {
 }
 ```
 
-Ninguno de los dos atajos duplica lógica de recálculo propia: ambos llaman al mismo
-`POST /users/me/recalculate` que ya usa el botón del dashboard (decisión 5b) — o, en el caso del
-cuestionario, quedan encadenados dentro del propio botón "Guardar y recalcular compatibilidad" del
-último bloque en modo edición (ver `footerButtonLabel()`/`submitLastBlock()` más arriba).
+Ninguno de los dos atajos duplica lógica de recálculo propia entre sí: ambos llaman directamente al
+mismo `POST /users/me/recalculate` — o, en el caso del cuestionario, quedan encadenados dentro del
+propio botón "Guardar y recalcular compatibilidad" del último bloque en modo edición (ver
+`footerButtonLabel()`/`submitLastBlock()` más arriba). **El dashboard ya no tiene un botón de
+recalcular propio** (retirado a petición explícita de la usuaria, 2026-08-19 — decisión original 5b de
+`design.md`, ver el change de OpenSpec `simplify-dashboard-recalculate`): resultaba redundante con
+estos dos atajos, siempre visible pero casi siempre deshabilitado. `recalculateNow()` de este
+componente llama a `POST /users/me/recalculate` por su cuenta y navega al dashboard ya con el
+recálculo en marcha, sin depender de que exista ningún botón allí.
 
 El botón "Editar tus respuestas" es `btn-outline-dark` (acción secundaria de la sección, no la principal
-de la pantalla — esa sigue siendo "Guardar cambios" del perfil). Configuración **no** duplica el botón
-de recalcular: solo enlaza al dashboard, donde vive el único control de recálculo (decisión 5b de
-`design.md`), ya habilitado allí porque `needs_recalculation` quedó en `true`.
+de la pantalla — esa sigue siendo "Guardar cambios" del perfil).
 
 ## Chat interno: botón de la card, listado y burbujas de mensaje
 
