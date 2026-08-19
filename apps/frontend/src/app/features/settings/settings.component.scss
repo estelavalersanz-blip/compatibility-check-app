@@ -6,6 +6,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  // `display: flex` (necesario para centrar el icono/imagen DENTRO del botón) convierte a este
+  // <button> en una caja de bloque — deja de ser `inline-block` (su valor nativo), así que el
+  // `text-center` del contenedor padre ya no lo centra a ÉL. Con ancho fijo + `margin: 0 auto` se
+  // centra igualmente, sin depender del `text-align` del padre. Bug real reportado por la usuaria
+  // con captura (2026-08-19): esta regla se copió de `registration.component.scss` sin esta línea,
+  // así que aquí el círculo quedaba pegado al borde izquierdo de la card en vez de centrado.
+  margin: 0 auto;
   width: 96px;
   height: 96px;
   border: none;
