@@ -106,25 +106,49 @@
           ></textarea>
         </div>
       }
-      <app-question-nav
-        [questions]="activeBlock().questions"
-        [currentIndex]="currentQuestionIndex()"
-        [maxReachedIndex]="maxReachedQuestionIndex()"
-        (indexChange)="goToQuestion($event)"
-      />
+      <div class="d-flex align-items-center justify-content-center gap-2 mt-3">
+        <button
+          type="button"
+          class="btn btn-link p-0 text-secondary block-nav-btn block-nav-previous"
+          [disabled]="currentBlockIndex() === 0"
+          (click)="previousBlockNav()"
+          aria-label="Bloque anterior"
+          title="Bloque anterior"
+        >
+          <i class="bi bi-chevron-double-left fs-5" aria-hidden="true"></i>
+        </button>
+        <app-question-nav
+          [questions]="activeBlock().questions"
+          [currentIndex]="currentQuestionIndex()"
+          [maxReachedIndex]="maxReachedQuestionIndex()"
+          (indexChange)="goToQuestion($event)"
+        />
+        <button
+          type="button"
+          class="btn btn-link p-0 text-secondary block-nav-btn block-nav-next"
+          [disabled]="isLastBlock()"
+          (click)="nextBlockNav()"
+          [attr.aria-label]="nextBlockNavLabel()"
+          [title]="nextBlockNavLabel()"
+        >
+          <i class="bi bi-chevron-double-right fs-5" aria-hidden="true"></i>
+        </button>
+      </div>
     </div>
     @if (submitError()) {
       <div class="alert alert-danger py-2 mx-3" role="alert">{{ submitError() }}</div>
     }
-    <div class="card-footer bg-white d-flex justify-content-end">
-      <button
-        type="button"
-        class="btn btn-dark"
-        [disabled]="footerButtonDisabled() || submitting()"
-        (click)="onFooterButtonClick()"
-      >
-        {{ footerButtonLabel() }}
-      </button>
-    </div>
+    @if (isLastBlock()) {
+      <div class="card-footer bg-white d-flex justify-content-end">
+        <button
+          type="button"
+          class="btn btn-dark"
+          [disabled]="footerButtonDisabled() || submitting()"
+          (click)="onFooterButtonClick()"
+        >
+          {{ footerButtonLabel() }}
+        </button>
+      </div>
+    }
   </div>
 }

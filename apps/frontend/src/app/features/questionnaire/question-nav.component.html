@@ -5,6 +5,7 @@
     [disabled]="currentIndex() === 0"
     (click)="previousQuestion()"
     aria-label="Pregunta anterior"
+    title="Pregunta anterior"
   >
     <i class="bi bi-chevron-left fs-5"></i>
   </button>
@@ -26,6 +27,7 @@
     [disabled]="currentIndex() === questions().length - 1"
     (click)="nextQuestion()"
     aria-label="Siguiente pregunta"
+    title="Siguiente pregunta"
   >
     <i class="bi bi-chevron-right fs-5"></i>
   </button>
