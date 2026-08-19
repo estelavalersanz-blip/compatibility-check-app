@@ -126,6 +126,16 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
     expect(items.every((item) => collapse?.contains(item))).toBe(true);
   });
 
+  it('la cabecera usa el degradado de marca (navbar-dark), no el fondo blanco anterior', async () => {
+    const { harness } = await setup(true);
+    const nav = rootElement(harness).querySelector('nav');
+
+    expect(nav?.classList.contains('shell-navbar')).toBe(true);
+    expect(nav?.classList.contains('navbar-dark')).toBe(true);
+    expect(nav?.classList.contains('bg-white')).toBe(false);
+    expect(nav?.classList.contains('navbar-light')).toBe(false);
+  });
+
   /**
    * Bug real encontrado en la verificación manual de la tarea 21.7: Bootstrap no carga su bundle JS
    * en este proyecto (design.md decisión 3c-bis — evita conflictos con la detección de cambios de

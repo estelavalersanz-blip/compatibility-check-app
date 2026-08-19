@@ -79,8 +79,10 @@ export class QuestionnaireComponent {
   readonly currentQuestionIndex = signal(0);
   readonly maxReachedQuestionIndex = signal(0);
 
-  /** Racha (gamificación, puramente de UI): pico de respondidas-a-la-vez visto EN ESTA sesión — se
-   *  reinicia a 0 en cada recarga a propósito, incluso si se prerellenan respuestas previas. */
+  /** Racha (gamificación, puramente de UI): pico de respondidas-a-la-vez visto hasta ahora. Arranca
+   *  con las respuestas ya guardadas de una sesión anterior (ver `applyLoadedAnswers()`), no en 0 —
+   *  encontrado en verificación manual: con 6 respuestas ya prerellenadas, mostrar "0" parecía un
+   *  fallo aunque técnicamente fuera a propósito. Solo sube a partir de ahí, nunca baja. */
   readonly streakCount = signal(0);
 
   readonly submitting = signal(false);
@@ -133,6 +135,7 @@ export class QuestionnaireComponent {
       record[answer.questionId] = answer.answer;
     }
     this.answers.set(record);
+    this.streakCount.set(this.totalAnsweredCount()); // arranca desde lo ya guardado, no desde 0
     this.loading.set(false);
     this.positionAtFirstIncompleteBlock();
   }
@@ -226,30 +229,23 @@ export class QuestionnaireComponent {
 
   /** Botón de bloque siguiente junto a los puntos de pregunta (sección 21b) — antes vivía en el
    *  footer compartiendo sitio con la acción de envío final, lo que confundía porque su función
-   *  cambiaba de golpe al llegar al último bloque (encontrado en verificación manual). Misma lógica
-   *  de siempre: avanza de verdad la primera vez (mueve `maxReachedBlockIndex`), o vuelve a
-   *  `maxReachedBlockIndex` si se estaba revisando uno anterior ("Volver a donde estabas") — nunca
-   *  retrocede el máximo alcanzado. Deshabilitado en el último bloque (plantilla, `isLastBlock()`).
-   */
+   *  cambiaba de golpe al llegar al último bloque (encontrado en verificación manual). Siempre
+   *  avanza al inmediato siguiente, sea cual sea el bloque en el que se esté — el salto directo a
+   *  "Volver a donde estabas" al revisar un bloque anterior se desactivó a petición expresa (mismo
+   *  comportamiento lineal siempre, sin excepción al revisar). `maxReachedBlockIndex` nunca
+   *  retrocede (lo sigue necesitando la barra de progreso para saber qué tramos son clicables), pero
+   *  ya no se usa para decidir A DÓNDE avanza este botón. Deshabilitado en el último bloque
+   *  (plantilla, `isLastBlock()`). */
   nextBlockNav(): void {
     if (this.isLastBlock()) {
       return;
     }
     this.saveDraft();
-    if (this.currentBlockIndex() < this.maxReachedBlockIndex()) {
-      this.enterBlock(this.maxReachedBlockIndex());
-      return;
-    }
     const next = this.currentBlockIndex() + 1;
-    this.maxReachedBlockIndex.set(next);
+    if (next > this.maxReachedBlockIndex()) {
+      this.maxReachedBlockIndex.set(next);
+    }
     this.enterBlock(next);
-  }
-
-  /** Aria-label/title del botón de bloque siguiente — mismo criterio que antes tenía el texto del
-   *  footer, ahora expuesto como nombre accesible/tooltip de un botón de icono en vez de texto de
-   *  botón completo. */
-  nextBlockNavLabel(): string {
-    return this.currentBlockIndex() < this.maxReachedBlockIndex() ? 'Volver a donde estabas' : 'Bloque siguiente';
   }
 
   /** Tramos de la barra de progreso ya visitados (tarea 14.3b): salta directo a revisar/editar. */

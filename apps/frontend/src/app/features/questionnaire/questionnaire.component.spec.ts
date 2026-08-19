@@ -314,9 +314,13 @@ describe('QuestionnaireComponent — revisar bloques ya visitados (tarea 14.3b)'
     expect(blockHeaderText(fixture)).toContain('Bloque 1');
   });
 
-  it('al revisar, el botón de bloque siguiente cambia a "Volver a donde estabas" y regresa al más avanzado, no al siguiente', () => {
-    // El texto ya no vive en el footer (sección 21b: el footer pasa a ser solo la acción final) —
-    // ahora es el aria-label/title del botón de bloque siguiente, junto a los puntos de pregunta.
+  it('al revisar un bloque anterior, el botón de bloque siguiente avanza de forma lineal (al inmediato siguiente, no al más avanzado)', () => {
+    // Desactivado a petición expresa: el botón de bloque siguiente tenía un comportamiento especial
+    // ("Volver a donde estabas") al revisar un bloque ya superado, que saltaba directo al más
+    // avanzado en vez de al inmediato siguiente. Ahora el comportamiento es siempre el mismo
+    // (lineal), sea cual sea el bloque en el que se esté — el salto directo a un bloque concreto
+    // sigue existiendo, pero solo desde los tramos de la barra de progreso (`goToBlock()`), no desde
+    // este botón.
     const { fixture } = setup({ mode: 'create' });
     start(fixture);
     clickBlockNavNext(fixture); // bloque 1 -> 2
@@ -324,11 +328,11 @@ describe('QuestionnaireComponent — revisar bloques ya visitados (tarea 14.3b)'
     segments(fixture)[0].click(); // revisar el bloque 1
     fixture.detectChanges();
 
-    expect(blockNavNextButton(fixture).getAttribute('aria-label')).toBe('Volver a donde estabas');
+    expect(blockNavNextButton(fixture).getAttribute('aria-label')).toBe('Bloque siguiente');
 
     clickBlockNavNext(fixture);
 
-    expect(blockHeaderText(fixture)).toContain('Bloque 3'); // el más avanzado, no el bloque 2
+    expect(blockHeaderText(fixture)).toContain('Bloque 2'); // el inmediato siguiente, no el bloque 3
   });
 });
 
@@ -347,6 +351,18 @@ describe('QuestionnaireComponent — prerellenado y autoguardado (tarea 14.4)', 
 
     // El bloque 1, ya completo, sigue siendo revisable desde la barra
     expect(segments(fixture)[0].disabled).toBe(false);
+  });
+
+  it('la racha arranca ya con las respuestas prerellenadas, no desde 0', () => {
+    // Encontrado en verificación manual: con 6 respuestas ya guardadas de una sesión anterior, la
+    // racha mostraba "0" al cargar — técnicamente a propósito (ver comentario anterior de
+    // streakCount, que se reiniciaba siempre), pero de cara al usuario parecía roto: "si ya hay 6
+    // respuestas escritas, la racha debería haber partido de 6, no de 0".
+    const { fixture } = setup({ mode: 'create', existingAnswers: answersFor(idsUpTo(6)) });
+    start(fixture);
+
+    const streak = root(fixture).querySelector('.bi-fire')?.parentElement?.textContent?.trim();
+    expect(streak).toContain('6');
   });
 
   it('con el cuestionario completo (modo edición), no hay bloque incompleto y aterriza en el bloque 6', () => {
