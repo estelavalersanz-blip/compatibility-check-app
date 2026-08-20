@@ -150,6 +150,13 @@ Por qué es así:
   fondos claros (p. ej. la fila de cada conversación en `features/chats`, ver más abajo) — el problema
   era específico de este badge, sobre este fondo degradado, no una regla general a cambiar en todas
   partes.
+- El botón "Cerrar sesión" lleva un `[attr.title]` con el email de la sesión activa (pedido explícito
+  de la usuaria, 2026-08-20: ver el correo con el que se ha iniciado sesión, sin ir a Configuración).
+  Es un `title` nativo del navegador, no un tooltip propio: Bootstrap no tiene su JS de tooltips
+  cargado en este proyecto (decisión 3c-bis de `design.md`), y un tooltip por hover tampoco sería
+  accesible en móvil de todos modos — por eso este `title` es solo un atajo adicional para quien usa
+  ratón, y el campo no editable de Configuración (ver más abajo) sigue siendo la fuente accesible en
+  cualquier dispositivo.
 - `<main class="container py-4 py-md-5">` es el único punto donde cada feature inyecta su contenido.
   Ninguna pantalla autenticada debería envolver su contenido en su propio `container` adicional — ya lo
   provee el shell.
@@ -191,7 +198,12 @@ este shell:
   contraseña").
 - Los `form-control` mantienen fondo claro/blanco (nunca transparentes sobre el degradado — perderían
   legibilidad), pero las etiquetas/enlaces/texto suelto de esta pantalla van en blanco
-  (`text-white`/`text-white-50`), no en `$body-color` como en Shell A.
+  (`text-white`/`text-white-50`), no en `$body-color` como en Shell A. **Esto incluye los mensajes de
+  validación** (`.invalid-feedback`, p. ej. "Mínimo 8 caracteres"): bug real reportado por la usuaria
+  con captura (2026-08-20) — se quedaron en el rojo por defecto de Bootstrap, casi ilegibles sobre el
+  propio degradado naranja→rojo de esta pantalla (rojo sobre naranja/rojo es el peor caso de contraste
+  posible). Cualquier texto suelto nuevo que se añada a Shell B debería revisarse contra esta misma
+  regla antes de asumir que el rojo/gris por defecto de Bootstrap funciona aquí.
 - El botón principal de estas 4 pantallas sigue la misma regla que el resto de la app — ver "Sistema de
   botones" más abajo (`btn-dark`, no `btn-primary`).
 - Copys y estructura exactos de cada una de las 4 pantallas: `references/design-tokens.md`.
@@ -500,8 +512,11 @@ error, a diferencia del resto de pantallas de Shell A que editan una única enti
 Contraseña** (feedback explícito de la usuaria, 2026-08-19: el cuestionario va antes que cambiar la
 contraseña, no al final):
 
-1. **Perfil**: nombre, alias (validación en vivo) y las píldoras de cualidad (`shared/quality-pill`,
-   mismo tope de 5 que el registro) — botón "Guardar cambios" (`btn-dark`) al final de esta sección. Al
+1. **Perfil**: **email de la sesión activa** (primer campo, no editable — `form-control-plaintext` +
+   `readonly`, no un `<p>`/`<span>` suelto — pedido explícito de la usuaria, 2026-08-20: no hay ningún
+   flujo de "cambiar email" en esta app), nombre, alias (validación en vivo) y las píldoras de cualidad
+   (`shared/quality-pill`, mismo tope de 5 que el registro) — botón "Guardar cambios" (`btn-dark`) al
+   final de esta sección. Al
    guardar con éxito (si la selección de cualidades cambió, lo que marca `needs_recalculation = true`),
    aparece un `alert alert-warning` con un botón **"Recalcular compatibilidad ahora"**
    (`btn-outline-dark btn-sm`) que llama directo a `POST /users/me/recalculate` y navega al dashboard —

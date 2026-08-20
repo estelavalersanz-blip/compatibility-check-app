@@ -47,6 +47,11 @@
           </div>
 
           <div class="mb-3">
+            <label class="form-label" for="settings-email">Email</label>
+            <input id="settings-email" type="email" class="form-control-plaintext" [value]="userEmail()" readonly />
+          </div>
+
+          <div class="mb-3">
             <label class="form-label" for="settings-name">Nombre completo</label>
             <input
               id="settings-name"

@@ -52,6 +52,28 @@ describe('ResetPasswordComponent (tarea 12.7, sin test propio en tasks.md)', () 
     expect(root.querySelector('#passwordConfirm')?.classList.contains('is-invalid')).toBe(true);
   });
 
+  /**
+   * Mismo bug real que en `register.component.spec.ts` — mismo mensaje ("Mínimo 8 caracteres"),
+   * mismo fondo degradado de Shell B, mismo fix (`.auth-shell .invalid-feedback` en blanco, ver
+   * `styles.scss`).
+   */
+  it('el mensaje de "Mínimo 8 caracteres" es blanco, no el rojo por defecto (bug real: casi ilegible sobre el degradado)', () => {
+    setInputValue(fixture, 'password', 'corta1');
+    setInputValue(fixture, 'passwordConfirm', 'corta1');
+
+    submitForm(fixture);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const feedback = Array.from(root.querySelectorAll<HTMLElement>('.invalid-feedback')).find((el) =>
+      el.textContent?.includes('Mínimo 8 caracteres'),
+    );
+    if (!feedback) {
+      throw new Error('No se encontró el mensaje de "Mínimo 8 caracteres"');
+    }
+    expect(getComputedStyle(feedback).color).toBe('rgb(255, 255, 255)');
+  });
+
   it('con contraseñas válidas y coincidentes, actualiza la contraseña y navega a la ruta principal', async () => {
     updateSpy.and.resolveTo(undefined);
     setInputValue(fixture, 'password', 'contraseñaLarga1');

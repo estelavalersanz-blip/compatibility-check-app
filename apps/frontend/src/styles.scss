@@ -49,3 +49,16 @@ $font-family-base: 'Poppins', 'DM Sans', 'Roboto', system-ui, sans-serif;
 .auth-shell a {
   color: #ffffff;
 }
+
+// Bug real reportado por la usuaria: `.invalid-feedback` (mensajes de "Mínimo 8 caracteres", "Las
+// contraseñas no coinciden", etc.) se quedó fuera de la regla de arriba — sigue el rojo por defecto
+// de Bootstrap (`$danger`, sin recompilar en este proyecto), casi ilegible sobre el propio degradado
+// naranja→rojo de esta pantalla (contraste medido: ~1.3-1.8:1, muy por debajo del 4.5:1 de WCAG AA —
+// rojo sobre naranja/rojo es justo el peor caso posible, dos colores casi análogos). Mismo criterio
+// que el resto de texto suelto de Shell B: blanco. El contraste resultante tampoco es perfecto en el
+// extremo más claro del degradado (~2.5:1) — ningún color plano fijo llega a AA en las dos puntas de
+// este degradado en concreto — pero es muchísimo mejor que el rojo original y consistente con las
+// demás reglas de esta pantalla, sin reintroducir la card blanca que Shell B rechaza a propósito.
+.auth-shell .invalid-feedback {
+  color: #ffffff;
+}
