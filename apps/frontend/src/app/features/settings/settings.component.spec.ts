@@ -379,8 +379,8 @@ describe('SettingsComponent — aviso de recalcular (tarea 17.1b)', () => {
 describe('SettingsComponent — cambio de contraseña (tarea 17.3)', () => {
   function passwordForm(fixture: ComponentFixture<SettingsComponent>): void {
     setInputValue(fixture, 'current-password', 'actualCorrecta1');
-    setInputValue(fixture, 'new-password', 'nuevaContrasena1');
-    setInputValue(fixture, 'new-password-confirm', 'nuevaContrasena1');
+    setInputValue(fixture, 'new-password', 'NuevaContrasena1!');
+    setInputValue(fixture, 'new-password-confirm', 'NuevaContrasena1!');
   }
 
   it('reintenta signInWithPassword con la contraseña actual antes de llamar a updateUser', async () => {
@@ -394,7 +394,7 @@ describe('SettingsComponent — cambio de contraseña (tarea 17.3)', () => {
     await loaded(fixture);
 
     expect(auth.signInWithPassword).toHaveBeenCalledWith('ada@example.com', 'actualCorrecta1');
-    expect(auth.updatePassword).toHaveBeenCalledWith('nuevaContrasena1');
+    expect(auth.updatePassword).toHaveBeenCalledWith('NuevaContrasena1!');
   });
 
   it('si la contraseña actual es incorrecta, no llama a updateUser y no cambia la contraseña', async () => {
@@ -411,6 +411,27 @@ describe('SettingsComponent — cambio de contraseña (tarea 17.3)', () => {
     expect(auth.updatePassword).not.toHaveBeenCalled();
     const root = fixture.nativeElement as HTMLElement;
     expect(root.textContent).toContain('no es correcta');
+  });
+
+  /**
+   * Requisitos endurecidos el 2026-08-20 a petición explícita de la usuaria: además del mínimo de 8
+   * caracteres, la NUEVA contraseña necesita mayúscula, minúscula y carácter especial — mismo
+   * validador compartido que registro/reset (ver `password-validators.spec.ts`). La contraseña
+   * ACTUAL no lleva este validador (solo `Validators.required`): no tendría sentido exigir
+   * retroactivamente estas reglas a una contraseña ya creada bajo las reglas antiguas.
+   */
+  it('rechaza una contraseña nueva sin mayúscula ni carácter especial, sin llamar a updateUser', async () => {
+    const auth = fakeAuthServiceForSettings();
+    const { fixture } = setup({ auth });
+    await loaded(fixture);
+    setInputValue(fixture, 'current-password', 'actualCorrecta1');
+    setInputValue(fixture, 'new-password', 'todaminuscula1');
+    setInputValue(fixture, 'new-password-confirm', 'todaminuscula1');
+    await loaded(fixture);
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(findButton(root, 'Cambiar contraseña').disabled).toBe(true);
+    expect(auth.updatePassword).not.toHaveBeenCalled();
   });
 });
 

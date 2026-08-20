@@ -4,15 +4,17 @@
 
 Muestra a cada usuario el estado y resultado de sus comparaciones con sus candidatos — foto, alias,
 score final, gráfico radar por dimensión y detalle expandible por pregunta, sin exponer nunca el texto
-de ninguna respuesta — y ofrece el punto de entrada para recalcular la compatibilidad y para iniciar
-un chat con un candidato. Es también la pantalla principal de la aplicación una vez completado el
-cuestionario.
+de ninguna respuesta — y ofrece el punto de entrada para iniciar un chat con un candidato. Es también
+la pantalla principal de la aplicación una vez completado el cuestionario, y se mantiene actualizada
+por sí sola mientras el análisis o un recálculo (activado desde `user-settings`) sigan en curso.
 
 ## Requirements
 
 ### Requirement: Visualización de las comparaciones de un usuario
 El sistema SHALL mostrar al usuario, tras completar su cuestionario, el estado y resultado de cada una
-de sus comparaciones con foto, alias y score del candidato correspondiente.
+de sus comparaciones con foto, alias y score del candidato correspondiente, y SHALL mantener esa vista
+actualizada por sí solo mientras el análisis de alguna comparación siga en curso, sin exigir que la
+persona recargue la página a mano.
 
 #### Scenario: Dashboard con comparaciones completadas
 - **WHEN** las comparaciones de un usuario han terminado su análisis
@@ -26,9 +28,16 @@ de sus comparaciones con foto, alias y score del candidato correspondiente.
 - **THEN** el sistema muestra el progreso (cuántas de las comparaciones están completadas) en vez del
   resultado final de las que faltan
 
+#### Scenario: El dashboard se actualiza solo cuando el análisis termina, sin recargar la página
+- **WHEN** el usuario tiene el dashboard abierto con alguna comparación todavía en `pending` o
+  `analyzing` (por ejemplo, justo después de activar un recálculo desde Configuración)
+- **THEN** el sistema vuelve a consultar el estado de las comparaciones periódicamente por su cuenta, y
+  la tarjeta correspondiente pasa de mostrar el spinner de análisis a mostrar el resultado final en
+  cuanto está disponible, sin que la persona tenga que recargar la página
+
 #### Scenario: Detalle expandible por pregunta, sin exponer respuestas
 - **WHEN** el usuario expande una tarjeta de resultado
-- **THEN** el sistema muestra, para cada una de las 36 preguntas, el texto de la pregunta, sus
+- **THEN** el sistema muestra, para cada una de las preguntas analizadas, el texto de la pregunta, sus
   puntuaciones por dimensión y la explicación de la IA, **sin incluir en ningún caso el texto de la
   respuesta propia ni la del candidato**
 
@@ -53,24 +62,6 @@ de la IA por pregunta son visibles.
 - **WHEN** el usuario expande el detalle de una comparación con un candidato
 - **THEN** tampoco ve su propia respuesta a cada pregunta en esa vista — el detalle es exclusivamente
   de puntuaciones y explicación, igual para ambas partes de la comparación
-
-### Requirement: Botón de recalcular compatibilidad en el dashboard
-El sistema SHALL mostrar en el dashboard un botón de "recalcular compatibilidad", habilitado únicamente
-cuando el perfil del usuario está marcado como pendiente de recalcular (ver `candidate-matching`), y
-SHALL refrescar el gráfico y las tarjetas con los nuevos resultados una vez completado el recálculo.
-
-#### Scenario: Botón deshabilitado sin cambios pendientes
-- **WHEN** el usuario no ha editado sus respuestas ni sus cualidades desde el último cálculo
-- **THEN** el botón de recalcular compatibilidad aparece deshabilitado u oculto en el dashboard
-
-#### Scenario: Botón habilitado tras editar respuestas o cualidades
-- **WHEN** el perfil del usuario está marcado como pendiente de recalcular
-- **THEN** el botón de recalcular compatibilidad aparece habilitado en el dashboard
-
-#### Scenario: El dashboard refleja el recálculo
-- **WHEN** el usuario activa el recálculo y el nuevo análisis termina
-- **THEN** el dashboard muestra las nuevas tarjetas y gráficos con los resultados actualizados,
-  reemplazando los anteriores
 
 ### Requirement: Enrutamiento de la página principal según el estado del usuario
 El sistema SHALL mostrar como página principal el cuestionario mientras el usuario autenticado (con

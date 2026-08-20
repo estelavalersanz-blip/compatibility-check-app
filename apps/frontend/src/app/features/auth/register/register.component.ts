@@ -4,7 +4,11 @@ import { isAuthApiError } from '@supabase/supabase-js';
 import { Router, RouterLink } from '@angular/router';
 import { AuthShellComponent } from '../../../core/auth-shell/auth-shell.component';
 import { AuthService } from '../../../core/auth.service';
-import { passwordMinLengthValidator, passwordsMatchValidator } from '../../../shared/password-validators';
+import {
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  passwordStrengthValidator,
+  passwordsMatchValidator,
+} from '../../../shared/password-validators';
 
 /**
  * Registro paso 1 (Shell B — spec `authentication`, "Registro con email y contraseña"; spec
@@ -25,13 +29,14 @@ export class RegisterComponent {
   readonly form = this.fb.group(
     {
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, passwordMinLengthValidator]],
+      password: ['', [Validators.required, passwordStrengthValidator]],
       passwordConfirm: ['', Validators.required],
     },
     { validators: passwordsMatchValidator },
   );
   readonly submitting = signal(false);
   readonly submitError = signal<string | null>(null);
+  readonly passwordRequirementsMessage = PASSWORD_REQUIREMENTS_MESSAGE;
 
   async onSubmit(): Promise<void> {
     if (this.form.invalid) {

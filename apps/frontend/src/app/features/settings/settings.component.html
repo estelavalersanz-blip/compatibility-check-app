@@ -163,7 +163,8 @@
               formControlName="password"
               [class.is-invalid]="passwordForm.controls.password.invalid && passwordForm.controls.password.touched"
             />
-            <div class="invalid-feedback">Mínimo 8 caracteres.</div>
+            <div class="form-text">{{ passwordRequirementsMessage }}</div>
+            <div class="invalid-feedback">{{ passwordRequirementsMessage }}</div>
           </div>
           <div class="mb-3">
             <label class="form-label" for="new-password-confirm">Repite la nueva contraseña</label>

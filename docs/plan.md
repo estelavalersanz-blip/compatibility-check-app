@@ -505,28 +505,54 @@ Pantallas (12 en total — ver `.claude/skills/ui-design-consistency/` para el m
    desde 2026-08-19, no las 36 completas — ver "Orquestación de las llamadas a IA") con sus
    puntuaciones y la explicación de la IA — **nunca el texto de ninguna respuesta**, ni la propia ni la del candidato; solo
    puntuaciones y, opcionalmente, la justificación de la IA. Las tarjetas se ordenan de mayor a menor
-   `compatibilidad_final`. Incluye el botón "recalcular compatibilidad" (`btn-dark`, habilitado solo si
-   `needs_recalculation=true`), que llama a `POST /users/me/recalculate` y refresca el dashboard al
-   completarse. Cada tarjeta incluye además un botón **"Chatear"** que inicia (o reutiliza, si ya
-   existía) una conversación con ese candidato vía `POST /conversations` y navega a ella.
-6. **Configuración** (`features/settings`): accesible desde el botón de ajustes de la cabecera, con 3
-   secciones dentro de la misma card. **Perfil**: nombre, alias, foto y píldoras de cualidad (mismas
-   reglas que el registro) — botón "Guardar cambios"; si cambiaron las cualidades, aparece un aviso con
-   un atajo **"Recalcular compatibilidad ahora"** que llama directo a `POST /users/me/recalculate` sin
-   tener que ir antes al dashboard. **Cuestionario**: un resumen (fecha de finalización) y un botón
-   **"Editar tus respuestas"** que **navega** (no despliega inline) a `features/questionnaire` en modo
-   edición — ver el punto 3 para el guardado combinado con recálculo. **Contraseña**: contraseña actual +
-   nueva, con reautenticación.
+   `compatibilidad_final`. El dashboard se actualiza solo, sondeando cada pocos segundos mientras alguna
+   comparación siga en `pending`/`analyzing` (p. ej. justo tras activar un recálculo desde
+   Configuración), sin exigir recargar la página — bug real corregido el 2026-08-20 (antes solo se
+   consultaba una vez, así que las tarjetas se quedaban con el spinner hasta un F5 manual). **Ya no
+   tiene su propio botón de recalcular** (retirado el 2026-08-20, redundante con el atajo de
+   Configuración, ver punto 6 — era casi siempre inerte, solo se habilitaba si
+   `needs_recalculation=true`). Cada tarjeta incluye además un botón **"Chatear"** que inicia (o
+   reutiliza, si ya existía) una conversación con ese candidato vía `POST /conversations` y navega a
+   ella.
+6. **Configuración** (`features/settings`): accesible desde el botón de ajustes de la cabecera, con
+   **3 cards independientes** apiladas (no una única card con 3 secciones, pese a lo que decía una
+   versión anterior de este documento — son 3 acciones de guardado independientes, cada una con su
+   propio botón). **Perfil**: email de la sesión activa (primer campo, no editable — esta app no tiene
+   ningún flujo para cambiar el email de una cuenta ya creada), nombre, alias, foto y píldoras de
+   cualidad (mismas reglas que el registro) — botón "Guardar cambios"; si cambiaron las cualidades,
+   aparece un aviso con un atajo **"Recalcular compatibilidad ahora"** que llama directo a
+   `POST /users/me/recalculate` — único punto de entrada de esta acción en toda la app desde el
+   2026-08-20 (ver punto 5). **Cuestionario**: un resumen (fecha de finalización) y un botón **"Editar
+   tus respuestas"** que **navega** (no despliega inline) a `features/questionnaire` en modo edición —
+   ver el punto 3 para el guardado combinado con recálculo. **Contraseña**: contraseña actual + nueva,
+   con reautenticación. Este orden (Perfil → Cuestionario → Contraseña) es explícito, a petición de la
+   usuaria.
 7. **Chats** (`features/chats` y `features/chats/:id`): listado de todas las conversaciones del usuario
    (las que él inició y las que otros le iniciaron a él, aunque no le tengan como candidato propio),
-   ordenadas por actividad reciente, con indicador de no leídos; al abrir una, la conversación muestra
+   ordenadas por actividad reciente, con indicador de no leídos (número real de mensajes pendientes,
+   suma de todas las conversaciones — no solo un punto sin cifra); al abrir una, la conversación muestra
    los mensajes en burbujas (propios a la derecha en `$primary`, del otro participante a la izquierda en
    `$light`) y un campo para responder. Se actualiza por sondeo (~4s con la conversación abierta, ~20-30s
    el contador de no leídos del menú) — sin WebSockets (ver `design.md` decisión 9).
 
+**Configuración y Chats como "modal" sobre la pantalla principal** (decisión del 2026-08-19, a petición
+explícita de la usuaria): las 3 pantallas de los puntos 6 y 7 llevan un botón de cierre explícito ("×")
+que navega a la pantalla principal (mismo destino que el logo de la cabecera), en vez de depender solo
+del botón atrás del navegador — son *acciones puntuales* sobre el flujo principal, no destinos
+permanentes como el dashboard. Es solo un restyle visual (`shared/modal-panel`): las rutas, guards y
+navegación siguen exactamente igual que antes. Una primera versión con backdrop oscurecido y card
+centrada se simplificó tras verla en producción (sin la pantalla anterior realmente montada detrás, no
+había nada que mostrar oscurecido, y la card podía quedar tapada por la propia cabecera) — el diseño
+final ocupa todo el ancho, como cualquier otra pantalla. Detalle completo:
+`.claude/skills/ui-design-consistency/SKILL.md`, "Configuración y Chats: cierre explícito...".
+
 Toda pantalla autenticada (salvo completar perfil, que solo lleva logo + cerrar sesión) comparte una
 **cabecera** (`core/shell`) con, en la esquina superior derecha, el icono de chat (con indicador de no
 leídos), el botón de configuración y el botón de cerrar sesión (`supabase.auth.signOut`), en ese orden.
+El botón de cerrar sesión lleva además el email de la sesión activa como `title` nativo del navegador
+(pedido explícito de la usuaria, 2026-08-20, junto al campo de solo lectura del punto 6 — ver
+"Configuración" más arriba); no es un tooltip propio, ya que Bootstrap no tiene su JS de tooltips
+cargado en este proyecto y tampoco sería accesible en móvil de todos modos.
 
 **Enrutamiento de la página principal (`/`)**, en orden de prioridad: sin sesión → landing (punto 0); con
 sesión pero **sin fila de perfil** → completar perfil paso 1, sin excepción, para cualquier ruta que se

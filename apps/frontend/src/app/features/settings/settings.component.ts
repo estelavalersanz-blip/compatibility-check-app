@@ -11,7 +11,11 @@ import { QualitiesService } from '../../core/qualities.service';
 import { UsersService } from '../../core/users.service';
 import { aliasAvailableValidator } from '../../shared/alias-available.validator';
 import { ModalPanelComponent } from '../../shared/modal-panel/modal-panel.component';
-import { passwordMinLengthValidator, passwordsMatchValidator } from '../../shared/password-validators';
+import {
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  passwordStrengthValidator,
+  passwordsMatchValidator,
+} from '../../shared/password-validators';
 import { QualityPillComponent } from '../../shared/quality-pill/quality-pill.component';
 
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -98,7 +102,7 @@ export class SettingsComponent {
   readonly passwordForm = this.fb.group(
     {
       currentPassword: ['', [Validators.required]],
-      password: ['', [Validators.required, passwordMinLengthValidator]],
+      password: ['', [Validators.required, passwordStrengthValidator]],
       passwordConfirm: ['', [Validators.required]],
     },
     { validators: passwordsMatchValidator },
@@ -106,6 +110,7 @@ export class SettingsComponent {
   readonly passwordSubmitting = signal(false);
   readonly passwordError = signal<string | null>(null);
   readonly passwordSuccess = signal(false);
+  readonly passwordRequirementsMessage = PASSWORD_REQUIREMENTS_MESSAGE;
 
   constructor() {
     // Primera carga con suscripción directa, nunca envuelta en un timer/interval (gotcha zoneless ya

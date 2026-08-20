@@ -88,8 +88,9 @@ comparaciones anteriores.
 - **WHEN** un usuario cambia únicamente su selección de cualidades (sin tocar el cuestionario) desde
   configuración
 - **THEN** el sistema marca el perfil como pendiente de recalcular y espera a que el usuario active
-  explícitamente el recálculo (desde el atajo de configuración o desde el dashboard) — guardar el
-  cambio de cualidades no recalcula por sí solo
+  explícitamente el recálculo desde el atajo de configuración (único punto de entrada de esta acción
+  en la interfaz — ver `user-settings`/`results-dashboard`) — guardar el cambio de cualidades no
+  recalcula por sí solo
 
 ### Requirement: La pre-compatibilidad por cualidades no participa en el cálculo ponderado final
 El sistema SHALL usar el número de cualidades coincidentes únicamente como criterio de selección de
