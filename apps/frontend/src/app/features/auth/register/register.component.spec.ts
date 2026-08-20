@@ -64,6 +64,32 @@ describe('RegisterComponent (tarea 12.3)', () => {
     expect(root.querySelector('#password')?.classList.contains('is-invalid')).toBe(true);
   });
 
+  /**
+   * Bug real reportado por la usuaria: el mensaje de "Mínimo 8 caracteres" (`.invalid-feedback`) se
+   * quedaba en el rojo por defecto de Bootstrap (`$danger`, sin recompilar aquí), casi ilegible sobre
+   * el degradado naranja→rojo de Shell B (contraste medido ~1.3-1.8:1, muy por debajo del 4.5:1 de
+   * WCAG AA — rojo sobre naranja/rojo es el peor caso posible). Mismo criterio que el resto de texto
+   * suelto de esta pantalla (`.auth-shell .form-label`/`.form-text`/`a`, ya en blanco): ver
+   * `styles.scss`.
+   */
+  it('el mensaje de "Mínimo 8 caracteres" es blanco, no el rojo por defecto (bug real: casi ilegible sobre el degradado)', () => {
+    setInputValue(fixture, 'email', 'nueva@example.com');
+    setInputValue(fixture, 'password', 'corta1');
+    setInputValue(fixture, 'passwordConfirm', 'corta1');
+
+    submitForm(fixture);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const feedback = Array.from(root.querySelectorAll<HTMLElement>('.invalid-feedback')).find((el) =>
+      el.textContent?.includes('Mínimo 8 caracteres'),
+    );
+    if (!feedback) {
+      throw new Error('No se encontró el mensaje de "Mínimo 8 caracteres"');
+    }
+    expect(getComputedStyle(feedback).color).toBe('rgb(255, 255, 255)');
+  });
+
   it('muestra el error de email ya en uso sin crear una cuenta duplicada', async () => {
     // `isAuthApiError` (usado por el componente) comprueba el marcador `__isAuthError`, no
     // `instanceof AuthApiError` — verificado leyendo la implementación real de `@supabase/auth-js`.
