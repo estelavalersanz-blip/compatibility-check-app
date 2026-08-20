@@ -12,6 +12,9 @@ Trabajo de Fin de Máster.
 - **Frontend**: [Angular](https://angular.dev/) 22 + Bootstrap 5 / Bootstrap Icons / ng-bootstrap
   (recompilado desde Sass con la paleta de marca AfinIA) + `@supabase/supabase-js`.
 - **Datos/Auth/Storage**: [Supabase](https://supabase.com/) (PostgreSQL + Auth + Storage).
+- **Docker**: no se usa en producción — la CLI de Supabase (`npx supabase start`) lo usa para levantar
+  una réplica local completa del stack (Postgres, Auth, Storage, Kong...), tanto para desarrollo local
+  como para el job de tests de integración de la CI, contra una base de datos real en vez de mocks.
 - **Tipos compartidos**: `packages/shared-types` (contrato único frontend/backend, validado con Zod).
 - **CI**: GitHub Actions (lint + tests unitarios + tests e2e + build, y tests de integración contra
   el stack local de Supabase). Despliegue vía integración nativa de Vercel (frontend) y Render
@@ -94,6 +97,189 @@ docs/
   architecture.md  # Configuración resultante de infraestructura (Auth, Storage, CI/CD)
   brand/           # Assets de marca (logo, favicons)
 ```
+
+## Modelo de datos
+
+```mermaid
+erDiagram
+    USERS ||--o{ USER_QUALITIES : elige
+    QUALITIES ||--o{ USER_QUALITIES : "elegida por"
+    USERS ||--o| QUESTIONNAIRES : responde
+    USERS ||--o{ COMPARISONS : "es requester en"
+    USERS ||--o{ COMPARISONS : "es candidate en"
+    COMPARISONS ||--o{ COMPARISON_QUESTION_RESULTS : detalla
+    COMPARISONS ||--o| COMPARISON_AGGREGATED_RESULTS : agrega
+    USERS ||--o{ CONVERSATIONS : "participa (A o B)"
+    CONVERSATIONS ||--o{ MESSAGES : contiene
+    USERS ||--o{ MESSAGES : envía
+
+    USERS {
+        uuid id PK "1:1 con auth.users"
+        text name
+        text alias "único"
+        text photo_url
+        timestamptz questionnaire_completed_at
+        boolean needs_recalculation
+    }
+    QUALITIES {
+        uuid id PK
+        text name "único, catálogo de 15"
+    }
+    USER_QUALITIES {
+        uuid user_id PK_FK
+        uuid quality_id PK_FK
+    }
+    QUESTIONNAIRES {
+        uuid id PK
+        uuid user_id FK "único (1:1)"
+        jsonb answers "AnswerSet, 0-36 elementos"
+    }
+    COMPARISONS {
+        uuid id PK
+        uuid requester_user_id FK
+        uuid candidate_user_id FK
+        text status "pending/analyzing/completed/error"
+        int shared_qualities_count
+    }
+    COMPARISON_QUESTION_RESULTS {
+        uuid id PK
+        uuid comparison_id FK
+        int question_id
+        jsonb result "ComparisonResult, 13 claves"
+    }
+    COMPARISON_AGGREGATED_RESULTS {
+        uuid id PK
+        uuid comparison_id FK "único (1:1)"
+        jsonb result "AggregatedResult, 6 dimensiones + final"
+    }
+    CONVERSATIONS {
+        uuid id PK
+        uuid user_a_id FK "user_a_id < user_b_id"
+        uuid user_b_id FK
+    }
+    MESSAGES {
+        uuid id PK
+        uuid conversation_id FK
+        uuid sender_id FK
+        text body "cifrado, AES-256-GCM"
+        text iv "null = mensaje anterior al cifrado"
+        text auth_tag
+        timestamptz read_at
+    }
+```
+
+`comparisons` y sus dos tablas de detalle no tienen `GRANT` a `authenticated` — solo el backend con
+`service_role` accede a ellas (ver "Seguridad"). Esquema completo, con comentarios de cada decisión,
+en [`supabase/migrations/`](supabase/migrations/).
+
+## Integración con la IA: ejemplo real
+
+Petición real a Groq (`apps/backend/src/ai/groq.provider.ts`) — un lote de 6 preguntas por llamada,
+recortado aquí a 1 para que se lea cómodo:
+
+```json
+{
+  "model": "openai/gpt-oss-120b",
+  "reasoning_effort": "low",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Eres un psicólogo especializado en relaciones de pareja y compatibilidad interpersonal... Debes responder ÚNICAMENTE con un array JSON válido... con exactamente un objeto por cada pregunta recibida... (prompt completo en apps/backend/src/ai/prompts/compatibility-prompt.ts)"
+    },
+    {
+      "role": "user",
+      "content": "Compara las siguientes 6 preguntas y respuestas entre los usuarios \"a1b2c3d4-...\" y \"e5f6a7b8-...\":\n\n1. Pregunta: \"¿Qué significa para ti tener una 'vida perfecta'?\"\n   Respuesta de \"a1b2c3d4-...\": \"No tener una lista de tareas pendientes resonando en la cabeza todo el tiempo.\"\n   Respuesta de \"e5f6a7b8-...\": \"Tener tiempo de sobra para mis proyectos y la gente que quiero.\"\n\n[... 5 preguntas más del mismo bloque ...]\n\nDevuelve el array JSON con 6 objetos, en el mismo orden que las preguntas anteriores."
+    }
+  ]
+}
+```
+
+Respuesta cruda de la API (formato estándar de chat completion; `content` es un string, no JSON
+anidado de verdad):
+
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "content": "[{\"pregunta\":\"¿Qué significa para ti tener una 'vida perfecta'?\",\"id_usuario_1\":\"a1b2c3d4-...\",\"respuesta_usuario_1\":\"No tener una lista de tareas pendientes...\",\"id_usuario_2\":\"e5f6a7b8-...\",\"respuesta_usuario_2\":\"Tener tiempo de sobra...\",\"compatibilidad\":7.80,\"emocional\":7.50,\"valores\":8.20,\"estilo\":6.90,\"intereses\":7.00,\"madurez\":8.00,\"apertura\":7.60,\"explicación\":\"Ambos priorizan el tiempo personal sobre la productividad, aunque lo enmarcan de forma algo distinta.\"}, ...]"
+      }
+    }
+  ]
+}
+```
+
+Ese `content`, ya descodificado y validado contra el esquema esperado
+(`comparisonResultSchema` de `shared-types`) antes de persistirse — el primero de los 6 objetos:
+
+```json
+{
+  "pregunta": "¿Qué significa para ti tener una 'vida perfecta'?",
+  "id_usuario_1": "a1b2c3d4-...",
+  "respuesta_usuario_1": "No tener una lista de tareas pendientes resonando en la cabeza todo el tiempo.",
+  "id_usuario_2": "e5f6a7b8-...",
+  "respuesta_usuario_2": "Tener tiempo de sobra para mis proyectos y la gente que quiero.",
+  "compatibilidad": 7.80,
+  "emocional": 7.50,
+  "valores": 8.20,
+  "estilo": 6.90,
+  "intereses": 7.00,
+  "madurez": 8.00,
+  "apertura": 7.60,
+  "explicación": "Ambos priorizan el tiempo personal sobre la productividad, aunque lo enmarcan de forma algo distinta."
+}
+```
+
+Este detalle por pregunta (con `respuesta_usuario_1/2` incluidas) se guarda tal cual en
+`comparison_question_results` — pero nunca se expone por API (ver "Seguridad"): el endpoint de
+detalle filtra esas dos claves antes de responder.
+
+## Arquitectura
+
+Más allá de qué tecnologías se usan (arriba) y dónde vive cada cosa (arriba), estas son las
+decisiones de diseño detrás del código:
+
+- **CQRS selectivo**: `@nestjs/cqrs` con Commands solo donde hay un evento de dominio real que
+  publicar (completar el cuestionario), no en cada operación de escritura — el resto (`PATCH` de
+  perfil, envío de un mensaje de chat...) son servicios normales, sin la sobrecarga de un Command
+  para algo que no lo necesita.
+- **Módulos desacoplados por eventos, al estilo mediator**: `QuestionnaireCompletedEvent` dispara la
+  selección de candidatos (`matching`), que a su vez publica `ComparisonsCreatedEvent` y desencadena
+  el análisis por IA (`ai`). Ninguno de los tres módulos importa a los otros dos — solo conocen el
+  tipo del evento al que reaccionan, nunca la clase concreta que lo publicó.
+- **Puertos y adaptadores para el proveedor de IA** (mismo espíritu que Clean Architecture, sin
+  llevarlo a los cuatro anillos completos): `ai-provider.interface.ts` aísla al orquestador de si el
+  proveedor activo es Groq u OpenRouter — añadir un proveedor nuevo, o cambiar el activo, es una
+  clase nueva implementando la misma interfaz, sin tocar el resto del sistema.
+- **El backend como único gatekeeper para los datos sensibles**: `comparisons` y los mensajes de
+  chat nunca son accesibles directamente por el cliente, ni siquiera con RLS de por medio — todo
+  pasa por el backend. Para el resto (`users`, `questionnaires`) sí hay acceso directo por
+  PostgREST, protegido en una segunda capa por RLS — dos estrategias de seguridad distintas, elegida
+  cada una según qué tan sensible es el dato.
+- **Frontend zoneless**: sin `zone.js`, la reactividad depende solo de *signals* — guards
+  funcionales que devuelven un `UrlTree` en vez de una ruta a pelo, e intervalos de sondeo
+  inyectables (`InjectionToken`) para poder sobreescribirlos en los tests.
+
+## Seguridad
+
+- **Contraseñas nunca en texto plano**: Supabase Auth (GoTrue) las hashea con `bcrypt` antes de
+  persistirlas — este código no las ve, no las loguea, no las guarda él mismo. Toda contraseña nueva
+  exige además mayúscula, minúscula y carácter especial, informado *antes* de fallar, no solo después
+  (ver "Usuario y contraseña de prueba").
+- **JWT delegado, no reinventado**: el backend nunca implementa su propia verificación de firma ni
+  gestiona un secreto de JWT propio — valida cada token llamando a la propia API de Supabase Auth
+  (`getUser`), la misma fuente de verdad que lo emitió.
+- **El backend como único gatekeeper para lo más sensible**: `comparisons` y los mensajes de chat
+  (ver "Arquitectura") nunca son accesibles directamente por el cliente, ni con RLS de por medio.
+- **Minimización de información**: pedir el detalle de una comparación o un mensaje que no es tuyo,
+  o que directamente no existe, responde exactamente lo mismo en los dos casos (un 404 idéntico) —
+  nunca revela si algo existe pero no es tuyo frente a si no existe en absoluto.
+- **Cifrado en reposo del chat**: el cuerpo de cada mensaje se cifra con AES-256-GCM antes de
+  guardarse en Postgres, con una clave propia de la aplicación (`CHAT_ENCRYPTION_KEY`) que solo tiene
+  el backend, nunca en el repositorio — cifrado en reposo, no de extremo a extremo (ver "Próximas
+  mejoras" para el motivo).
+- **CORS restringido**: el backend solo acepta peticiones de los orígenes configurados
+  explícitamente en `CORS_ORIGIN`, nunca abierto a cualquier origen.
 
 ## Empezar a desarrollar
 
@@ -242,6 +428,21 @@ end-to-end) marcado explícitamente:
     real el nivel de protección — contra una fuga de la base de datos, una `service_role key`
     filtrada, o alguien mirando el dashboard de Supabase directamente — con una fracción de la
     complejidad operativa de E2EE de verdad.
+
+## Metodología
+
+- **TDD real, no solo "hay tests"**: ciclo rojo-verde-refactor en las 4 capas del proyecto —
+  funciones puras de dominio (sin mocks), servicios con dependencias externas (contra una
+  interfaz/mock, nunca la red real), tests de integración contra un Supabase real (nunca el proyecto
+  real — `test/factories/` + un pool fijo de cuentas), y e2e de cada endpoint. Ninguna tarea se da
+  por completada sin su test correspondiente en verde.
+- **Demostrado, no solo prometido**: el caso más claro es la política RLS de `users` — sin ella, 7 de
+  los 10 casos de test fallan de verdad (confirmando el hueco real); con ella aplicada, 10 de 10 en
+  verde. Rojo antes de arreglar, verde después — nunca al revés.
+- **Logging estructurado** (`nestjs-pino`, JSON de fábrica, no un wrapper a mano) para no depurar a
+  ciegas, sobre todo en la orquestación de llamadas a IA — la parte con más superficie de fallo real
+  (red, límites de tasa del proveedor, JSON mal formado del LLM).
+- **Desarrollo guiado por especificación**: ver la siguiente sección.
 
 ## Documentación y flujo de trabajo
 
