@@ -17,6 +17,55 @@ Trabajo de Fin de Máster.
   el stack local de Supabase). Despliegue vía integración nativa de Vercel (frontend) y Render
   (backend) — sin Terraform ni workflow de deploy propio.
 
+## Despliegue
+
+La aplicación está desplegada y en funcionamiento (plan gratuito en ambos servicios):
+
+- **Frontend**: <https://compatibility-check-app.vercel.app>
+- **Backend (API)**: <https://compatibility-check-app.onrender.com>
+
+Detalle completo de la configuración de cada servicio en [`docs/architecture.md`](docs/architecture.md).
+El backend está en el plan gratuito de Render: la primera petición tras ~15 min de inactividad puede
+tardar 30-60s en responder (cold-start) — ver "Limitaciones de las herramientas gratuitas" más abajo.
+
+## Slides y vídeo (TFM)
+
+- **Slides**: <https://claude.ai/code/artifact/812252b8-3d7d-40ee-9ae5-ac9004c349f9> — también disponibles
+  como documento en [`docs/slides.html`](docs/slides.html).
+- **Vídeo**: pendiente de grabar y enlazar. Guion en [`docs/video-script.md`](docs/video-script.md).
+
+## Funcionalidades principales
+
+- **Registro y autenticación** por email/contraseña (Supabase Auth), con recuperación de contraseña.
+- **Completar perfil**: nombre, alias único, foto y selección de exactamente 5 cualidades personales.
+- **Cuestionario de compatibilidad** de 36 preguntas, en un wizard de 6 bloques ponderados
+  (5/5/15/20/25/30%), editable después de completado.
+- **Selección automática de candidatos**: hasta 3 personas más afines por cualidades compartidas,
+  calculada una única vez al completar el cuestionario.
+- **Análisis de compatibilidad por IA** (Groq, con OpenRouter como alternativa): puntuación por 6
+  dimensiones y explicación por pregunta, sin exponer nunca el texto de ninguna respuesta.
+- **Dashboard de resultados**: tarjeta por candidato con score final, gráfico radar por dimensión y
+  detalle expandible por pregunta; se actualiza solo mientras el análisis está en curso.
+- **Recalcular compatibilidad** bajo demanda tras editar las propias respuestas o cualidades.
+- **Chat interno** entre usuarios ya comparados entre sí.
+- **Configuración**: edición de perfil, cuestionario y contraseña desde una única pantalla.
+- **Diseño responsive** en las 12 pantallas de la aplicación.
+
+## Usuario y contraseña de prueba
+
+La aplicación tiene login (Supabase Auth). Dos cuentas de prueba, ambas con la misma contraseña,
+ninguna con datos personales reales — son usuarios sintéticos de `supabase/seed/`:
+
+- **Con resultados ya calculados** (dashboard, radar y chat visibles sin rellenar nada):
+  - Email: `elena.luna@seed.compatibility-check.local`
+  - Contraseña: `Afinia-TFM-2026!`
+- **Cuenta nueva, sin perfil** (para probar el alta completa: perfil, cuestionario, matching):
+  - Email: `demo@seed.compatibility-check.local`
+  - Contraseña: `Afinia-TFM-2026!`
+  - Para rellenar el cuestionario de 36 preguntas sin pensar cada respuesta:
+    [`docs/respuestas-ejemplo-cuestionario.md`](docs/respuestas-ejemplo-cuestionario.md) — cópialas y
+    pégalas tal cual, bloque a bloque.
+
 ## Estructura del monorepo
 
 ```
@@ -104,10 +153,10 @@ npm run seed
 ```
 
 Contra el proyecto real (tras la tarea 19.1), exporta en su lugar `SUPABASE_URL` y
-`SUPABASE_SERVICE_ROLE_KEY` de ese proyecto antes de `npm run seed`. La cuenta de demostración
-(`demo@seed.compatibility-check.local`) se crea con una contraseña aleatoria no comunicada; para
-usarla en una presentación en vivo, resetea su contraseña a mano desde el Dashboard de Supabase
-(nunca se documenta en ningún fichero versionado, ver tarea 18.5).
+`SUPABASE_SERVICE_ROLE_KEY` de ese proyecto antes de `npm run seed`. El seed nunca fija ni resetea la
+contraseña de una cuenta que ya existe (crea cada cuenta nueva con una al azar, y no la toca en
+re-seeds posteriores) — las dos cuentas de prueba documentadas más abajo tienen su contraseña fijada
+a mano desde el Dashboard de Supabase, fuera de este script, precisamente para poder documentarla.
 
 ## Limitaciones de las herramientas gratuitas (importante antes de una demo en vivo)
 
