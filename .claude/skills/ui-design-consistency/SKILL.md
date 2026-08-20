@@ -572,6 +572,16 @@ No inventes un patrón nuevo por pantalla para estas cosas — reutiliza siempre
     <div class="invalid-feedback">Introduce un email válido.</div>
   </div>
   ```
+  Cuando el requisito no es evidente por sí solo (p. ej. la fortaleza de una contraseña nueva, ver
+  más abajo), añade además un `.form-text` con el MISMO texto justo debajo del control, siempre
+  visible — no obligues a fallar primero para enterarse de la regla.
+- **Contraseñas nuevas** (registro, "nueva contraseña" tras recuperación, "nueva contraseña" de
+  Configuración — nunca la contraseña ACTUAL que se reautentica en Configuración): mínimo 8
+  caracteres, mayúscula, minúscula y carácter especial (endurecido 2026-08-20, a petición explícita
+  de la usuaria — antes solo exigía 8 caracteres). Un único validador compartido
+  (`shared/password-validators.ts`), no uno por pantalla — endurecer solo en el alta y dejarlo más
+  débil al cambiar/recuperar no tendría sentido. Detalle completo (por qué Unicode-aware, el texto
+  exacto, dónde va el `.form-text`): `references/design-tokens.md`, "Requisitos de contraseña".
 - **Píldoras seleccionables** (las 15 cualidades en registro paso 2/configuración, ver decisión 3d de
   `design.md` — **rediseño: sustituye a las cards con insignia de check de versiones anteriores**): cada
   cualidad es una píldora/chip compacto (`rounded-pill`), no una card en grid. Sin seleccionar: fondo

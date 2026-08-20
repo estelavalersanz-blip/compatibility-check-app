@@ -4,7 +4,11 @@ import { isAuthApiError } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
 import { AuthShellComponent } from '../../../core/auth-shell/auth-shell.component';
 import { AuthService } from '../../../core/auth.service';
-import { passwordMinLengthValidator, passwordsMatchValidator } from '../../../shared/password-validators';
+import {
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  passwordStrengthValidator,
+  passwordsMatchValidator,
+} from '../../../shared/password-validators';
 
 /**
  * Pantalla de destino del enlace de recuperación (Shell B — spec `authentication`, "Establecimiento
@@ -27,13 +31,14 @@ export class ResetPasswordComponent {
 
   readonly form = this.fb.group(
     {
-      password: ['', [Validators.required, passwordMinLengthValidator]],
+      password: ['', [Validators.required, passwordStrengthValidator]],
       passwordConfirm: ['', Validators.required],
     },
     { validators: passwordsMatchValidator },
   );
   readonly submitting = signal(false);
   readonly submitError = signal<string | null>(null);
+  readonly passwordRequirementsMessage = PASSWORD_REQUIREMENTS_MESSAGE;
 
   async onSubmit(): Promise<void> {
     if (this.form.invalid) {

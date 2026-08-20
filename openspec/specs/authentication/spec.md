@@ -33,12 +33,21 @@ la aplicación ya tiene una sesión activa.
 El sistema SHALL permitir crear una cuenta con email y contraseña, verificando que el email no exista
 ya previamente, antes de permitir continuar al paso 2 (completar el perfil). El sistema SHALL informar
 de forma específica cuando el registro falla por un límite de peticiones del proveedor de email, en vez
-de mostrar el mismo mensaje genérico que cualquier otro fallo no reconocido.
+de mostrar el mismo mensaje genérico que cualquier otro fallo no reconocido. La contraseña SHALL
+cumplir, como mínimo, 8 caracteres, al menos una mayúscula, una minúscula y un carácter especial —
+misma regla exigida al establecer una contraseña nueva desde cualquier otro punto de la aplicación
+(recuperación de contraseña, ver más abajo, y cambio de contraseña desde `user-settings`).
 
 #### Scenario: Registro exitoso con email nuevo
-- **WHEN** un visitante envía un email no registrado previamente y una contraseña válida
+- **WHEN** un visitante envía un email no registrado previamente y una contraseña que cumple los
+  requisitos de fortaleza
 - **THEN** el sistema crea la cuenta con la contraseña hasheada, abre una sesión y permite avanzar a la
   pantalla de completar perfil (nombre, alias, foto, cualidades)
+
+#### Scenario: Contraseña que no cumple los requisitos de fortaleza
+- **WHEN** un visitante intenta registrarse con una contraseña que no cumple el mínimo de 8
+  caracteres, o le falta una mayúscula, una minúscula o un carácter especial
+- **THEN** el sistema rechaza el envío e indica los requisitos exactos, sin crear la cuenta
 
 #### Scenario: Intento de registro con email ya existente
 - **WHEN** un visitante intenta registrarse con un email que ya tiene una cuenta creada

@@ -40,8 +40,8 @@ describe('RegisterComponent (tarea 12.3)', () => {
 
   it('rechaza un email con formato inválido, sin llamar al servicio', () => {
     setInputValue(fixture, 'email', 'no-es-un-email');
-    setInputValue(fixture, 'password', 'contraseñaLarga1');
-    setInputValue(fixture, 'passwordConfirm', 'contraseñaLarga1');
+    setInputValue(fixture, 'password', 'ContraseñaLarga1!');
+    setInputValue(fixture, 'passwordConfirm', 'ContraseñaLarga1!');
 
     submitForm(fixture);
     fixture.detectChanges();
@@ -51,10 +51,29 @@ describe('RegisterComponent (tarea 12.3)', () => {
     expect(root.querySelector('#email')?.classList.contains('is-invalid')).toBe(true);
   });
 
-  it('rechaza una contraseña por debajo de la fortaleza mínima (8 caracteres), sin llamar al servicio', () => {
+  it('rechaza una contraseña por debajo del mínimo de 8 caracteres, sin llamar al servicio', () => {
     setInputValue(fixture, 'email', 'nueva@example.com');
     setInputValue(fixture, 'password', 'corta1');
     setInputValue(fixture, 'passwordConfirm', 'corta1');
+
+    submitForm(fixture);
+    fixture.detectChanges();
+
+    expect(signUpSpy).not.toHaveBeenCalled();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('#password')?.classList.contains('is-invalid')).toBe(true);
+  });
+
+  /**
+   * Requisitos endurecidos el 2026-08-20 a petición explícita de la usuaria: además del mínimo de 8
+   * caracteres (ya cubierto en el test anterior), hace falta mayúscula, minúscula y carácter
+   * especial. Caso distinto a propósito: 8+ caracteres pero sin mayúscula ni especial, para
+   * comprobar que el formulario rechaza estas condiciones nuevas de verdad, no solo la longitud.
+   */
+  it('rechaza una contraseña con longitud suficiente pero sin mayúscula ni carácter especial', () => {
+    setInputValue(fixture, 'email', 'nueva@example.com');
+    setInputValue(fixture, 'password', 'todaminuscula1');
+    setInputValue(fixture, 'passwordConfirm', 'todaminuscula1');
 
     submitForm(fixture);
     fixture.detectChanges();
@@ -101,14 +120,14 @@ describe('RegisterComponent (tarea 12.3)', () => {
       code: 'user_already_exists',
     });
     setInputValue(fixture, 'email', 'ya-existe@example.com');
-    setInputValue(fixture, 'password', 'contraseñaLarga1');
-    setInputValue(fixture, 'passwordConfirm', 'contraseñaLarga1');
+    setInputValue(fixture, 'password', 'ContraseñaLarga1!');
+    setInputValue(fixture, 'passwordConfirm', 'ContraseñaLarga1!');
 
     submitForm(fixture);
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(signUpSpy).toHaveBeenCalledWith('ya-existe@example.com', 'contraseñaLarga1');
+    expect(signUpSpy).toHaveBeenCalledWith('ya-existe@example.com', 'ContraseñaLarga1!');
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.alert-danger')?.textContent).toContain('ya está en uso');
   });
@@ -126,8 +145,8 @@ describe('RegisterComponent (tarea 12.3)', () => {
       code: 'over_email_send_rate_limit',
     });
     setInputValue(fixture, 'email', 'nueva@example.com');
-    setInputValue(fixture, 'password', 'contraseñaLarga1');
-    setInputValue(fixture, 'passwordConfirm', 'contraseñaLarga1');
+    setInputValue(fixture, 'password', 'ContraseñaLarga1!');
+    setInputValue(fixture, 'passwordConfirm', 'ContraseñaLarga1!');
 
     submitForm(fixture);
     await fixture.whenStable();
@@ -140,8 +159,8 @@ describe('RegisterComponent (tarea 12.3)', () => {
   it('con datos válidos, crea la cuenta y navega a completar perfil (paso 2)', async () => {
     signUpSpy.and.resolveTo(undefined);
     setInputValue(fixture, 'email', 'nueva@example.com');
-    setInputValue(fixture, 'password', 'contraseñaLarga1');
-    setInputValue(fixture, 'passwordConfirm', 'contraseñaLarga1');
+    setInputValue(fixture, 'password', 'ContraseñaLarga1!');
+    setInputValue(fixture, 'passwordConfirm', 'ContraseñaLarga1!');
 
     submitForm(fixture);
     await fixture.whenStable();

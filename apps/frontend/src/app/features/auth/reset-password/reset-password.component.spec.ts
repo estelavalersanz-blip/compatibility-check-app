@@ -41,7 +41,7 @@ describe('ResetPasswordComponent (tarea 12.7, sin test propio en tasks.md)', () 
   });
 
   it('rechaza contraseñas que no coinciden, sin llamar al servicio', () => {
-    setInputValue(fixture, 'password', 'contraseñaLarga1');
+    setInputValue(fixture, 'password', 'ContraseñaLarga1!');
     setInputValue(fixture, 'passwordConfirm', 'otraDistinta1');
 
     submitForm(fixture);
@@ -50,6 +50,23 @@ describe('ResetPasswordComponent (tarea 12.7, sin test propio en tasks.md)', () 
     expect(updateSpy).not.toHaveBeenCalled();
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('#passwordConfirm')?.classList.contains('is-invalid')).toBe(true);
+  });
+
+  /**
+   * Requisitos endurecidos el 2026-08-20 a petición explícita de la usuaria: además del mínimo de 8
+   * caracteres, hace falta mayúscula, minúscula y carácter especial — mismo validador compartido que
+   * `register.component.spec.ts` (ver `password-validators.spec.ts` para el detalle de cada regla).
+   */
+  it('rechaza una contraseña con longitud suficiente pero sin mayúscula ni carácter especial', () => {
+    setInputValue(fixture, 'password', 'todaminuscula1');
+    setInputValue(fixture, 'passwordConfirm', 'todaminuscula1');
+
+    submitForm(fixture);
+    fixture.detectChanges();
+
+    expect(updateSpy).not.toHaveBeenCalled();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('#password')?.classList.contains('is-invalid')).toBe(true);
   });
 
   /**
@@ -76,13 +93,13 @@ describe('ResetPasswordComponent (tarea 12.7, sin test propio en tasks.md)', () 
 
   it('con contraseñas válidas y coincidentes, actualiza la contraseña y navega a la ruta principal', async () => {
     updateSpy.and.resolveTo(undefined);
-    setInputValue(fixture, 'password', 'contraseñaLarga1');
-    setInputValue(fixture, 'passwordConfirm', 'contraseñaLarga1');
+    setInputValue(fixture, 'password', 'ContraseñaLarga1!');
+    setInputValue(fixture, 'passwordConfirm', 'ContraseñaLarga1!');
 
     submitForm(fixture);
     await fixture.whenStable();
 
-    expect(updateSpy).toHaveBeenCalledWith('contraseñaLarga1');
+    expect(updateSpy).toHaveBeenCalledWith('ContraseñaLarga1!');
     expect(TestBed.inject(Router).url).toBe('/');
   });
 
@@ -97,8 +114,8 @@ describe('ResetPasswordComponent (tarea 12.7, sin test propio en tasks.md)', () 
       status: 422,
       code: 'same_password',
     });
-    setInputValue(fixture, 'password', 'contraseñaLarga1');
-    setInputValue(fixture, 'passwordConfirm', 'contraseñaLarga1');
+    setInputValue(fixture, 'password', 'ContraseñaLarga1!');
+    setInputValue(fixture, 'passwordConfirm', 'ContraseñaLarga1!');
 
     submitForm(fixture);
     await fixture.whenStable();

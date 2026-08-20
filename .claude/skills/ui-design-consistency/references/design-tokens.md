@@ -298,6 +298,10 @@ del formulario.
     <div class="mb-3">
       <label class="form-label" for="password">Contraseña</label>
       <input id="password" class="form-control" type="password" formControlName="password">
+      <!-- hint SIEMPRE visible (form-text) + mismo texto en invalid-feedback si no se cumple —
+           requisitos endurecidos 2026-08-20, ver "Requisitos de contraseña" más abajo -->
+      <div class="form-text">{{ passwordRequirementsMessage }}</div>
+      <div class="invalid-feedback">{{ passwordRequirementsMessage }}</div>
     </div>
     <div class="mb-3">
       <label class="form-label" for="passwordConfirm">Repite la contraseña</label>
@@ -335,8 +339,10 @@ del formulario.
   <h1 class="h4 text-white mb-4">Nueva contraseña</h1>
   <form class="w-100 text-start" style="max-width: 360px;">
     <div class="mb-3">
-      <label class="form-label" for="password">Mínimo 8 caracteres</label>
+      <label class="form-label" for="password">Contraseña</label>
       <input id="password" class="form-control" type="password" formControlName="password">
+      <div class="form-text">{{ passwordRequirementsMessage }}</div>
+      <div class="invalid-feedback">{{ passwordRequirementsMessage }}</div>
     </div>
     <div class="mb-3">
       <label class="form-label" for="passwordConfirm">Repite la nueva contraseña</label>
@@ -346,6 +352,33 @@ del formulario.
   </form>
 </div>
 ```
+
+### Requisitos de contraseña (endurecidos el 2026-08-20)
+
+A petición explícita de la usuaria: además del mínimo de 8 caracteres, toda contraseña **nueva**
+(registro, "nueva contraseña" tras recuperación, y el campo "nueva contraseña" de Configuración —
+nunca la contraseña ACTUAL que se reautentica en Configuración, que no lleva este validador) exige
+al menos una mayúscula, una minúscula y un carácter especial. Un único validador compartido
+(`shared/password-validators.ts`, `passwordStrengthValidator` + `PASSWORD_REQUIREMENTS_MESSAGE`), no
+uno distinto por pantalla: endurecer la contraseña solo al crear la cuenta y dejarla más débil al
+cambiarla o recuperarla no tendría sentido.
+
+```ts
+// apps/frontend/src/app/shared/password-validators.ts (extracto)
+export const PASSWORD_REQUIREMENTS_MESSAGE =
+  'Mínimo 8 caracteres, con mayúscula, minúscula y un carácter especial.';
+
+// \p{Lu}/\p{Ll} (mayúscula/minúscula Unicode) en vez de [A-Z]/[a-z]: una Ñ cuenta como mayúscula
+// igual que una N. "Carácter especial" = ni letra unicode ni dígito ni espacio — no una lista
+// cerrada de símbolos (evita rechazar algún símbolo válido no previsto) y, a la vez, evita que una
+// tilde/eñe cuente como "especial" cuando en realidad es una letra normal.
+```
+
+El mismo texto (`PASSWORD_REQUIREMENTS_MESSAGE`) se usa en dos sitios a la vez bajo cada campo de
+contraseña nueva — un `.form-text` siempre visible (para no obligar a fallar primero para enterarse
+de las 4 condiciones) y el `.invalid-feedback` de siempre, que aparece además en rojo/blanco cuando
+no se cumplen (ver "Shell B" más abajo para el color). No son dos mensajes distintos que puedan
+desincronizarse: los dos leen de la misma constante.
 
 Los 4 textos de botón/título de arriba están transcritos de una captura de mockup a baja resolución —
 si al implementar el copy exacto difiere (p. ej. "Enviar contraseña" podría en realidad ser "Enviar
@@ -997,6 +1030,15 @@ En **modo edición** (`mode === 'edit'`), esta pantalla no se muestra nunca — 
 // contenedor padre ya no lo centra a EL. margin: 0 auto lo centra igual, sin depender de eso.
 // Encontrado en verificación manual con captura real, no solo en teoría — ver el fichero real
 // (registration.component.scss) para el bloque completo con display/align-items/justify-content.
+// Bug real independiente del anterior (2026-08-19, reportado con captura): sin object-fit, una foto
+// que no sea ya perfectamente cuadrada (la inmensa mayoría) se renderiza a su propia proporción en
+// vez de recortada al cuadrado del círculo — sale pequeña dentro de él, no solo descentrada.
+.profile-photo-picker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
 .profile-photo-picker__placeholder {
   display: block;
   width: 100%;
