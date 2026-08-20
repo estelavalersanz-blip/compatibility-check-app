@@ -480,6 +480,13 @@
       <div class="metric"><div class="big">20-30s</div><div class="cap">Badge de no leídos en la cabecera compartida — en segundo plano, sin ninguna conversación abierta.</div></div>
       <div class="metric"><div class="big">3s</div><div class="cap">Dashboard y pantalla de procesamiento — solo mientras algún análisis sigue <span class="mono">pending</span>/<span class="mono">analyzing</span>.</div></div>
     </div>
+    <div class="card" style="margin-top:20px;">
+      <p style="margin:0;font-size:15px;line-height:1.5;"><b>La privacidad tampoco necesitó WebSockets</b>: el cuerpo de cada mensaje se cifra en reposo
+        (AES-256-GCM) en la capa de aplicación, no en el transporte — no hace falta un canal
+        persistente ni un protocolo especial para protegerlo, el mismo sondeo HTTP de siempre ya
+        vale. La clave vive solo en el backend (<span class="mono">CHAT_ENCRYPTION_KEY</span>), nunca
+        en el repositorio.</p>
+    </div>
   </section>
 
   <section class="slide" id="slide-12">

@@ -18,8 +18,10 @@ function idOf(row: unknown): string {
 /**
  * RLS (design.md, decisión 11): un usuario autenticado con su propio JWT real
  * (`signInWithPassword`, nunca `service_role`) solo puede leer/escribir su propia fila de
- * `users`/`questionnaires`, y solo las `conversations`/`messages` de las que participa —
- * ejercitado contra el cliente directo de Supabase, sin pasar por el backend.
+ * `users`/`questionnaires` — ejercitado contra el cliente directo de Supabase, sin pasar por el
+ * backend. `conversations`/`messages` (desde 0003_encrypt_chat_messages.sql, cifrado en reposo) y
+ * `comparisons` (desde el principio) van más allá: ni siquiera un participante/dueño real tiene
+ * acceso directo por esta vía, solo el backend con `service_role`.
  */
 describe('políticas RLS', () => {
   const admin = createSupabaseAdminTestClient();
@@ -128,7 +130,7 @@ describe('políticas RLS', () => {
     });
   });
 
-  describe('conversations y messages', () => {
+  describe('conversations y messages (no expuestas directamente, mismo patrón que comparisons más abajo)', () => {
     let conversationId: string;
 
     beforeEach(async () => {
@@ -151,48 +153,32 @@ describe('políticas RLS', () => {
       });
     });
 
-    it('un participante puede leer y enviar mensajes (control positivo)', async () => {
+    // Hasta 0003_encrypt_chat_messages.sql, un participante SÍ podía leer/escribir sus propios
+    // mensajes por esta vía (RLS filtrando filas, con GRANT a `authenticated`) — ese GRANT se
+    // retiró a propósito al añadir el cifrado en reposo: si el cliente pudiera insertar
+    // directamente, se saltaría por completo `message-encryption.ts`. Ahora ni siquiera un
+    // participante real tiene acceso directo — el backend es el único camino, mismo patrón que
+    // ya usaba `comparisons` desde el principio (ver describe de más abajo).
+    it('ni siquiera un participante puede leer mensajes a través del cliente directo', async () => {
       const clientC = await createSupabaseUserTestClient(userC.email, userC.password);
 
-      const { data: messages } = await clientC
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId);
-      expect(messages).toHaveLength(1);
-
-      const { error: insertError } = await clientC.from('messages').insert({
-        conversation_id: conversationId,
-        sender_id: userC.id,
-        body: 'Un segundo mensaje',
-      });
-      expect(insertError).toBeNull();
-    });
-
-    it('un usuario que no participa no puede leer la conversación', async () => {
-      const clientA = await createSupabaseUserTestClient(userA.email, userA.password);
-
-      const { data, error } = await clientA
-        .from('conversations')
-        .select('*')
-        .eq('id', conversationId);
-
-      expect(error).toBeNull();
-      expect(data).toEqual([]);
-    });
-
-    it('un usuario que no participa no puede leer los mensajes de la conversación', async () => {
-      const clientA = await createSupabaseUserTestClient(userA.email, userA.password);
-
-      const { data, error } = await clientA
+      const { data } = await clientC
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId);
 
-      expect(error).toBeNull();
-      expect(data).toEqual([]);
+      expect(data ?? []).toEqual([]);
     });
 
-    it('un usuario que no participa no puede escribir en la conversación', async () => {
+    it('ni siquiera un participante puede leer la conversación a través del cliente directo', async () => {
+      const clientC = await createSupabaseUserTestClient(userC.email, userC.password);
+
+      const { data } = await clientC.from('conversations').select('*').eq('id', conversationId);
+
+      expect(data ?? []).toEqual([]);
+    });
+
+    it('nadie puede escribir un mensaje a través del cliente directo, participante o no', async () => {
       const clientA = await createSupabaseUserTestClient(userA.email, userA.password);
 
       const { error } = await clientA.from('messages').insert({
