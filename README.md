@@ -215,6 +215,27 @@ end-to-end) marcado explícitamente:
   mensuales limitados — sin problema para el volumen de una demo de TFM, no se ha necesitado ajustar
   nada.
 
+## Próximas mejoras
+
+- **Cifrado de extremo a extremo (E2EE) del chat interno**: hoy el cuerpo de cada mensaje se cifra en
+  reposo antes de guardarse en Postgres (AES-256-GCM, ver `apps/backend/src/chat/message-encryption.ts`),
+  pero con una clave que gestiona el propio backend, que sigue pudiendo descifrar para poder devolver
+  los mensajes por el sondeo HTTP existente. E2EE de
+  verdad — que ni siquiera el backend pudiera leer el contenido — no se ha aplicado en esta primera
+  fase por varias razones concretas, no por descuido:
+  - **Gestión de claves multidispositivo**: si la clave de descifrado vive solo en el navegador del
+    usuario, cambiar de dispositivo o simplemente borrar datos del navegador dejaría sin acceso al
+    historial de conversaciones, salvo que se construya además un sistema de backup/recuperación de
+    claves — no trivial, y con sus propios riesgos si se implementa mal.
+  - **Verificación de identidad**: cifrar de extremo a extremo sin verificar que la clave pública que
+    recibes es de verdad la de tu interlocutor (y no la de un atacante interpuesto) da una falsa
+    sensación de seguridad. Hacerlo bien exige una UX de verificación (los "números de seguridad" de
+    apps como Signal) que no es trivial de diseñar bien en el alcance de un TFM.
+  - **Coste/beneficio de esta fase**: el cifrado en reposo con clave de servidor ya sube de forma
+    real el nivel de protección — contra una fuga de la base de datos, una `service_role key`
+    filtrada, o alguien mirando el dashboard de Supabase directamente — con una fracción de la
+    complejidad operativa de E2EE de verdad.
+
 ## Documentación y flujo de trabajo
 
 Este proyecto sigue [OpenSpec](https://github.com/Fission-AI/OpenSpec). El cambio original

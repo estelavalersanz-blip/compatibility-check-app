@@ -686,7 +686,22 @@ Pasos de aprovisionamiento manual:
 login social/OAuth, verificación de email obligatoria antes de continuar el registro, panel de
 analítica entre citas, permitir que el usuario elija manualmente más o menos de 3 candidatos, chat en
 tiempo real vía WebSockets, llamadas de voz/vídeo, chats grupales, indicador de "escribiendo…",
-edición/borrado de mensajes, notificaciones push y cifrado end-to-end del chat interno. El
+edición/borrado de mensajes, notificaciones push y **cifrado de extremo a extremo** del chat interno
+(2026-08-20: el body de cada mensaje SÍ se cifra en reposo en Postgres, AES-256-GCM con clave propia
+del backend —`src/chat/message-encryption.ts`, `internal-chat/spec.md`— pero el backend conserva la
+clave y sigue pudiendo descifrar para poder devolver el texto a los participantes vía el sondeo HTTP
+existente; lo que queda fuera de alcance es específicamente que ni siquiera el backend pueda leerlo,
+que exigiría claves por conversación gestionadas por los propios clientes — no aplicado en esta
+primera fase por tres motivos concretos, no por descuido: (1) gestión de claves multidispositivo —
+si la clave vive solo en el navegador, cambiar de dispositivo o borrar datos locales dejaría sin
+acceso al historial salvo que se construya además un sistema de backup/recuperación de claves, nada
+trivial y con sus propios riesgos si se hace mal; (2) verificación de identidad — cifrar sin
+verificar que la clave pública recibida es de verdad la del interlocutor, y no la de un atacante
+interpuesto, da una falsa sensación de seguridad, y hacerlo bien exige una UX de verificación (los
+"números de seguridad" de Signal) que no es trivial de diseñar en el alcance de un TFM; (3)
+coste/beneficio de esta fase — el cifrado en reposo con clave de servidor ya sube el nivel de
+protección real (fuga de BD, `service_role key` filtrada, alguien mirando el dashboard de Supabase)
+con una fracción de la complejidad operativa de E2EE de verdad). El
 recálculo retroactivo de candidatos para usuarios ya existentes queda explícitamente excluido por el
 riesgo de coste de llamadas a la IA explicado arriba; si se retoma en el futuro, debería implementarse
 como acción explícita bajo demanda del propio usuario ("buscar nuevos candidatos"), reutilizando

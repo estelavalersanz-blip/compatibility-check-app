@@ -10,3 +10,9 @@
  */
 process.env.SUPABASE_URL ??= 'http://127.0.0.1:54321';
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'e2e-test-placeholder-service-role-key';
+
+// `POST /conversations/:id/messages` pasa por el `ChatService` real (solo `SupabaseService` se
+// sobreescribe en `chat.e2e-spec.ts`), que a su vez llama a `encryptMessageBody` de verdad -- sin
+// esta clave, esos tests fallarían por falta de `CHAT_ENCRYPTION_KEY`, no por lo que en realidad
+// están probando. 32 bytes exactos en base64 (AES-256), fija y sin ningún significado real.
+process.env.CHAT_ENCRYPTION_KEY ??= Buffer.alloc(32, 'e2e-test-chat-key').toString('base64');

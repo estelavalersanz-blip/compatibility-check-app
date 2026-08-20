@@ -203,10 +203,10 @@
   .arch-arrow { color: var(--fg-muted); font-size: 22px; }
   .arch-col { display: flex; flex-direction: column; gap: 10px; }
 
-  /* ---------- Cierre (slide 11) ---------- */
-  #slide-11 { background: linear-gradient(160deg, var(--orange) 0%, var(--red) 100%); color: #fff; text-align: center; align-items: center; }
-  #slide-11 h1 { color: #fff; }
-  #slide-11 .eyebrow { color: rgba(255,255,255,.85); }
+  /* ---------- Cierre (última diapositiva) ---------- */
+  #slide-14 { background: linear-gradient(160deg, var(--orange) 0%, var(--red) 100%); color: #fff; text-align: center; align-items: center; }
+  #slide-14 h1 { color: #fff; }
+  #slide-14 .eyebrow { color: rgba(255,255,255,.85); }
   .link-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 22px; }
   .link-chip {
     padding: 10px 18px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.55);
@@ -454,13 +454,50 @@
   </section>
 
   <section class="slide" id="slide-10">
+    <div class="eyebrow">Patrones de diseño</div>
+    <h1>Módulos que no se conocen entre sí, pero reaccionan a lo que pasa</h1>
+    <div class="slide-body grid-2">
+      <ul class="tick">
+        <li><span class="dot">·</span><span><b>CQRS selectivo</b>: Commands solo donde hay un evento de dominio real que publicar — completar el cuestionario, no cada <span class="mono">PATCH</span> de perfil.</span></li>
+        <li><span class="dot">·</span><span><b>Cadena de eventos sin acoplar módulos</b>: <span class="mono">QuestionnaireCompletedEvent</span> → matching selecciona candidatos → <span class="mono">ComparisonsCreatedEvent</span> → IA analiza. Ninguno de los tres importa a los otros dos.</span></li>
+        <li><span class="dot">·</span><span><span class="mono">writableTable(client, tabla)</span>: wrapper tipado sobre Supabase — sin él, <span class="mono">.insert()</span>/<span class="mono">.update()</span> resuelven a <span class="mono">never</span> por no tener un <span class="mono">Database</span> genérico.</span></li>
+      </ul>
+      <ul class="tick">
+        <li><span class="dot">·</span><span>Guards funcionales que devuelven un <span class="mono">UrlTree</span>, nunca una ruta a pelo — <span class="mono">mainRouteGuard</span>/<span class="mono">profileGuard</span>.</span></li>
+        <li><span class="dot">·</span><span>Intervalos de sondeo <b>inyectables</b> (<span class="mono">InjectionToken</span>): en producción son constantes reales, en test se sobreescriben por unos de milisegundos — sin <span class="mono">fakeAsync</span>, este proyecto no carga <span class="mono">zone.js/testing</span>.</span></li>
+        <li><span class="dot">·</span><span>Angular <b>zoneless</b> + signals: la reactividad de toda la app no depende de <span class="mono">zone.js</span> en ningún punto.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide" id="slide-11">
+    <div class="eyebrow">Cómo se resolvió el chat</div>
+    <h1>Se siente en vivo sin un servidor de WebSockets que mantener</h1>
+    <p class="lede">Sin infraestructura de WebSockets en un plan gratuito, cada pantalla sondea al backend a
+      un ritmo distinto según la urgencia real de lo que muestra — no un intervalo único para todo.</p>
+    <div class="metric-row">
+      <div class="metric"><div class="big">4s</div><div class="cap">Conversación abierta — <span class="mono">GET .../messages?after=&lt;cursor&gt;</span>: solo pide los mensajes posteriores al último ya recibido, nunca la conversación entera. El mismo <span class="mono">GET</span> marca como leídos los dirigidos a mí.</div></div>
+      <div class="metric"><div class="big">20-30s</div><div class="cap">Badge de no leídos en la cabecera compartida — en segundo plano, sin ninguna conversación abierta.</div></div>
+      <div class="metric"><div class="big">3s</div><div class="cap">Dashboard y pantalla de procesamiento — solo mientras algún análisis sigue <span class="mono">pending</span>/<span class="mono">analyzing</span>.</div></div>
+    </div>
+    <div class="card" style="margin-top:20px;">
+      <p style="margin:0;font-size:15px;line-height:1.5;"><b>La privacidad tampoco necesitó WebSockets</b>: el cuerpo de cada mensaje se cifra en reposo
+        (AES-256-GCM) en la capa de aplicación, no en el transporte — no hace falta un canal
+        persistente ni un protocolo especial para protegerlo, el mismo sondeo HTTP de siempre ya
+        vale. La clave vive solo en el backend (<span class="mono">CHAT_ENCRYPTION_KEY</span>), nunca
+        en el repositorio.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="slide-12">
     <div class="eyebrow">Seguridad y metodología</div>
     <h1>Nadie lee una respuesta ajena — ni por accidente, ni por un bug futuro</h1>
     <div class="slide-body grid-2">
       <ul class="tick">
         <li><span class="dot">✓</span><span><b>RLS en Postgres</b> + el backend como único punto con permiso real para leer comparaciones — dos capas, no una.</span></li>
         <li><span class="dot">✓</span><span>Ni el propio usuario puede leer su respuesta de texto de vuelta en el detalle de una comparación.</span></li>
-        <li><span class="dot">✓</span><span>Contraseñas con mayúscula, minúscula y carácter especial, informadas antes de fallar, no solo después.</span></li>
+        <li><span class="dot">✓</span><span><b>Contraseñas nunca en texto plano</b>: Supabase Auth (GoTrue) las hashea con <span class="mono">bcrypt</span> antes de persistirlas — este código no las ve, no las loguea, no las guarda él mismo.</span></li>
+        <li><span class="dot">✓</span><span>Requisito de fortaleza (mayúscula, minúscula, carácter especial) informado <i>antes</i> de fallar, no solo después.</span></li>
       </ul>
       <ul class="tick">
         <li><span class="dot">◆</span><span><b>OpenSpec</b>: desarrollo guiado por especificación — un <span class="mono">spec.md</span> por capacidad, no solo código y memoria.</span></li>
@@ -470,7 +507,24 @@
     </div>
   </section>
 
-  <section class="slide" id="slide-11">
+  <section class="slide" id="slide-13">
+    <div class="eyebrow">Próximos pasos</div>
+    <h1>Cifrado de extremo a extremo del chat — el siguiente escalón</h1>
+    <div class="slide-body grid-2">
+      <ul class="tick">
+        <li><span class="dot">1</span><span><b>Gestión de claves multidispositivo</b>: si la clave vive solo en el navegador, cambiar de dispositivo o borrar datos locales deja sin acceso al historial, salvo un sistema de backup/recuperación de claves — nada trivial, y con sus propios riesgos si se hace mal.</span></li>
+        <li><span class="dot">2</span><span><b>Verificación de identidad</b>: cifrar sin comprobar que la clave pública recibida es de verdad la del interlocutor da una falsa sensación de seguridad. Hacerlo bien exige una UX de verificación (los "números de seguridad" de Signal) que no es trivial en el alcance de un TFM.</span></li>
+        <li><span class="dot">3</span><span><b>Coste/beneficio de esta fase</b>: el cifrado en reposo ya sube el nivel de protección real — fuga de BD, clave de servicio filtrada, alguien mirando el dashboard de Supabase — con una fracción de la complejidad operativa de E2EE de verdad.</span></li>
+      </ul>
+      <div class="card">
+        <p style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-muted);">Hoy vs. el siguiente escalón</p>
+        <p style="margin:0 0 12px;font-size:15px;line-height:1.5;"><b>Hoy:</b> cifrado en reposo, AES-256-GCM, clave en el backend — protege la base de datos, pero el backend sigue pudiendo descifrar para servir los mensajes.</p>
+        <p style="margin:0;font-size:15px;line-height:1.5;"><b>E2EE de verdad:</b> ni siquiera el backend podría leer el contenido — clave por conversación, gestionada por los propios clientes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="slide-14">
     <svg class="cover-mark" style="width:64px;height:64px;margin-bottom:8px;" viewBox="0 0 345.3 336.08" aria-hidden="true">
       <path d="M267.83,175.64c-19.09,25.81-46.83,52.24-71.15,73.34-31.85,27.64-101.3,82.56-142.99,86.01-41.43,3.42-63.46-26.52-49.5-65.5,9.91-27.69,29.75-63.59,43.16-90.84,1.28-2.61,8.11-17.06,9.37-17.63l14.3,19.67,2.01,5.58c-11.47,26.61-25.74,52.03-37.67,78.39-4.64,10.26-12.58,23.75-7.2,34.9,3.89,8.07,12.23,9.8,20.52,9.45,39.12-1.67,121.5-69.78,150.54-97.48,23.76-22.67,67.2-67,70.74-100.28,1.69-15.92-16.82-36.45-20.75-52.23,26.33,2.81,44.81,19.6,46.87,46.62,1.77,23.18-14.82,51.85-28.25,70.01Z" fill="#fff"/>
       <path d="M195.78,259.55c1.84-1.27,1.12-2.64,5.38-1,4.84,1.86,15.03,11.19,20.32,14.67,18.45,12.14,54.36,35.73,76.22,35.57,18.35-.14,23.42-12.82,17.96-28.75l-44.45-93.64c-.61-6,13.39-19.49,16.49-25.38,2.47,0,19.13,39.11,21.64,44.34,10.42,21.65,36.13,64.74,35.94,87.14-.2,24.04-21.77,43.81-45.6,43.58-30.41-.29-70.28-25.17-94.8-42.26-6.22-4.34-18.86-12.48-23.7-17.3-.96-.95-2.8-1.99-1.52-3.54,5.91-3.49,10.63-9.65,16.11-13.43Z" fill="#fff"/>
