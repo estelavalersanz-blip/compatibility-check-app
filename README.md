@@ -53,13 +53,20 @@ tardar 30-60s en responder (cold-start) — ver "Limitaciones de las herramienta
 
 ## Usuario y contraseña de prueba
 
-La aplicación tiene login (Supabase Auth). Dos cuentas de prueba, ambas con la misma contraseña,
+La aplicación tiene login (Supabase Auth). Tres cuentas de prueba, todas con la misma contraseña,
 ninguna con datos personales reales — son usuarios sintéticos de `supabase/seed/`:
 
 - **Con resultados ya calculados** (dashboard, radar y chat visibles sin rellenar nada):
   - Email: `elena.luna@seed.compatibility-check.local`
   - Contraseña: `Afinia-TFM-2026!`
-- **Cuenta nueva, sin perfil** (para probar el alta completa: perfil, cuestionario, matching):
+- **Para probar el chat de verdad, en las dos direcciones**: esta cuenta y `elena.luna` ya tienen
+  compatibilidad calculada entre sí — inicia sesión con las dos a la vez (dos navegadores distintos,
+  o uno normal y otro en incógnito) para escribir y responder mensajes desde ambos lados:
+  - Email: `marta.creativa@seed.compatibility-check.local`
+  - Contraseña: `Afinia-TFM-2026!`
+- **Cuenta nueva, sin perfil** (para probar el alta completa: perfil, cuestionario, matching) — no
+  sirve para probar el chat con `elena.luna`: sus candidatos dependerán de qué cualidades elijas al
+  completar el perfil, sin garantía de que coincidan con las suyas:
   - Email: `demo@seed.compatibility-check.local`
   - Contraseña: `Afinia-TFM-2026!`
   - Para rellenar el cuestionario de 36 preguntas sin pensar cada respuesta:
