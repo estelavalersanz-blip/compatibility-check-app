@@ -29,6 +29,8 @@ interface FakeMessageRow {
   body: string;
   created_at: string;
   read_at: string | null;
+  iv: string | null;
+  auth_tag: string | null;
 }
 interface FakeUserRow {
   id: string;
@@ -188,6 +190,8 @@ function messagesTable(db: FakeDatabase) {
             body: values.body as string,
             created_at: new Date().toISOString(),
             read_at: null,
+            iv: (values.iv as string | undefined) ?? null,
+            auth_tag: (values.auth_tag as string | undefined) ?? null,
           };
           db.messages.push(row);
           return Promise.resolve({ data: row, error: null });
@@ -378,6 +382,8 @@ describe('Chat interno (e2e)', () => {
           body: 'Hola',
           created_at: '2024-01-01T00:00:01.000Z',
           read_at: '2024-01-01T00:00:02.000Z',
+          iv: null,
+          auth_tag: null,
         },
         {
           id: 'msg-2',
@@ -386,6 +392,8 @@ describe('Chat interno (e2e)', () => {
           body: 'Qué tal',
           created_at: '2024-01-02T00:00:00.000Z',
           read_at: null,
+          iv: null,
+          auth_tag: null,
         },
       );
       // C inició esta con A (A nunca la inició) — debe aparecer igualmente.
@@ -457,6 +465,8 @@ describe('Chat interno (e2e)', () => {
           body: 'Segundo',
           created_at: '2024-01-01T00:00:02.000Z',
           read_at: null,
+          iv: null,
+          auth_tag: null,
         },
         {
           id: 'msg-1',
@@ -465,6 +475,8 @@ describe('Chat interno (e2e)', () => {
           body: 'Primero',
           created_at: '2024-01-01T00:00:01.000Z',
           read_at: null,
+          iv: null,
+          auth_tag: null,
         },
       );
     });
@@ -531,6 +543,8 @@ describe('Chat interno (e2e)', () => {
         body: 'De otra conversación',
         created_at: '2024-01-01T00:00:03.000Z',
         read_at: null,
+        iv: null,
+        auth_tag: null,
       });
       app = await buildApp(createFakeSupabaseService(db, AUTH_TOKENS));
 
@@ -597,6 +611,29 @@ describe('Chat interno (e2e)', () => {
       });
       expect(db.messages).toHaveLength(1);
       expect(db.messages[0]).toMatchObject({ conversation_id: 'conv-a-b', sender_id: USER_A.id });
+      // La fila cruda queda cifrada -- ni siquiera en el fake se guarda el texto en claro.
+      expect(db.messages[0].body).not.toBe('Hola Bea');
+    });
+
+    it('un mensaje enviado se relee ya descifrado por un camino distinto (GET /conversations)', async () => {
+      app = await buildApp(createFakeSupabaseService(db, AUTH_TOKENS));
+
+      await request(app.getHttpServer())
+        .post('/conversations/conv-a-b/messages')
+        .set('Authorization', 'Bearer jwt-a')
+        .send({ body: 'Hola Bea' })
+        .expect(201);
+
+      // No es la respuesta directa del POST (esa siempre devuelve el texto en claro que ya tenía a
+      // mano, sin volver a leer la fila) -- aquí se relee por un camino distinto,
+      // `listConversations`, que sí depende de que el fake haya guardado `iv`/`auth_tag` de verdad.
+      const response = await request(app.getHttpServer())
+        .get('/conversations')
+        .set('Authorization', 'Bearer jwt-b')
+        .expect(200);
+
+      const body = response.body as Array<{ lastMessage: { body: string } | null }>;
+      expect(body[0].lastMessage).toMatchObject({ body: 'Hola Bea' });
     });
 
     it('con un body vacío, rechaza con 4xx sin persistir nada', async () => {
@@ -650,6 +687,8 @@ describe('Chat interno (e2e)', () => {
         body: 'Hola Ada',
         created_at: '2024-01-01T00:00:01.000Z',
         read_at: null,
+        iv: null,
+        auth_tag: null,
       });
       app = await buildApp(createFakeSupabaseService(db, AUTH_TOKENS));
 

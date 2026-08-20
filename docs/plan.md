@@ -737,6 +737,26 @@ no aumentar cuántas preguntas caben en cada llamada. El paso 3 seguiría siendo
 el paso 1 (plan de pago, que sí sube el límite de tokens/minuto) o con un proveedor de mayor límite,
 pero no como sustituto de ninguno de los dos.
 
+### Selección de candidatos: más criterios de filtrado, y revisar el tope de 3
+
+La selección actual (`candidate-selector.service.ts`) usa un único criterio de preselección — número
+de cualidades coincidentes entre las 5 elegidas por cada usuario — y un tope fijo de 3 candidatos. Los
+dos son simplificaciones deliberadas de esta fase, no el diseño final si el proyecto escalara:
+
+- **Más filtros previos a las cualidades**: hoy `users` no guarda edad, sexo ni intencionalidad (qué
+  tipo de conexión busca la persona — amistad, relación romántica, networking, etc.) — ninguno de los
+  tres se pregunta en el registro ni se usa para preseleccionar. Añadirlos como filtros previos (antes
+  de contar cualidades coincidentes, no en vez de) acotaría el pool a candidatos relevantes por esos
+  ejes antes de aplicar el criterio de cualidades, en vez de dejar que las cualidades sean el único
+  filtro. Requeriría nuevas columnas en `users`, nuevos pasos en completar perfil, y ampliar
+  `candidate-selector.service.ts` con esos filtros antes del recuento de cualidades.
+- **El tope de 3 no es un número de producto cerrado**: se eligió también por el límite real de
+  llamadas a la IA de esta fase (cada comparación es una llamada al LLM) — el mismo límite que motivó
+  el muestreo de 6 preguntas en vez de 36 (ver "Orquestación de las llamadas a IA"). Subir los límites
+  de tasa del proveedor (paso 1 de la tabla de LLM, arriba) o usar la Batch API (paso 4) son
+  precisamente lo que haría viable subir también este tope sin disparar el coste, no solo una promesa
+  de "algún día se sube el número".
+
 ### Despliegue: de free tier a infraestructura de producción
 
 - **Backend**: pasar de Render free (con cold-start) a un plan de pago con always-on, o migrar el

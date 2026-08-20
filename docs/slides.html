@@ -446,9 +446,10 @@
         </div>
       </div>
       <ul class="tick">
-        <li><span class="dot">·</span><span><b>packages/shared-types</b>: contrato único, validado con Zod, entre frontend y backend.</span></li>
-        <li><span class="dot">·</span><span><b>CI</b>: lint + tests unitarios + e2e + build, y tests de integración contra un Supabase local real — no solo mocks.</span></li>
-        <li><span class="dot">·</span><span>Sin Terraform ni pipeline de deploy propio — integración nativa de Vercel/Render con GitHub.</span></li>
+        <li><span class="dot">·</span><span><b>packages/shared-types</b>: contrato único entre frontend y backend, validado con <span class="mono">Zod</span> — una librería de TypeScript que define el tipo <i>y</i> lo valida en tiempo de ejecución a la vez, en un único sitio, en vez de un tipo que no protege nada si el dato real no coincide.</span></li>
+        <li><span class="dot">·</span><span><b>CI en GitHub Actions, 2 jobs en cada push/PR</b>: lint + tests unitarios + e2e + build (con mocks, sin Docker) y, aparte, tests de integración que arrancan un Supabase real en el propio runner — no solo contra mocks.</span></li>
+        <li><span class="dot">·</span><span><b>Despliegue automático, sin pipeline propio</b>: cada push a <span class="mono">main</span> dispara un deploy nuevo en Vercel (frontend) y Render (backend) por su integración nativa con GitHub — sin Terraform, sin workflow de deploy a mano.</span></li>
+        <li><span class="dot">·</span><span><b>Rama <span class="mono">main</span> protegida</b>: exige los dos jobs de CI en verde antes de poder mergear, sin excepciones.</span></li>
       </ul>
     </div>
   </section>
