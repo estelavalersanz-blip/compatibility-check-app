@@ -103,6 +103,13 @@ vinculada a GitHub, sin uso previo):
 7. **`CORS_ORIGIN` añadida tras conocer la URL real de Vercel** (ver sección "Vercel" más abajo):
    `https://compatibility-check-app.vercel.app` — Render redeploya solo al cambiar una variable de
    entorno, sin acción manual aparte.
+8. **`CHAT_ENCRYPTION_KEY` añadida (cifrado en reposo de los mensajes de chat, ver
+   `src/chat/message-encryption.ts` e `internal-chat/spec.md`)**: 32 bytes en base64 (AES-256),
+   distinta de la usada en local — `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+   `message-encryption.ts` la resuelve solo en el momento de cifrar/descifrar (nunca en el arranque
+   del módulo), así que el backend sigue arrancando sin ella — pero **enviar o leer un mensaje de
+   chat fallará hasta que se añada aquí**, antes o justo después del primer deploy que incluya este
+   cambio.
 
 ## Vercel — proyecto del frontend (tarea 19.3)
 

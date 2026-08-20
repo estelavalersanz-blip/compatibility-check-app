@@ -7,12 +7,14 @@ import {
   asParticipantRows,
   CONVERSATION_COLUMNS,
   ConversationRow,
+  decryptMessageRow,
   MESSAGE_COLUMNS,
   MessageRow,
   PARTICIPANT_COLUMNS,
   toMessage,
   toUserProfile,
 } from './chat.mapper';
+import { encryptMessageBody } from './message-encryption';
 import { POSTGRES_UNIQUE_VIOLATION } from '../supabase/postgres-error-codes';
 import { SupabaseService } from '../supabase/supabase.service';
 import { writableTable } from '../supabase/writable-table';
@@ -157,6 +159,9 @@ export class ChatService {
         throw new Error(`No se encontró el perfil del participante "${otherUserId}"`);
       }
       // Ordenados ascendente arriba: el último elemento de cada grupo es el mensaje más reciente.
+      // `unreadCount` no necesita el body (nunca se descifra solo para contar), pero `lastMessage`
+      // sí se muestra como vista previa en el listado — pasa por `decryptMessageRow` igual que en
+      // `getMessages`.
       const conversationMessages = messagesByConversation.get(row.id) ?? [];
       const lastRow = conversationMessages[conversationMessages.length - 1] ?? null;
       const unreadCount = conversationMessages.filter(
@@ -166,7 +171,7 @@ export class ChatService {
       const conversation: Conversation = {
         id: row.id,
         otherParticipant: toUserProfile(participantRow),
-        lastMessage: lastRow ? toMessage(lastRow) : null,
+        lastMessage: lastRow ? toMessage(decryptMessageRow(lastRow)) : null,
         unreadCount,
       };
       return { conversation, sortKey: lastRow?.created_at ?? row.created_at };
@@ -215,8 +220,10 @@ export class ChatService {
     }
 
     // Refleja en la respuesta el `read_at` que se acaba de aplicar, sin una segunda consulta: son
-    // exactamente las mismas filas que cumplían el filtro del `update` de arriba.
+    // exactamente las mismas filas que cumplían el filtro del `update` de arriba. Descifra antes de
+    // mapear a `Message` -- `decryptMessageRow` es un passthrough para filas anteriores al cifrado.
     return asMessageRows(messageRows)
+      .map(decryptMessageRow)
       .map((row) =>
         row.sender_id !== userId && row.read_at === null ? { ...row, read_at: readAt } : row,
       )
@@ -227,6 +234,11 @@ export class ChatService {
    * `POST /conversations/:id/messages`: exige ser participante (mismo criterio que `getMessages`)
    * y un `body` no vacío tras recortar espacios — el controller ya lo comprueba, pero se revalida
    * aquí por si este servicio se llama alguna vez desde otro sitio.
+   *
+   * Cifra `trimmedBody` antes de insertar (cifrado en reposo, ver `message-encryption.ts`) — nunca
+   * llega texto plano a la fila de `messages`. La respuesta se construye con el `trimmedBody` que
+   * ya se tiene a mano, en vez de descifrar la fila recién insertada: mismo resultado, sin un
+   * cifrado-descifrado redundante en la misma petición.
    */
   async sendMessage(conversationId: string, userId: string, body: string): Promise<Message> {
     const client = this.supabaseService.getClient();
@@ -237,15 +249,22 @@ export class ChatService {
       throw new BadRequestException('El mensaje no puede estar vacío');
     }
 
+    const encrypted = encryptMessageBody(trimmedBody);
     const { data, error } = await writableTable(client, 'messages')
-      .insert({ conversation_id: conversationId, sender_id: userId, body: trimmedBody })
+      .insert({
+        conversation_id: conversationId,
+        sender_id: userId,
+        body: encrypted.ciphertext,
+        iv: encrypted.iv,
+        auth_tag: encrypted.authTag,
+      })
       .select(MESSAGE_COLUMNS)
       .single();
     if (error) {
       throw new Error(`No se pudo enviar el mensaje: ${error.message}`);
     }
 
-    return toMessage(data as MessageRow);
+    return toMessage({ ...(data as MessageRow), body: trimmedBody });
   }
 
   private async findConversation(

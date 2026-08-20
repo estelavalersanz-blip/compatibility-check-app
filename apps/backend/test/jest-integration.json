@@ -7,5 +7,6 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "globalSetup": "<rootDir>/setup/global-setup.ts",
+  "setupFiles": ["<rootDir>/setup/integration-env.ts"],
   "setupFilesAfterEnv": ["<rootDir>/setup/reset-domain-tables.ts"]
 }

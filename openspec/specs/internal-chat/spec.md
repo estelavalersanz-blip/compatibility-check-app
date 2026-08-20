@@ -6,7 +6,7 @@ Permite a un usuario iniciar y mantener conversaciones de texto simple con los c
 tiene compatibilidad calculada, con elegibilidad asimétrica para iniciar un chat, acceso a todas las
 conversaciones propias (iniciadas por uno mismo o por otros) desde un icono del menú, indicador de no
 leídos, y persistencia independiente del estado actual de las comparaciones — sin WebSockets, por
-sondeo.
+sondeo. El texto de cada mensaje se cifra en reposo antes de guardarse.
 
 ## Requirements
 
@@ -78,6 +78,27 @@ sin leer, y SHALL marcar los mensajes de una conversación como leídos cuando e
 - **WHEN** el usuario abre una conversación con mensajes sin leer
 - **THEN** esos mensajes quedan marcados como leídos, y el indicador del menú se actualiza para reflejar
   si quedan o no otros mensajes sin leer en el resto de conversaciones
+
+### Requirement: Cifrado en reposo del cuerpo de los mensajes
+El sistema SHALL cifrar el cuerpo de cada mensaje antes de persistirlo (AES-256-GCM, clave propia
+de la aplicación en `CHAT_ENCRYPTION_KEY`, nunca en el repositorio) y SHALL descifrarlo únicamente en
+el momento de devolverlo a un participante autorizado de esa conversación. El acceso directo a
+`conversations`/`messages` por fuera del backend (p. ej. PostgREST con el JWT del propio usuario)
+SHALL estar deshabilitado, para que la garantía de cifrado no se pueda eludir insertando en texto
+plano por otra vía.
+
+#### Scenario: El mensaje se guarda cifrado, no en texto plano
+- **WHEN** un participante envía un mensaje con texto válido
+- **THEN** la fila persistida en `messages` no contiene el texto en claro en ninguna de sus columnas
+
+#### Scenario: El mensaje se devuelve descifrado a los participantes
+- **WHEN** un participante de la conversación consulta sus mensajes
+- **THEN** el sistema le devuelve el texto original de cada mensaje, no el cifrado
+
+#### Scenario: Mensajes anteriores a este cambio siguen siendo legibles
+- **WHEN** existe un mensaje persistido antes de que este cifrado se activara (sin material de
+  cifrado asociado)
+- **THEN** el sistema lo sigue devolviendo tal cual, sin intentar descifrarlo ni fallar por ello
 
 ### Requirement: Las conversaciones no dependen del estado actual de las comparaciones
 El sistema SHALL conservar una conversación y su historial de mensajes independientemente de que,
