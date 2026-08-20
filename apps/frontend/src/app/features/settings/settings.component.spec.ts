@@ -141,6 +141,26 @@ describe('SettingsComponent — perfil (tarea 17.1)', () => {
     expect(selected.length).toBe(5);
   });
 
+  /**
+   * Pedido explícito de la usuaria: se pueda ver en algún sitio de la app el correo con el que se
+   * ha iniciado sesión. Campo no editable (`form-control-plaintext` + `readonly`, patrón estándar de
+   * Bootstrap para esto — no un `<p>`/`<span>` suelto): se ve como el resto de campos del formulario,
+   * pero sin caja ni posibilidad real de escribir en él (no hay ningún flujo de "cambiar email" en
+   * esta app, a diferencia de nombre/alias/contraseña).
+   */
+  it('muestra el email de la sesión activa en un campo no editable', async () => {
+    const { fixture } = setup();
+    await loaded(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+
+    const emailInput = root.querySelector<HTMLInputElement>('#settings-email');
+    if (!emailInput) {
+      throw new Error('No se encontró el campo de email');
+    }
+    expect(emailInput.value).toBe('ada@example.com');
+    expect(emailInput.readOnly).toBe(true);
+  });
+
   it('prerellena también la foto de perfil desde profile.photoUrl', async () => {
     const { fixture } = setup({
       profile: ownProfile({ photoUrl: 'https://example.com/una-foto-real.jpg' }),

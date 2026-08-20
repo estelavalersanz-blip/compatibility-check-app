@@ -44,7 +44,12 @@
             </li>
           }
           <li class="nav-item">
-            <button type="button" class="btn btn-outline-light btn-sm" (click)="logout()">
+            <button
+              type="button"
+              class="btn btn-outline-light btn-sm"
+              [attr.title]="userEmail()"
+              (click)="logout()"
+            >
               <i class="bi bi-box-arrow-right"></i> Cerrar sesión
             </button>
           </li>

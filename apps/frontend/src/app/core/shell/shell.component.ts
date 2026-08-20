@@ -34,6 +34,12 @@ export class ShellComponent {
   /** Tarea 11.1: los 3 botones solo se muestran con sesión activa. */
   readonly hasSession = computed(() => this.auth.session() !== null);
 
+  /** Pedido explícito de la usuaria: ver en algún sitio de la app el correo con el que se ha
+   *  iniciado sesión — usado como `title` nativo del botón de cerrar sesión (ver plantilla). El
+   *  campo no editable de Configuración (`settings.component.ts`) es la fuente accesible en
+   *  cualquier dispositivo; esto es solo un atajo adicional para quien pasa el ratón por encima. */
+  readonly userEmail = computed(() => this.auth.session()?.user?.email ?? '');
+
   /**
    * Caso especial de completar perfil (SKILL.md, "Shell A"): sin icono de chat ni enlace de
    * Configuración, solo cerrar sesión. Se lee de `data.minimalNav` de la ruta hija activa más

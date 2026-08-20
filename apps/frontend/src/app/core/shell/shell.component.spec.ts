@@ -263,6 +263,26 @@ describe('ShellComponent (tareas 11.1/11.2, 11.2b/11.2c)', () => {
   });
 
   /**
+   * Pedido explícito de la usuaria: poder ver en algún sitio de la app el correo con el que se ha
+   * iniciado sesión. Además del campo no editable de Configuración (ver
+   * `settings.component.spec.ts`), un `title` nativo (sin JS/componente propio — Bootstrap no tiene
+   * su JS de tooltips cargado en este proyecto, ver design.md decisión 3c-bis) sobre "Cerrar sesión":
+   * se ve al pasar el ratón por encima en escritorio. No sustituye al campo de Configuración (un
+   * tooltip por hover no es accesible en móvil, sin hover real), es solo un atajo adicional barato.
+   */
+  it('el botón de cerrar sesión lleva el email de la sesión activa como title (atajo de acceso rápido)', async () => {
+    const { harness } = await setup(true);
+    const logoutButton = Array.from(
+      rootElement(harness).querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent?.includes('Cerrar sesión'));
+    if (!logoutButton) {
+      throw new Error('No se encontró el botón de cerrar sesión');
+    }
+
+    expect(logoutButton.title).toBe('fake@example.com');
+  });
+
+  /**
    * Bug real encontrado en producción durante la tarea 20.2 (verificación end-to-end): tras cerrar
    * sesión, `logout()` navega dentro de la SPA (`router.navigate`), sin recargar la página — así que
    * la instancia de `UsersService` (`providedIn: 'root'`, un único singleton para toda la vida de la

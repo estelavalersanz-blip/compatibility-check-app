@@ -251,6 +251,17 @@ del formulario.
 .auth-shell a {
   color: #FFFFFF;
 }
+
+// Bug real reportado por la usuaria con captura (2026-08-20): `.invalid-feedback` (mensajes como
+// "Mínimo 8 caracteres", "Las contraseñas no coinciden") se quedó fuera de la regla de arriba —
+// seguía el rojo por defecto de Bootstrap (`$danger`, sin recompilar en este proyecto: solo
+// `$primary`/`$secondary`/`$dark`/`$light`/`$body-color`/`$font-family-base` están overrideados, ver
+// más abajo). Rojo sobre el propio degradado naranja→rojo de esta pantalla es el peor caso posible —
+// contraste medido ~1.3-1.8:1 (WCAG AA exige 4.5:1 para texto normal). Mismo criterio que el resto de
+// texto suelto de esta pantalla: blanco.
+.auth-shell .invalid-feedback {
+  color: #FFFFFF;
+}
 ```
 
 ```html
@@ -1105,6 +1116,12 @@ usuaria, 2026-08-19: cuestionario antes que contraseña, no al final).
   <div class="card mb-4">
     <div class="card-header">Tu perfil</div>
     <div class="card-body">
+      <!-- email de la sesión activa (readonly, no editable — pedido explícito de la usuaria,
+           2026-08-20): -->
+      <div class="mb-3">
+        <label class="form-label" for="settings-email">Email</label>
+        <input id="settings-email" type="email" class="form-control-plaintext" [value]="userEmail()" readonly />
+      </div>
       <!-- nombre, alias, quality-pill... -->
       @if (showRecalculateBanner()) {
         <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 mt-3" role="alert">

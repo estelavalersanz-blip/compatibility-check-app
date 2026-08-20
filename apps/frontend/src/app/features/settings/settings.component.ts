@@ -64,6 +64,10 @@ export class SettingsComponent {
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
+  /** Pedido explícito de la usuaria: ver en algún sitio de la app el correo con el que se ha
+   *  iniciado sesión. No editable — no hay ningún flujo de "cambiar email" en esta app. */
+  readonly userEmail = computed(() => this.authService.session()?.user?.email ?? '');
+
   readonly loading = signal(true);
 
   readonly profileForm = this.fb.group({
