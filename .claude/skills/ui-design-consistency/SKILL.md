@@ -519,8 +519,10 @@ contraseña, no al final):
    final de esta sección. Al
    guardar con éxito (si la selección de cualidades cambió, lo que marca `needs_recalculation = true`),
    aparece un `alert alert-warning` con un botón **"Recalcular compatibilidad ahora"**
-   (`btn-outline-dark btn-sm`) que llama directo a `POST /users/me/recalculate` y navega al dashboard —
-   sin obligar a ir antes al dashboard a buscar ese botón.
+   (`btn-dark btn-sm` — es la única acción de ese aviso, no `btn-outline-dark`) que llama directo a
+   `POST /users/me/recalculate` y navega al dashboard — sin obligar a ir antes al dashboard a buscar
+   ese botón. El aviso apila texto y botón en móvil (`flex-column flex-sm-row`, no una sola fila —
+   bug real reportado por la usuaria, 2026-08-21, ver `references/design-tokens.md`).
 2. **Cuestionario**: muestra un resumen (p. ej. "Respondido el 12/03/2026") y un botón **"Editar tus
    respuestas"** (`btn-outline-dark`) que **navega** a `features/questionnaire` en modo edición (ruta
    real, ver decisión 3h de `design.md` — no despliega las 36 preguntas dentro de la propia pantalla de
@@ -625,6 +627,15 @@ pantalla por pantalla de forma aislada:
 - Antes de dar por terminada cualquier pantalla, compruébala en los 3 anchos de referencia del proyecto:
   ~375px (móvil), ~768px (tablet), ~1280px (escritorio) — no solo en el ancho por defecto del navegador
   de desarrollo.
+- **Un `d-flex` de una sola fila que combina texto libre con un botón/control que no debe encoger
+  (p. ej. `text-nowrap`) no siempre desborda en móvil, pero igualmente queda roto**: `flex-shrink`
+  deja que el texto se aplaste en varias líneas estrechas mientras el control mantiene su ancho
+  completo — visualmente tan mal como un desbordamiento, pero invisible para
+  `expectNoHorizontalOverflow` (bug real reportado por la usuaria, 2026-08-21, ver el aviso de
+  recalcular compatibilidad de Configuración en `references/design-tokens.md`). Si una fila así
+  aparece en una pantalla nueva, apílala en móvil con `flex-column flex-sm-row` (ajustando
+  `align-items`/`justify-content` con el mismo sufijo `-sm-`) en vez de dejarla en una sola fila y
+  confiar en que no desborde.
 
 ## Checklist antes de dar una pantalla por terminada
 
@@ -637,6 +648,9 @@ pantalla por pantalla de forma aislada:
 - [ ] ¿Los errores de formulario usan `is-invalid`/`invalid-feedback`, no marcado propio?
 - [ ] ¿Existen los 3 estados (cargando/vacío/error) si la pantalla depende de una llamada al backend?
 - [ ] ¿Se ha comprobado en los 3 breakpoints sin scroll horizontal?
+- [ ] ¿Ninguna fila `d-flex` combina texto libre con un botón/control que no deba encoger sin
+      apilarse en móvil (`flex-column flex-sm-row`)? Puede no desbordar y seguir viéndose roto (texto
+      aplastado en varias líneas junto a un control de ancho fijo) — ver sección de Responsive.
 - [ ] ¿No se ha añadido CSS a medida sin una razón que no se pueda resolver con utilidades de Bootstrap?
 - [ ] ¿Los colores usados son los de `references/design-tokens.md` (vía `$primary`/`$secondary`/clases
       de Bootstrap recompiladas), no valores hexadecimales sueltos escritos a mano en el componente?

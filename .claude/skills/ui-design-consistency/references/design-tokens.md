@@ -1166,7 +1166,12 @@ usuaria, 2026-08-19: cuestionario antes que contraseña, no al final).
       </div>
       <!-- nombre, alias, quality-pill... -->
       @if (showRecalculateBanner()) {
-        <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 mt-3" role="alert">
+        <!-- flex-column flex-sm-row, no un d-flex de una sola fila (bug real reportado por la
+             usuaria, 2026-08-21): el texto y el botón no desbordan en ~375px (flex-shrink los deja
+             caber), pero el texto se aplasta en varias líneas estrechas junto a un botón que no
+             encoge (text-nowrap) — igual de roto visualmente aunque expectNoHorizontalOverflow no
+             lo detecte. Apila por debajo de 576px, vuelve a la fila a partir de ahí. -->
+        <div class="alert alert-warning d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-sm-between gap-2 mt-3" role="alert">
           <span>Tu compatibilidad necesita recalcularse con tus nuevas cualidades.</span>
           <button type="button" class="btn btn-dark btn-sm text-nowrap" (click)="recalculateNow()">
             Recalcular compatibilidad ahora

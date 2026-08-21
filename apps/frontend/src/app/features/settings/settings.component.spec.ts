@@ -470,4 +470,35 @@ describe('SettingsComponent — responsive (tarea 21.3)', () => {
 
     await expectNoHorizontalOverflow(fixture.nativeElement as HTMLElement, 375);
   });
+
+  it('el aviso de recalcular compatibilidad apila el texto y el botón en móvil, sin compartir fila', async () => {
+    // Bug real reportado por la usuaria (2026-08-21): el texto del aviso + el botón "Recalcular
+    // compatibilidad ahora" compartían una fila `d-flex justify-content-between` sin apilarse en
+    // móvil. No llega a desbordar (expectNoHorizontalOverflow no lo detecta -- flex-shrink deja que
+    // el texto se aplaste en varias líneas estrechas mientras el botón, con `text-nowrap`, se queda
+    // con su ancho completo), pero el resultado visual es igual de roto. Al depender de las clases
+    // responsive de Bootstrap (`flex-column`/`flex-sm-row`, una media query real), se verifica por
+    // estructura, no por medida -- mismo criterio ya usado en este proyecto para `navbar-expand-md`
+    // (tarea 21.1): forzar el ancho de un contenedor sintético no engaña a `@media (min-width: ...)`.
+    const newQualityIds = ['q1', 'q2', 'q3', 'q4', 'q6'];
+    const updateProfileSpy = jasmine
+      .createSpy('updateProfile')
+      .and.returnValue(of(ownProfile({ qualityIds: newQualityIds, needsRecalculation: true })));
+    const { fixture } = setup({ updateProfile: updateProfileSpy });
+    await loaded(fixture);
+    const root = fixture.nativeElement as HTMLElement;
+
+    pills(root)[4].click();
+    fixture.detectChanges();
+    pills(root)[5].click();
+    fixture.detectChanges();
+    findButton(root, 'Guardar cambios').click();
+    await loaded(fixture);
+
+    const banner = root.querySelector('.alert-warning');
+    expect(banner).not.toBeNull();
+    expect(banner?.classList).toContain('flex-column');
+    expect(banner?.classList).toContain('flex-sm-row');
+    await expectNoHorizontalOverflow(root, 375);
+  });
 });
