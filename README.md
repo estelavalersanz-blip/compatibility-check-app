@@ -3,7 +3,8 @@
 App web que mide la compatibilidad entre dos personas mediante un cuestionario de 36 preguntas
 analizado por IA (Groq, con OpenRouter como alternativa), comparando a cada usuario contra los 3
 candidatos más afines de un pool preseleccionado por cualidades personales compartidas. Proyecto de
-Trabajo de Fin de Máster.
+Trabajo de Fin de Máster siguiendo OpenSpec y utilizando metodología TDD con pruebas de integración
+automáticas e2e.
 
 ## Stack
 
