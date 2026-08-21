@@ -110,11 +110,11 @@
             <div class="alert alert-danger py-2 mt-3" role="alert">{{ profileError() }}</div>
           }
           @if (showRecalculateBanner()) {
-            <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 mt-3" role="alert">
+            <div class="alert alert-warning d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-sm-between gap-2 mt-3" role="alert">
               <span>Tu compatibilidad necesita recalcularse con tus nuevas cualidades.</span>
               <button
                 type="button"
-                class="btn btn-dark btn-sm text-nowrap"
+                class="btn btn-dark btn-sm"
                 [disabled]="recalculating()"
                 (click)="recalculateNow()"
               >
