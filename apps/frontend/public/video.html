@@ -1,0 +1,112 @@
+<meta charset="utf-8">
+<title>AfinIA — Vídeo del TFM</title>
+<style>
+  :root {
+    --orange: #FB8500;
+    --red: #BE1E2D;
+    --ink: #000000;
+    --cream: #FDF0D5;
+    --paper: #FFFFFF;
+    --bg: var(--paper);
+    --fg: var(--ink);
+    --fg-muted: #4a4a4a;
+    --surface: var(--cream);
+    --surface-border: rgba(0,0,0,.08);
+    --shadow: 0 20px 60px -20px rgba(0,0,0,.25);
+    font-synthesis: none;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0a09;
+    --fg: #f7f1e8;
+    --fg-muted: #b9afa0;
+    --surface: #17130f;
+    --surface-border: rgba(255,255,255,.1);
+    --shadow: 0 20px 60px -20px rgba(0,0,0,.6);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c0a09;
+      --fg: #f7f1e8;
+      --fg-muted: #b9afa0;
+      --surface: #17130f;
+      --surface-border: rgba(255,255,255,.1);
+      --shadow: 0 20px 60px -20px rgba(0,0,0,.6);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: 'Poppins', 'Segoe UI', -apple-system, system-ui, sans-serif;
+  }
+
+  main {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(20px, 4vw, 36px);
+    padding: clamp(24px, 6vw, 64px) clamp(20px, 6vw, 48px);
+  }
+
+  .brand-mark { width: 44px; height: 44px; fill: var(--red); }
+  :root[data-theme="dark"] .brand-mark { fill: var(--orange); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .brand-mark { fill: var(--orange); }
+  }
+
+  .heading { text-align: center; max-width: 62ch; }
+  .eyebrow {
+    text-transform: uppercase; letter-spacing: .18em; font-size: 12.5px; font-weight: 600;
+    color: var(--red); margin: 0 0 10px;
+  }
+  :root[data-theme="dark"] .eyebrow { color: var(--orange); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .eyebrow { color: var(--orange); }
+  }
+  h1 { font-size: clamp(24px, 3.4vw, 34px); font-weight: 700; margin: 0 0 .35em; text-wrap: balance; }
+  p.lede { font-size: clamp(15px, 1.6vw, 18px); color: var(--fg-muted); margin: 0; line-height: 1.5; }
+
+  .video-frame {
+    width: min(100%, 960px);
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--shadow);
+  }
+  .video-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  footer { font-size: 13.5px; color: var(--fg-muted); text-align: center; }
+  footer a { color: inherit; text-decoration: underline; }
+</style>
+
+<main>
+  <svg class="brand-mark" viewBox="0 0 345.3 336.08" aria-hidden="true">
+    <path d="M267.83,175.64c-19.09,25.81-46.83,52.24-71.15,73.34-31.85,27.64-101.3,82.56-142.99,86.01-41.43,3.42-63.46-26.52-49.5-65.5,9.91-27.69,29.75-63.59,43.16-90.84,1.28-2.61,8.11-17.06,9.37-17.63l14.3,19.67,2.01,5.58c-11.47,26.61-25.74,52.03-37.67,78.39-4.64,10.26-12.58,23.75-7.2,34.9,3.89,8.07,12.23,9.8,20.52,9.45,39.12-1.67,121.5-69.78,150.54-97.48,23.76-22.67,67.2-67,70.74-100.28,1.69-15.92-16.82-36.45-20.75-52.23,26.33,2.81,44.81,19.6,46.87,46.62,1.77,23.18-14.82,51.85-28.25,70.01Z"/>
+    <path d="M195.78,259.55c1.84-1.27,1.12-2.64,5.38-1,4.84,1.86,15.03,11.19,20.32,14.67,18.45,12.14,54.36,35.73,76.22,35.57,18.35-.14,23.42-12.82,17.96-28.75l-44.45-93.64c-.61-6,13.39-19.49,16.49-25.38,2.47,0,19.13,39.11,21.64,44.34,10.42,21.65,36.13,64.74,35.94,87.14-.2,24.04-21.77,43.81-45.6,43.58-30.41-.29-70.28-25.17-94.8-42.26-6.22-4.34-18.86-12.48-23.7-17.3-.96-.95-2.8-1.99-1.52-3.54,5.91-3.49,10.63-9.65,16.11-13.43Z"/>
+    <path d="M167.98.28c39.58-4,60.4,35.73,75.08,65.36,5.16,10.4,12.14,24.14,16.32,34.68,1.35,3.41,3.14,7.26,2.63,10.92-1.33,9.47-6.77,20.93-12.31,28.74-16.01-27.04-26.17-58.74-42.33-85.65-25.02-41.69-51.73-33.27-73.34,5-14.5,25.68-24.6,55.05-39.33,80.65-2.35.06-15.15-28.3-12.27-33.23C101.83,70.2,118.95,5.24,167.98.28Z"/>
+    <path d="M95.2,59.01l-20.76,43.73c-1.06,6.59.39,13.02,2.25,19.28,9.34,31.31,45.49,67.57,68.98,90.02,3.6,3.44,17.4,13.96,19.03,16.98.47.87.89,1.95.36,2.87-4.57,1.61-14.04,13.02-17.58,14-.96.26-1.59.19-2.52-.05-2.02-.5-15.51-13.2-18.29-15.8-28.36-26.46-75.34-76.81-78.35-116.65-2.3-30.46,17.67-50.59,46.87-54.37Z"/>
+    <path d="M164.56,109.65c-3.25-2.85-6.38-6.73-10.02-9.48-7.55-5.69-16.08-9.2-24.3-13.73-.27-1.17,8.96-20.42,10.43-21.55,1.92-1.47,10.21,3.37,12.56,4.59,6.7,3.49,12.68,8.26,19.5,11.51,4.76-3.4,26.84-18.5,31.49-15.53,1.79,1.14,10.33,20.29,9.56,21.54-15.94,7.32-29.01,16.37-41.52,28.61-.76.19-6.49-4.89-7.7-5.96Z"/>
+  </svg>
+
+  <div class="heading">
+    <div class="eyebrow">Trabajo de Fin de Máster · Desarrollo con IA</div>
+    <h1>AfinIA — vídeo de presentación</h1>
+    <p class="lede">Recorrido por la aplicación y por las decisiones técnicas detrás de ella.</p>
+  </div>
+
+  <div class="video-frame">
+    <iframe
+      src="https://www.youtube.com/embed/0_quX6Ke2xU"
+      title="Vídeo de presentación del TFM — AfinIA"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen
+      loading="lazy"
+    ></iframe>
+  </div>
+
+  <footer>
+    Ver también las <a href="./slides.html">slides del proyecto</a>.
+  </footer>
+</main>

@@ -37,7 +37,9 @@ tardar 30-60s en responder (cold-start) — ver "Limitaciones de las herramienta
   del propio frontend (`apps/frontend/public/slides.html`, copia de
   [`docs/slides.html`](docs/slides.html), que es la fuente) precisamente para que el enlace sea
   público sin depender de los permisos de un Artifact.
-- **Vídeo**: pendiente de grabar y enlazar.
+- **Vídeo**: <https://compatibility-check-app.vercel.app/video.html> — mismo patrón que las slides
+  (`apps/frontend/public/video.html`, copia de [`docs/video.html`](docs/video.html)), con el vídeo
+  embebido desde YouTube.
 
 ## Funcionalidades principales
 
