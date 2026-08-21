@@ -178,16 +178,21 @@ describe('RegistrationComponent (tarea 13.0)', () => {
     expect(nextButton.disabled).toBe(false);
   });
 
-  it('marca nombre y alias como obligatorios (asterisco visible + atributo required)', () => {
+  it('marca nombre, alias y foto como obligatorios (asterisco visible + atributo required)', () => {
     // Encontrado en verificación manual: el botón "Siguiente" se queda deshabilitado sin ninguna
-    // pista de por qué — confuso para quien no sepa que ambos campos son obligatorios.
+    // pista de por qué — confuso para quien no sepa que los tres campos son obligatorios. La foto
+    // se pidió aparte (feedback explícito de la usuaria, 2026-08-21): "Subir foto" no llevaba
+    // asterisco pese a ser obligatoria para crear el perfil (a diferencia de Configuración, donde
+    // sí es opcional al editar — ver settings.component.html, "Cambiar foto", sin asterisco).
     const { fixture } = setup();
     const root = fixture.nativeElement as HTMLElement;
 
     const nameLabel = root.querySelector('label[for="name"]');
     const aliasLabel = root.querySelector('label[for="alias"]');
+    const uploadPhotoButton = findButton(root, 'Subir foto');
     expect(nameLabel?.textContent).toContain('*');
     expect(aliasLabel?.textContent).toContain('*');
+    expect(uploadPhotoButton.textContent).toContain('*');
 
     expect(root.querySelector<HTMLInputElement>('#name')?.required).toBe(true);
     expect(root.querySelector<HTMLInputElement>('#alias')?.required).toBe(true);
