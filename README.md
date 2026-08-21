@@ -37,7 +37,8 @@ tardar 30-60s en responder (cold-start) — ver "Limitaciones de las herramienta
   del propio frontend (`apps/frontend/public/slides.html`, copia de
   [`docs/slides.html`](docs/slides.html), que es la fuente) precisamente para que el enlace sea
   público sin depender de los permisos de un Artifact.
-- **Vídeo**: pendiente de grabar y enlazar. Guion en [`docs/video-script.md`](docs/video-script.md).
+- **Vídeo**: pendiente de grabar y enlazar. El guion de grabación es una nota de trabajo personal y
+  no se incluye en este repositorio público.
 
 ## Funcionalidades principales
 
