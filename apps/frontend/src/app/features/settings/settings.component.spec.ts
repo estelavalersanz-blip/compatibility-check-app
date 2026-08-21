@@ -474,12 +474,20 @@ describe('SettingsComponent — responsive (tarea 21.3)', () => {
   it('el aviso de recalcular compatibilidad apila el texto y el botón en móvil, sin compartir fila', async () => {
     // Bug real reportado por la usuaria (2026-08-21): el texto del aviso + el botón "Recalcular
     // compatibilidad ahora" compartían una fila `d-flex justify-content-between` sin apilarse en
-    // móvil. No llega a desbordar (expectNoHorizontalOverflow no lo detecta -- flex-shrink deja que
-    // el texto se aplaste en varias líneas estrechas mientras el botón, con `text-nowrap`, se queda
-    // con su ancho completo), pero el resultado visual es igual de roto. Al depender de las clases
-    // responsive de Bootstrap (`flex-column`/`flex-sm-row`, una media query real), se verifica por
-    // estructura, no por medida -- mismo criterio ya usado en este proyecto para `navbar-expand-md`
-    // (tarea 21.1): forzar el ancho de un contenedor sintético no engaña a `@media (min-width: ...)`.
+    // móvil. La primera versión de este fix (solo flex-column/flex-sm-row en el contenedor) pasaba
+    // en local (Windows) pero falló en CI (Linux, mismo Chrome headless): expectNoHorizontalOverflow
+    // sí lo detectó ahí -- "scrollWidth real: 417px" en un contenedor de 375px, señalando el botón.
+    // Causa real: con `text-nowrap` en el botón, min-content == max-content (el texto no puede
+    // partirse), así que el algoritmo shrink-to-fit no puede bajar de esa anchura completa aunque no
+    // quede espacio -- por eso desborda. La medida exacta en la que empieza a desbordar depende de la
+    // fuente realmente renderizada (Poppins vs. su fallback), que difiere entre Windows y Linux; de
+    // ahí que no reprodujera en local. El fix real quita `text-nowrap` del botón: sin él, min-content
+    // pasa a ser solo el ancho de la palabra más larga ("compatibilidad"), muy por debajo de 375px en
+    // cualquier fuente, así que ya no depende de una métrica de texto al límite.
+    // Las clases `flex-column`/`flex-sm-row` del contenedor sí dependen de una media query real
+    // (`@media (min-width: 576px)`), que un contenedor sintético de ancho forzado no puede engañar --
+    // por eso esas dos se verifican por estructura, no por medida, mismo criterio ya usado en este
+    // proyecto para `navbar-expand-md` (tarea 21.1).
     const newQualityIds = ['q1', 'q2', 'q3', 'q4', 'q6'];
     const updateProfileSpy = jasmine
       .createSpy('updateProfile')
@@ -499,6 +507,13 @@ describe('SettingsComponent — responsive (tarea 21.3)', () => {
     expect(banner).not.toBeNull();
     expect(banner?.classList).toContain('flex-column');
     expect(banner?.classList).toContain('flex-sm-row');
+
+    // Guarda directa e independiente de fuente/entorno contra la causa real del bug: si alguien
+    // vuelve a añadir `text-nowrap` aquí, esto falla en cualquier máquina sin depender de que la
+    // fuente renderizada empuje el texto justo por encima del límite (ver comentario del test).
+    const recalculateButton = findButton(root, 'Recalcular compatibilidad ahora');
+    expect(recalculateButton.className).not.toContain('text-nowrap');
+
     await expectNoHorizontalOverflow(root, 375);
   });
 });
