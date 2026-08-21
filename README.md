@@ -33,8 +33,10 @@ tardar 30-60s en responder (cold-start) — ver "Limitaciones de las herramienta
 
 ## Slides y vídeo (TFM)
 
-- **Slides**: <https://claude.ai/code/artifact/812252b8-3d7d-40ee-9ae5-ac9004c349f9> — también disponibles
-  como documento en [`docs/slides.html`](docs/slides.html).
+- **Slides**: <https://compatibility-check-app.vercel.app/slides.html> — servidas como asset estático
+  del propio frontend (`apps/frontend/public/slides.html`, copia de
+  [`docs/slides.html`](docs/slides.html), que es la fuente) precisamente para que el enlace sea
+  público sin depender de los permisos de un Artifact.
 - **Vídeo**: pendiente de grabar y enlazar. Guion en [`docs/video-script.md`](docs/video-script.md).
 
 ## Funcionalidades principales
