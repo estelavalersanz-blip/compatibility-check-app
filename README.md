@@ -313,6 +313,16 @@ local que usan los tests de integración) y el backend en marcha — `apps/front
 environment.ts` ya apunta a sus URLs por defecto (`http://127.0.0.1:54321` / `http://localhost:3000`),
 sin configuración adicional.
 
+El backend, en cambio, sí necesita un `.env` propio para arrancar (`npm run lint`/`npm test`/
+`npm run build` no lo necesitan — usan valores ficticios de test):
+
+```bash
+cp apps/backend/.env.example apps/backend/.env
+# rellena SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY (del `npx supabase start` de arriba),
+# GROQ_API_KEY (o OPENROUTER_API_KEY) y CHAT_ENCRYPTION_KEY (genera una con el comando
+# que indica el propio .env.example) antes de arrancar `start:dev`.
+```
+
 ### Tests de integración
 
 Ejercitan RLS y el esquema real de Postgres contra el stack local de Supabase (nunca el proyecto
@@ -353,8 +363,9 @@ npm run seed
 Contra el proyecto real (tras la tarea 19.1), exporta en su lugar `SUPABASE_URL` y
 `SUPABASE_SERVICE_ROLE_KEY` de ese proyecto antes de `npm run seed`. El seed nunca fija ni resetea la
 contraseña de una cuenta que ya existe (crea cada cuenta nueva con una al azar, y no la toca en
-re-seeds posteriores) — las dos cuentas de prueba documentadas más abajo tienen su contraseña fijada
-a mano desde el Dashboard de Supabase, fuera de este script, precisamente para poder documentarla.
+re-seeds posteriores) — las tres cuentas de prueba documentadas más arriba tienen su contraseña
+fijada a mano desde el Dashboard de Supabase, fuera de este script, precisamente para poder
+documentarla.
 
 ## Limitaciones de las herramientas gratuitas (importante antes de una demo en vivo)
 
@@ -433,6 +444,12 @@ end-to-end) marcado explícitamente:
     real el nivel de protección — contra una fuga de la base de datos, una `service_role key`
     filtrada, o alguien mirando el dashboard de Supabase directamente — con una fracción de la
     complejidad operativa de E2EE de verdad.
+- **Escalar de plan gratuito a producción real**: revisar los criterios de preselección de
+  candidatos (hoy solo cualidades compartidas; añadir edad, sexo o intencionalidad antes de contar
+  cualidades) y el tope de 3 candidatos (ligado al límite real de llamadas a IA de esta fase, no un
+  número de producto cerrado), subir los límites de tasa del proveedor de IA o pasar a su Batch API,
+  y mover cada servicio de su plan gratuito actual a uno con autoescalado. Detallado paso a paso, con
+  beneficios concretos de cada cambio, en `docs/plan.md` ("Propuesta de migración a producción").
 
 ## Metodología
 
